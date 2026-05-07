@@ -1206,6 +1206,73 @@ input, select, textarea {
   .stat-label, .section-title, .ai-managed-sub { color: rgba(255,255,255,0.58) !important; }
 }
 
+
+
+  /* iDeal agent scan overlay: Snap → auto-save → Wallet */
+  .scan-overlay {
+    position: fixed; inset: 0;
+    background: rgba(7, 12, 20, 0.62);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    display: none; align-items: center; justify-content: center;
+    z-index: 1200;
+    padding: 22px;
+  }
+  .scan-overlay.show { display: flex; animation: fadeIn 0.18s ease-out; }
+  .scan-sheet {
+    width: min(360px, 100%);
+    background: rgba(255,255,255,0.92);
+    color: #101216;
+    border-radius: 32px;
+    padding: 30px 24px 24px;
+    text-align: center;
+    box-shadow: 0 28px 80px rgba(0,0,0,0.34);
+    border: 0.5px solid rgba(255,255,255,0.6);
+  }
+  @media (prefers-color-scheme: dark) {
+    .scan-sheet { background: rgba(24,26,31,0.92); color: #f5f7fb; border-color: rgba(255,255,255,0.12); }
+  }
+  .scan-orb {
+    width: 96px; height: 96px;
+    border-radius: 30px;
+    margin: 0 auto 18px;
+    background: radial-gradient(circle at 35% 25%, #ffffff 0%, #89c8ff 16%, #0A84FF 44%, #111318 100%);
+    display: flex; align-items: center; justify-content: center;
+    position: relative; overflow: hidden;
+    box-shadow: 0 18px 38px rgba(10,132,255,0.35);
+  }
+  .scan-orb:before {
+    content: "";
+    position: absolute; inset: -40%;
+    background: linear-gradient(110deg, transparent 42%, rgba(255,255,255,0.82) 50%, transparent 58%);
+    transform: translateX(-50%);
+    animation: scanSweep 1.4s infinite;
+  }
+  .scan-overlay.success .scan-orb { background: radial-gradient(circle at 35% 25%, #ffffff 0%, #8ff7b0 18%, #30D158 52%, #0d3b1d 100%); box-shadow: 0 18px 38px rgba(48,209,88,0.35); }
+  .scan-overlay.error .scan-orb { background: radial-gradient(circle at 35% 25%, #ffffff 0%, #ffb0a7 18%, #ff453a 52%, #41100d 100%); box-shadow: 0 18px 38px rgba(255,69,58,0.28); }
+  .scan-overlay.success .scan-orb:before, .scan-overlay.error .scan-orb:before { display: none; }
+  .scan-orb span:after {
+    content: "iD";
+    position: relative; z-index: 2;
+    font-weight: 800; font-size: 25px; letter-spacing: -1px; color: white;
+  }
+  .scan-overlay.success .scan-orb span:after { content: "✓"; font-size: 40px; }
+  .scan-overlay.error .scan-orb span:after { content: "!"; font-size: 40px; }
+  @keyframes scanSweep { to { transform: translateX(65%); } }
+  .scan-title { margin: 0; font-size: 22px; font-weight: 750; letter-spacing: -0.5px; }
+  .scan-sub { margin: 8px auto 0; max-width: 280px; font-size: 14px; line-height: 1.45; color: var(--text-secondary); }
+  .scan-progress {
+    margin-top: 22px; height: 6px; border-radius: 999px;
+    background: rgba(10,132,255,0.14); overflow: hidden;
+  }
+  .scan-progress div {
+    height: 100%; width: 45%; border-radius: inherit;
+    background: #0A84FF; animation: scanBar 1.1s ease-in-out infinite alternate;
+  }
+  .scan-overlay.success .scan-progress div { width: 100%; background: #30D158; animation: none; }
+  .scan-overlay.error .scan-progress div { width: 100%; background: #ff453a; animation: none; }
+  @keyframes scanBar { from { transform: translateX(-75%); } to { transform: translateX(170%); } }
+
 </style>
 </head>
 <body>

@@ -422,27 +422,115 @@
   }
   async function handleCapture(file) {
     if (!file) return;
-    showOcrStatus('reading', 'Reading photo…');
-    const rawDataUrl = await fileToDataUrl(file);
-    const dataUrl = await compressImage(rawDataUrl, 1200);
-    pendingImage = dataUrl;
-    openModal(null, { imageOnly: true });
-    const apiKey = load(KEYS.apiKey, '');
-    if (!apiKey) {
-      showOcrStatus('success', 'Scan captured — production AI OCR will run server-side. Review and save the deal.');
-      applyOcrResult({ source:'Photo capture' });
-      return;
-    }
-    showOcrStatus('reading', 'Extracting deal details with AI…');
+    showScanOverlay('reading', 'Reading coupon…', 'iDeal is scanning the image and building your deal automatically.');
     try {
-      const result = await runOcr(dataUrl, apiKey);
-      applyOcrResult(result);
-      showOcrStatus('success', 'Got it — review and save below.');
+      const rawDataUrl = await fileToDataUrl(file);
+      const dataUrl = await compressImage(rawDataUrl, 1600);
+      pendingImage = dataUrl;
+
+      showScanOverlay('reading', 'Extracting offer…', 'Looking for merchant, discount, code, expiry and restrictions.');
+      const result = await runOcr(dataUrl);
+
+      showScanOverlay('reading', 'Saving to Wallet…', 'No forms. No manual save.');
+      const saved = autoSaveScannedDeal(result, dataUrl);
+
+      showScanOverlay('success', 'Saved to Deals Wallet', `${saved.merchant} · ${saved.discount}`);
+      setTimeout(() => {
+        hideScanOverlay();
+        dealsFilter = 'active';
+        switchTab('deals');
+        renderAll();
+      }, 900);
     } catch (err) {
       console.error('OCR failed:', err);
-      showOcrStatus('error', `Couldn't read it (${err.message}). Fill in manually.`);
+      showScanOverlay('error', 'Couldn’t read this coupon', 'Try again with better lighting and keep the coupon flat in the frame.');
+      setTimeout(() => hideScanOverlay(), 2600);
     }
   }
+
+  function autoSaveScannedDeal(result, imageDataUrl) {
+    const r = result || {};
+    const merchant = (r.merchant || '').trim() || 'Scanned Deal';
+    const discount = (r.discount || '').trim() || 'Coupon offer';
+    const url = inferUrl(merchant);
+    const deal = {
+      id: uid(),
+      merchant,
+      discount,
+      value: Number(r.value) || estimateValue(discount),
+      category: normalizeCategory(r.category),
+      source: 'Photo capture',
+      code: (r.code || '').trim(),
+      expiry: normalizeExpiry(r.expiry),
+      notes: (r.notes || 'Auto-created by iDeal from your coupon photo').trim(),
+      url,
+      image: imageDataUrl || '',
+      redeemed: false,
+      shared: false,
+      createdAt: Date.now(),
+      scanConfidence: r.confidence || 'medium',
+      rawScanText: r._rawText || ''
+    };
+    deals.push(deal);
+    bumpQuest('q_add');
+    save(KEYS.deals, deals);
+    checkAndSendReminders();
+    return deal;
+  }
+
+  function normalizeCategory(cat) {
+    const validCats = ['Groceries','Dining','Apparel','Travel','Beauty','Home','Electronics','Other'];
+    return validCats.includes(cat) ? cat : 'Other';
+  }
+
+  function normalizeExpiry(expiry) {
+    if (!expiry) return '';
+    const d = new Date(expiry);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toISOString().slice(0,10);
+  }
+
+  function estimateValue(discount) {
+    const dollarOff = String(discount || '').match(/\$\s*(\d{1,4})/);
+    const pctOff = String(discount || '').match(/(\d{1,2})\s*%/);
+    if (dollarOff) return Number(dollarOff[1]) || 0;
+    if (pctOff) return Math.max(5, Math.round((Number(pctOff[1]) || 0) * 0.75));
+    if (/BOGO/i.test(discount)) return 10;
+    if (/FREE/i.test(discount)) return 5;
+    return 0;
+  }
+
+  function ensureScanOverlay() {
+    let overlay = document.getElementById('scan-overlay');
+    if (overlay) return overlay;
+    overlay = document.createElement('div');
+    overlay.id = 'scan-overlay';
+    overlay.className = 'scan-overlay';
+    overlay.innerHTML = `
+      <div class="scan-sheet">
+        <div class="scan-orb"><span></span></div>
+        <p class="scan-title" id="scan-title">Scanning coupon…</p>
+        <p class="scan-sub" id="scan-sub">iDeal is extracting the savings for you.</p>
+        <div class="scan-progress"><div></div></div>
+      </div>`;
+    document.body.appendChild(overlay);
+    return overlay;
+  }
+
+  function showScanOverlay(kind, title, sub) {
+    const overlay = ensureScanOverlay();
+    overlay.className = 'scan-overlay show ' + (kind || 'reading');
+    const t = document.getElementById('scan-title');
+    const s = document.getElementById('scan-sub');
+    if (t) t.textContent = title || 'Scanning coupon…';
+    if (s) s.textContent = sub || '';
+  }
+
+  function hideScanOverlay() {
+    const overlay = document.getElementById('scan-overlay');
+    if (overlay) overlay.classList.remove('show');
+  }
+
   function showOcrStatus(kind, msg) {
     const el = document.getElementById('ocr-status');
     el.style.display = 'flex';
@@ -464,83 +552,104 @@
       logger: (m) => {
         if (m && m.status && typeof m.progress === 'number') {
           const pct = Math.round(m.progress * 100);
-          if (pct > 0 && pct < 100) showOcrStatus('reading', `Reading coupon… ${pct}%`);
+          if (pct > 0 && pct < 100) showScanOverlay('reading', `Reading coupon… ${pct}%`, 'iDeal is extracting the best offer from the image.');
         }
       }
     });
-    const raw = (data && data.text ? data.text : '').replace(/\s+/g, ' ').trim();
-    if (!raw || raw.length < 8) throw new Error('no readable text found');
+    const raw = (data && data.text ? data.text : '').trim();
+    if (!raw || raw.replace(/\s+/g, '').length < 8) throw new Error('no readable text found');
     return extractDealFromText(raw);
   }
 
   function extractDealFromText(raw) {
-    const text = String(raw || '');
-    const upper = text.toUpperCase();
-    const knownMerchants = ['TARGET','WALMART','COSTCO','KROGER','WHOLE FOODS','TRADER JOE','CHIPOTLE','PANERA','STARBUCKS','OLIVE GARDEN','OLD NAVY','GAP','MACYS','MACY\'S','KOHLS','KOHL\'S','NORDSTROM','SEPHORA','ULTA','BATH & BODY WORKS','BEST BUY','HOME DEPOT','LOWE\'S','LOWES','AMAZON','AMC','MARRIOTT'];
+    const original = String(raw || '');
+    const text = original.replace(/[\t ]+/g, ' ').replace(/\n{2,}/g, '\n').trim();
+    const flat = text.replace(/\s+/g, ' ').trim();
+    const upper = flat.toUpperCase();
+    const lines = text.split(/\n|\r/).map(x => x.trim()).filter(Boolean);
+
+    const knownMerchants = ['TARGET','WALMART','COSTCO','KROGER','WHOLE FOODS','TRADER JOE','CHIPOTLE','PANERA','STARBUCKS','OLIVE GARDEN','OLD NAVY','GAP','MACYS','MACY\'S','KOHLS','KOHL\'S','NORDSTROM','SEPHORA','ULTA','BATH & BODY WORKS','BEST BUY','HOME DEPOT','LOWE\'S','LOWES','AMAZON','AMC','MARRIOTT','CVS','WALGREENS','DUNKIN','MCDONALD','SUBWAY','PAPA JOHNS','DOMINOS'];
     let merchant = '';
     for (const m of knownMerchants) {
-      if (upper.includes(m)) { merchant = m.replace(/\b\w/g, c => c.toUpperCase()).replace('Macys', "Macy's").replace('Kohls', "Kohl's").replace('Lowes', "Lowe's"); break; }
+      if (upper.includes(m)) {
+        merchant = m.toLowerCase().replace(/\b\w/g, c => c.toUpperCase())
+          .replace('Macys', "Macy's").replace('Kohls', "Kohl's").replace('Lowes', "Lowe's");
+        break;
+      }
     }
-    if (!merchant) {
-      const firstLine = text.split(/[\n\.\|]/).map(x => x.trim()).find(x => x.length >= 3 && /[A-Za-z]/.test(x));
-      merchant = firstLine ? firstLine.split(/\s+/).slice(0,3).join(' ') : '';
+    if (!merchant && lines.length) {
+      const candidate = lines.find(x => /[A-Za-z]/.test(x) && !/coupon|expires|valid|code|off|save|total|receipt/i.test(x));
+      merchant = (candidate || lines[0]).split(/[|•]/)[0].trim().split(/\s+/).slice(0,4).join(' ');
     }
 
-    let discount = '';
     const discountPatterns = [
-      /(\d{1,2})\s*%\s*(?:OFF|DISCOUNT)/i,
-      /\$\s*(\d{1,4})\s*(?:OFF|DISCOUNT)/i,
-      /BUY\s+ONE\s+GET\s+ONE|BOGO/i,
+      /(?:SAVE\s*)?\$\s*\d{1,4}\s*(?:OFF)?(?:\s*(?:WHEN YOU SPEND|ON|WITH|MIN)\s*\$?\d{1,4})?/i,
+      /\d{1,2}\s*%\s*(?:OFF|DISCOUNT)?/i,
+      /BUY\s+ONE\s+GET\s+ONE(?:\s+FREE)?|BOGO/i,
       /FREE\s+[A-Z][A-Z\s]{2,30}/i,
-      /(\d{1,2})\s*%/i,
-      /\$\s*(\d{1,4})/i
+      /SAVE\s+\d{1,2}\s*%/i,
+      /SAVE\s+\$\s*\d{1,4}/i
     ];
+    let discount = '';
     for (const re of discountPatterns) {
-      const m = text.match(re);
+      const m = flat.match(re);
       if (m) { discount = m[0].replace(/\s+/g,' ').trim(); break; }
     }
     if (!discount) discount = 'Coupon offer';
+    discount = discount.replace(/^SAVE\s+/i, match => match.trim() + ' ');
 
-    let value = 0;
-    const dollarOff = discount.match(/\$\s*(\d{1,4})/);
-    const pctOff = discount.match(/(\d{1,2})\s*%/);
-    if (dollarOff) value = Number(dollarOff[1]) || 0;
-    else if (pctOff) value = Math.max(5, Math.round((Number(pctOff[1]) || 0) * 0.75));
-    else if (/BOGO/i.test(discount)) value = 10;
-    else if (/FREE/i.test(discount)) value = 5;
+    const value = estimateValue(discount);
 
     let code = '';
-    const codeMatch = text.match(/(?:CODE|PROMO|COUPON|USE)\s*[:#-]?\s*([A-Z0-9]{4,16})/i) || text.match(/\b([A-Z]{2,}[0-9]{2,}[A-Z0-9]{0,8})\b/);
-    if (codeMatch) code = codeMatch[1].toUpperCase();
+    const codePatterns = [
+      /(?:PROMO\s*CODE|COUPON\s*CODE|CODE|USE)\s*[:#-]?\s*([A-Z0-9][A-Z0-9\-]{3,18})/i,
+      /\b([A-Z]{2,}[0-9]{2,}[A-Z0-9]{0,10})\b/
+    ];
+    for (const re of codePatterns) {
+      const m = flat.match(re);
+      if (m && !/SAVE|OFF|DEAL|DATE|VALID/i.test(m[1])) { code = m[1].replace(/[^A-Z0-9-]/gi,'').toUpperCase(); break; }
+    }
 
     let expiry = '';
-    const datePatterns = [
+    const monthMap = {JAN:1,FEB:2,MAR:3,APR:4,MAY:5,JUN:6,JUL:7,AUG:8,SEP:9,OCT:10,NOV:11,DEC:12};
+    const dateMatchers = [
+      /(?:EXP(?:IRES)?|VALID\s*(?:THRU|UNTIL)?|ENDS?)\s*[:#-]?\s*(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/i,
       /(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/,
-      /(?:EXP|EXPIRES|VALID THRU|VALID UNTIL)\s*[:#-]?\s*(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/i
+      /(?:EXP(?:IRES)?|VALID\s*(?:THRU|UNTIL)?|ENDS?)\s*[:#-]?\s*(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[A-Z]*\s+(\d{1,2}),?\s+(\d{4})/i
     ];
-    for (const re of datePatterns) {
-      const m = text.match(re);
-      if (m) {
-        const parts = m.length >= 4 ? m.slice(-3) : null;
-        if (parts) {
-          let [mm, dd, yy] = parts.map(x => String(x));
-          if (yy.length === 2) yy = '20' + yy;
-          expiry = `${yy.padStart(4,'20')}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`;
-          break;
-        }
+    for (const re of dateMatchers) {
+      const m = flat.match(re);
+      if (!m) continue;
+      if (isNaN(Number(m[1]))) {
+        const mm = String(monthMap[m[1].slice(0,3).toUpperCase()]).padStart(2,'0');
+        const dd = String(m[2]).padStart(2,'0');
+        expiry = `${m[3]}-${mm}-${dd}`;
+      } else {
+        let mm = String(m[1]), dd = String(m[2]), yy = String(m[3]);
+        if (yy.length === 2) yy = '20' + yy;
+        expiry = `${yy.padStart(4,'20')}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`;
       }
+      break;
     }
 
     let category = 'Other';
-    if (/GROCERY|FOOD|COSTCO|TARGET|WALMART|KROGER|WHOLE FOODS|TRADER/i.test(upper)) category = 'Groceries';
-    if (/RESTAURANT|DINING|CHIPOTLE|PANERA|STARBUCKS|OLIVE/i.test(upper)) category = 'Dining';
-    if (/NAVY|GAP|MACY|KOHLS|NORDSTROM|APPAREL|CLOTHING/i.test(upper)) category = 'Apparel';
+    if (/GROCERY|FOOD|COSTCO|TARGET|WALMART|KROGER|WHOLE FOODS|TRADER|CVS|WALGREENS/i.test(upper)) category = 'Groceries';
+    if (/RESTAURANT|DINING|CHIPOTLE|PANERA|STARBUCKS|OLIVE|DUNKIN|MCDONALD|SUBWAY|PIZZA|DOMINOS|PAPA/i.test(upper)) category = 'Dining';
+    if (/NAVY|GAP|MACY|KOHLS|NORDSTROM|APPAREL|CLOTHING|SHOES/i.test(upper)) category = 'Apparel';
     if (/SEPHORA|ULTA|BEAUTY|BATH/i.test(upper)) category = 'Beauty';
     if (/HOME DEPOT|LOWE|HOME|PAINT|FURNITURE/i.test(upper)) category = 'Home';
     if (/BEST BUY|ELECTRONICS|APPLE|TECH/i.test(upper)) category = 'Electronics';
     if (/HOTEL|TRAVEL|AIRLINE|MARRIOTT/i.test(upper)) category = 'Travel';
 
-    return { merchant, discount, code, expiry, category, value, notes: 'Scanned on device', _rawText: text };
+    const confidenceScore = [merchant && merchant !== 'Scanned Deal', discount && discount !== 'Coupon offer', code, expiry].filter(Boolean).length;
+    const confidence = confidenceScore >= 3 ? 'high' : confidenceScore >= 2 ? 'medium' : 'low';
+    const notes = [
+      confidence === 'low' ? 'Auto-saved from scan — review if needed' : 'Auto-saved by iDeal',
+      expiry ? '' : 'No expiry detected',
+      code ? '' : 'No promo code detected'
+    ].filter(Boolean).join(' · ');
+
+    return { merchant, discount, code, expiry, category, value, notes, confidence, _rawText: flat };
   }
 
   function applyOcrResult(r) {
