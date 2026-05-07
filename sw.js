@@ -1,4 +1,4 @@
-const CACHE_NAME = 'perq-v12-premium';
+const CACHE_NAME = 'perq-v13-agent-scan';
 const ASSETS = [
   './', './index.html', './app.js', './manifest.json',
   './icon-180.png', './icon-192.png', './icon-512.png', './icon-maskable-512.png',
