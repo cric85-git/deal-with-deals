@@ -1,4 +1,4 @@
-const CACHE_NAME = 'perq-v17-link-flow';
+const CACHE_NAME = 'perq-v19-link-flow';
 const ASSETS = [
   './', './index.html', './app.js', './manifest.json',
   './icon-180.png', './icon-192.png', './icon-512.png', './icon-maskable-512.png',

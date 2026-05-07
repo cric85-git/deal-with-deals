@@ -1,10 +1,3 @@
-# Perq v17 — Link Save Only Fix
+# Perq v19 Tested Agent
 
-This build removes all paste-triggered auto-save behavior. Pasted links/text stay idle until the user explicitly taps **Save to Deals Wallet**.
-
-## Fixes
-- Click-only save handler for online deal modal
-- No autofocus on mobile to avoid accidental submit/touch events
-- Reset button state when modal opens/closes
-- 5-second safety reset if save ever gets stuck
-- Keeps app name as Perq and camera CTA as Snap Deal
+Static PWA build with automated extraction tests and improved multi-coupon parsing.
