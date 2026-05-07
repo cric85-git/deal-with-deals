@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="DwD Deals">
 <meta name="mobile-web-app-capable" content="yes">
-<title>Deal with Deals</title>
+<title>Deal with Deals — Smart Savings</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-180.png">
@@ -821,6 +821,233 @@
     border-top: 0.5px solid var(--border-tertiary);
   }
   .install-screen-footer button { width: 100%; padding: 14px; }
+
+
+/* ===== v11 Premium iPhone / Groupon + Uber UI refresh ===== */
+
+.premium-discover-hero {
+  position: relative;
+  overflow: hidden;
+  min-height: 184px;
+  border-radius: 32px;
+  padding: 22px;
+  margin: 0 0 14px;
+  background:
+    radial-gradient(circle at 85% 20%, rgba(184,255,77,0.9), transparent 20%),
+    radial-gradient(circle at 85% 80%, rgba(10,132,255,0.62), transparent 34%),
+    linear-gradient(135deg, #090A0C 0%, #151A23 58%, #202B3D 100%);
+  color: white;
+  box-shadow: 0 28px 72px rgba(10, 22, 42, 0.28);
+}
+.premium-discover-hero::after {
+  content: "%";
+  position: absolute;
+  right: 18px; bottom: -24px;
+  font-size: 128px;
+  line-height: 1;
+  font-weight: 900;
+  color: rgba(255,255,255,0.08);
+  letter-spacing: -8px;
+}
+.premium-discover-hero .hero-copy { position: relative; z-index: 1; max-width: 78%; }
+.premium-discover-hero .eyebrow { margin: 0 0 8px; font-size: 11px; font-weight: 800; letter-spacing: 1.1px; color: rgba(184,255,77,0.9); }
+.premium-discover-hero h2 { margin: 0; font-size: 31px; line-height: 1.02; letter-spacing: -1.15px; }
+.premium-discover-hero p:not(.eyebrow) { margin: 10px 0 0; font-size: 13px; color: rgba(255,255,255,0.70); line-height: 1.45; }
+.hero-cta {
+  position: absolute; left: 22px; bottom: 18px; z-index: 2;
+  background: white !important;
+  color: #111 !important;
+  border: none !important;
+  border-radius: 999px !important;
+  font-weight: 800;
+  padding: 10px 16px !important;
+  box-shadow: 0 12px 28px rgba(0,0,0,0.22);
+}
+@media (max-width: 380px) {
+  .premium-discover-hero h2 { font-size: 27px; }
+  .premium-discover-hero .hero-copy { max-width: 84%; }
+  .deal-actions-grid { width: 112px; }
+}
+
+:root {
+  --premium-black: #090A0C;
+  --premium-ink: #111318;
+  --premium-surface: rgba(255,255,255,0.78);
+  --premium-card: rgba(255,255,255,0.92);
+  --premium-glass: rgba(255,255,255,0.64);
+  --premium-shadow: 0 22px 60px rgba(18, 24, 40, 0.12);
+  --premium-blue: #0A84FF;
+  --premium-green: #30D158;
+  --premium-lime: #B8FF4D;
+  --premium-violet: #6E5BFF;
+  --premium-orange: #FF9F0A;
+}
+html, body {
+  background:
+    radial-gradient(circle at 20% -10%, rgba(10,132,255,0.22), transparent 36%),
+    radial-gradient(circle at 95% 8%, rgba(48,209,88,0.18), transparent 30%),
+    linear-gradient(180deg, #F8FAFF 0%, #F1F4F8 52%, #EEF0F3 100%) !important;
+  color: var(--premium-ink);
+}
+body { padding-bottom: calc(88px + var(--safe-bottom)); }
+.header {
+  position: sticky;
+  top: 0;
+  margin: 0;
+  padding: calc(12px + var(--safe-top)) 18px 14px;
+  background: rgba(248,250,255,0.74) !important;
+  color: var(--premium-ink) !important;
+  border-bottom: 0.5px solid rgba(0,0,0,0.06);
+  backdrop-filter: saturate(180%) blur(26px);
+  -webkit-backdrop-filter: saturate(180%) blur(26px);
+}
+.brand-mark {
+  width: 42px; height: 42px; border-radius: 15px;
+  background: linear-gradient(135deg, #090A0C 0%, #222733 70%, #0A84FF 140%) !important;
+  box-shadow: 0 10px 24px rgba(10,132,255,0.25);
+}
+.brand-mark .pct, .splash-mark .pct, .install-screen-mark .pct { background: var(--premium-lime) !important; color: #111 !important; }
+.header h1 { color: var(--premium-ink) !important; font-size: 18px; letter-spacing: -0.55px; }
+.header p { color: rgba(17,19,24,0.55) !important; font-size: 12px; }
+.settings-btn { background: rgba(255,255,255,0.72) !important; box-shadow: 0 10px 26px rgba(0,0,0,0.10) !important; backdrop-filter: blur(18px); }
+.settings-btn .gear-icon { color: #111 !important; }
+.content { max-width: 760px; padding: 16px 16px 22px; }
+.action-bar {
+  position: relative;
+  grid-template-columns: 1.55fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.action-btn {
+  min-height: 56px;
+  border-radius: 20px !important;
+  box-shadow: 0 18px 44px rgba(10,132,255,0.16);
+  font-size: 15px;
+}
+.action-btn.primary {
+  background: linear-gradient(135deg, #090A0C 0%, #1E2634 50%, #0A84FF 130%) !important;
+  color: #fff !important;
+}
+.action-btn.add-pill {
+  background: rgba(255,255,255,0.76) !important;
+  border-color: rgba(255,255,255,0.75) !important;
+  backdrop-filter: blur(18px);
+  box-shadow: 0 18px 40px rgba(18,24,40,0.08);
+}
+.action-btn.add-pill .plus-circle { background: #111 !important; }
+.card, .stat-card, .rewards-hero, .modal, .claim-screen {
+  background: var(--premium-card) !important;
+  border: 0.5px solid rgba(255,255,255,0.8) !important;
+  border-radius: 24px !important;
+  box-shadow: var(--premium-shadow);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+.stat-grid { gap: 12px; }
+.stat-card { padding: 15px 16px; min-height: 104px; }
+.stat-label { color: rgba(17,19,24,0.52); font-size: 11px; }
+.stat-value { font-size: 32px; letter-spacing: -1.1px; }
+.stat-hint { color: var(--premium-blue) !important; }
+.section-title { margin-top: 22px; color: rgba(17,19,24,0.58); font-size: 11px; letter-spacing: 0.8px; }
+.reminder-banner, .nearby-banner {
+  border: none !important;
+  border-radius: 24px !important;
+  box-shadow: 0 24px 60px rgba(255,159,10,0.16);
+}
+.nearby-banner { background: linear-gradient(135deg, rgba(48,209,88,0.16), rgba(10,132,255,0.12)) !important; color: #0B5C2B !important; }
+.reminder-banner { background: linear-gradient(135deg, rgba(255,159,10,0.18), rgba(255,214,10,0.16)) !important; color: #8A4B00 !important; }
+.flip-card { margin-bottom: 14px; }
+.flip-card-inner { min-height: 148px; }
+.flip-face {
+  border-radius: 28px !important;
+  border: 0.5px solid rgba(255,255,255,0.78) !important;
+  box-shadow: 0 24px 60px rgba(18,24,40,0.13);
+  padding: 18px !important;
+  overflow: hidden;
+}
+.flip-front::before {
+  content: "";
+  position: absolute; inset: 0 0 auto 0; height: 5px;
+  background: linear-gradient(90deg, #0A84FF, #30D158, #B8FF4D);
+}
+.deal-row { align-items: stretch; gap: 14px; }
+.deal-info p:first-child { font-size: 18px !important; letter-spacing: -0.35px; }
+.deal-info p { line-height: 1.35; }
+.pill { border-radius: 999px; padding: 5px 10px; font-weight: 700; }
+.deal-actions-grid { width: 124px; gap: 8px; }
+.action-mini {
+  border-radius: 18px;
+  background: rgba(246,247,251,0.9);
+  min-height: 52px;
+}
+.action-mini.use-btn { background: #111 !important; }
+.filter-chips { gap: 8px; }
+.chip {
+  border: none !important;
+  background: rgba(255,255,255,0.68) !important;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.06);
+  padding: 9px 14px;
+}
+.chip-active { background: #111 !important; color: white !important; }
+.nav-bar {
+  left: 12px; right: 12px; bottom: 10px;
+  border: 0.5px solid rgba(255,255,255,0.68) !important;
+  border-radius: 30px;
+  padding: 8px 8px calc(8px + var(--safe-bottom));
+  background: rgba(255,255,255,0.78) !important;
+  box-shadow: 0 18px 60px rgba(18,24,40,0.18);
+  backdrop-filter: saturate(180%) blur(28px);
+  -webkit-backdrop-filter: saturate(180%) blur(28px);
+}
+.nav-btn { border-radius: 22px; padding: 8px 4px; }
+.nav-btn.active {
+  background: #111;
+  color: #fff !important;
+  box-shadow: 0 12px 24px rgba(0,0,0,0.18);
+}
+.nav-btn span { font-size: 9.5px; }
+.nav-btn i { font-size: 19px; }
+.rewards-hero {
+  background: linear-gradient(145deg, rgba(255,255,255,0.95), rgba(245,248,255,0.9)) !important;
+}
+.wheel-container.compact { filter: drop-shadow(0 18px 28px rgba(10,132,255,0.15)); }
+.spin-cta { background: #111 !important; color: white !important; border: none !important; }
+.spend-pill { border: none; border-radius: 20px; background: rgba(255,255,255,0.75); box-shadow: 0 14px 34px rgba(18,24,40,0.08); }
+.spend-pill.spend-active { background: rgba(10,132,255,0.12) !important; }
+.modal-overlay { backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); background: rgba(0,0,0,0.34); }
+.modal { border-radius: 32px 32px 0 0 !important; }
+input, select, textarea {
+  background: rgba(246,247,251,0.86) !important;
+  border: none !important;
+  border-radius: 18px !important;
+  padding: 14px 14px !important;
+}
+.btn-primary { background: #111 !important; border-color: #111 !important; color: #fff !important; border-radius: 18px !important; }
+.use-btn { background: #111 !important; border-color: #111 !important; color: white !important; border-radius: 16px !important; }
+.ai-managed-card {
+  display: flex; gap: 12px; align-items: center;
+  background: linear-gradient(135deg, rgba(10,132,255,0.10), rgba(48,209,88,0.12));
+  border-radius: 24px; padding: 14px;
+  margin-bottom: 12px;
+}
+.ai-orb {
+  width: 44px; height: 44px; border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  background: #111; color: white; flex-shrink: 0;
+}
+.ai-managed-title { margin: 0; font-weight: 750; font-size: 14px; letter-spacing: -0.2px; }
+.ai-managed-sub { margin: 3px 0 0; color: rgba(17,19,24,0.58); font-size: 12px; line-height: 1.35; }
+.toast { background: rgba(17,19,24,0.92); backdrop-filter: blur(18px); border-radius: 20px; bottom: calc(100px + var(--safe-bottom)); }
+@media (prefers-color-scheme: dark) {
+  html, body { background: radial-gradient(circle at 20% -10%, rgba(10,132,255,0.24), transparent 36%), linear-gradient(180deg, #090A0C 0%, #111318 100%) !important; color: #F5F7FB; }
+  .header { background: rgba(9,10,12,0.72) !important; border-bottom-color: rgba(255,255,255,0.08); }
+  .header h1 { color: #fff !important; } .header p { color: rgba(255,255,255,0.55) !important; }
+  .card, .stat-card, .rewards-hero, .modal, .claim-screen, .flip-face { background: rgba(28,30,36,0.86) !important; border-color: rgba(255,255,255,0.10) !important; }
+  .nav-bar { background: rgba(28,30,36,0.82) !important; border-color: rgba(255,255,255,0.12) !important; }
+  .nav-btn.active, .btn-primary, .use-btn, .action-mini.use-btn, .ai-orb { background: #fff !important; color: #111 !important; }
+  .stat-label, .section-title, .ai-managed-sub { color: rgba(255,255,255,0.58) !important; }
+}
+
 </style>
 </head>
 <body>
@@ -831,8 +1058,8 @@
     <span class="mono">DwD</span>
     <span class="pct">%</span>
   </div>
-  <p class="splash-title">Deal with deals</p>
-  <p class="splash-sub">Snap. Forget. Get reminded.</p>
+  <p class="splash-title">Deal with Deals</p>
+  <p class="splash-sub">Discover. Save. Use nearby.</p>
 </div>
 
 <!-- iOS install instructions screen -->
@@ -879,8 +1106,8 @@
       <span class="pct">%</span>
     </div>
     <div>
-      <h1>Deal with deals</h1>
-      <p>Snap. Forget. Get reminded.</p>
+      <h1>Deal with Deals</h1>
+      <p>Your AI savings wallet</p>
     </div>
   </div>
   <div class="header-actions">
@@ -901,7 +1128,7 @@
   <div class="action-bar" id="action-bar">
     <button class="action-btn primary" id="btn-snap">
       <span class="snap-icon" aria-hidden="true">📷</span>
-      <span>Snap a deal</span>
+      <span>Scan deal</span>
     </button>
     <button class="action-btn add-pill" id="btn-add" aria-label="Add deal manually">
       <span class="plus-circle">+</span>
@@ -919,11 +1146,11 @@
 <input type="file" id="capture-input" accept="image/*" capture="environment" style="display:none;">
 
 <nav class="nav-bar">
-  <button class="nav-btn active" data-tab="dashboard"><i class="ti ti-layout-dashboard"></i><span>Home</span></button>
-  <button class="nav-btn" data-tab="deals"><i class="ti ti-ticket"></i><span>Deals</span></button>
+  <button class="nav-btn active" data-tab="dashboard"><i class="ti ti-compass"></i><span>Discover</span></button>
+  <button class="nav-btn" data-tab="deals"><i class="ti ti-wallet"></i><span>Wallet</span></button>
   <button class="nav-btn" data-tab="rewards"><i class="ti ti-confetti"></i><span>Rewards</span></button>
-  <button class="nav-btn" data-tab="suggest"><i class="ti ti-sparkles"></i><span>For you</span></button>
-  <button class="nav-btn" data-tab="social"><i class="ti ti-users"></i><span>Social</span></button>
+  <button class="nav-btn" data-tab="suggest"><i class="ti ti-sparkles"></i><span>AI Picks</span></button>
+  <button class="nav-btn" data-tab="social"><i class="ti ti-users"></i><span>Local</span></button>
 </nav>
 
 <div class="modal-overlay" id="modal-deal">
@@ -1040,14 +1267,15 @@
       </div>
     </div>
 
-    <p class="section-title"><i class="ti ti-eye-scan"></i>Smart Capture (OCR)</p>
-    <p style="font-size: 13px; color: var(--text-secondary); margin: 0 0 12px; line-height: 1.5;">
-      Snap a coupon and let AI fill in the details. Requires an Anthropic API key.
-    </p>
-    <div class="form-row">
-      <label>Anthropic API key</label>
-      <input id="s-api-key" type="password" placeholder="sk-ant-...">
+    <p class="section-title"><i class="ti ti-eye-scan"></i>Smart Capture</p>
+    <div class="ai-managed-card">
+      <div class="ai-orb"><i class="ti ti-sparkles"></i></div>
+      <div>
+        <p class="ai-managed-title">AI scan is app-managed</p>
+        <p class="ai-managed-sub">No user API key needed. The production OCR endpoint can be connected server-side when you are ready.</p>
+      </div>
     </div>
+    <input id="s-api-key" type="hidden" value="">
 
     <p class="section-title"><i class="ti ti-database"></i>Data</p>
     <div style="display: flex; gap: 8px;">

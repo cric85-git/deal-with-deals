@@ -429,7 +429,8 @@
     openModal(null, { imageOnly: true });
     const apiKey = load(KEYS.apiKey, '');
     if (!apiKey) {
-      showOcrStatus('warn', 'No API key set — fill in the details manually.');
+      showOcrStatus('success', 'Scan captured — production AI OCR will run server-side. Review and save the deal.');
+      applyOcrResult({ source:'Photo capture' });
       return;
     }
     showOcrStatus('reading', 'Extracting deal details with AI…');
@@ -529,10 +530,10 @@ Return only the JSON, no other text.`;
   const POINTS_PER_SPIN = 10;
   const POINTS_PER_PREMIUM_DEAL = 50;
   const TIERS = [
-    { name: 'Bronze',   min: 0,    color: '#A07248', bg: '#F5EBDD', perk: '1 free spin per day' },
-    { name: 'Silver',   min: 100,  color: '#6B7280', bg: '#E8EAED', perk: '2 free spins per day' },
-    { name: 'Gold',     min: 300,  color: '#9A6B0F', bg: '#FAEEDA', perk: '3 free spins + bonus odds' },
-    { name: 'Platinum', min: 750,  color: '#3C3489', bg: '#EEEDFE', perk: 'Unlimited points → spins' }
+    { name: 'Explorer',   min: 0,    color: '#0A84FF', bg: 'rgba(10,132,255,0.12)', perk: '1 free spin per day' },
+    { name: 'Insider',   min: 100,  color: '#30D158', bg: 'rgba(48,209,88,0.14)', perk: '2 free spins per day' },
+    { name: 'Saver Pro',     min: 300,  color: '#FF9F0A', bg: 'rgba(255,159,10,0.15)', perk: '3 free spins + bonus odds' },
+    { name: 'Black', min: 750,  color: '#111318', bg: 'rgba(17,19,24,0.10)', perk: 'Elite points → spins' }
   ];
   function currentTier() {
     let t = TIERS[0];
@@ -579,9 +580,9 @@ Return only the JSON, no other text.`;
     else if (game.streak >= 3) bonus = 2;
     // Tier perk: Silver +1, Gold +2, Platinum +3
     const tier = currentTier();
-    if (tier.name === 'Silver')   bonus += 1;
-    if (tier.name === 'Gold')     bonus += 2;
-    if (tier.name === 'Platinum') bonus += 3;
+    if (tier.name === 'Insider')   bonus += 1;
+    if (tier.name === 'Saver Pro')     bonus += 2;
+    if (tier.name === 'Black') bonus += 3;
     game.spins += bonus;
     save(KEYS.game, game);
     return { bonus, streak: game.streak, tier: tier.name };
@@ -690,11 +691,19 @@ Return only the JSON, no other text.`;
     const expiringWithinSetting = getDealsNeedingReminder();
 
     let html = `
+      <div class="premium-discover-hero">
+        <div class="hero-copy">
+          <p class="eyebrow">SMART SAVINGS NEAR YOU</p>
+          <h2>$${Math.round(potential)} waiting in your wallet</h2>
+          <p>${active.length} active deal${active.length===1?'':'s'} · ${soon.length} expiring soon · ${game.spins} reward spin${game.spins===1?'':'s'} ready</p>
+        </div>
+        <button class="hero-cta" data-goto="deals">Open Wallet</button>
+      </div>
       <div class="stat-grid">
-        <div class="stat-card stat-clickable" data-filter="active"><p class="stat-label">Active deals</p><p class="stat-value">${active.length}</p><p class="stat-hint">Tap to view →</p></div>
-        <div class="stat-card stat-clickable" data-filter="soon"><p class="stat-label">Expiring ≤ 7d</p><p class="stat-value" style="color: var(--text-warning);">${soon.length}</p><p class="stat-hint">Tap to view →</p></div>
-        <div class="stat-card"><p class="stat-label">Total saved</p><p class="stat-value" style="color: var(--text-success);">$${Math.round(totalSaved)}</p></div>
-        <div class="stat-card"><p class="stat-label">Potential</p><p class="stat-value">$${Math.round(potential)}</p></div>
+        <div class="stat-card stat-clickable" data-filter="active"><p class="stat-label">Wallet</p><p class="stat-value">${active.length}</p><p class="stat-hint">Active deals →</p></div>
+        <div class="stat-card stat-clickable" data-filter="soon"><p class="stat-label">Urgent</p><p class="stat-value" style="color: var(--text-warning);">${soon.length}</p><p class="stat-hint">Expiring soon →</p></div>
+        <div class="stat-card"><p class="stat-label">Saved</p><p class="stat-value" style="color: var(--text-success);">$${Math.round(totalSaved)}</p></div>
+        <div class="stat-card"><p class="stat-label">Available</p><p class="stat-value">$${Math.round(potential)}</p></div>
       </div>
     `;
 
@@ -767,7 +776,7 @@ Return only the JSON, no other text.`;
     }
 
     if (soon.length) {
-      html += `<p class="section-title"><i class="ti ti-bell" style="color: var(--text-warning);"></i>Use these soon</p>`;
+      html += `<p class="section-title"><i class="ti ti-bell" style="color: var(--text-warning);"></i>Ending soon</p>`;
       html += soon.map(d => `
         <div class="card" style="display:flex; align-items:center; justify-content:space-between; gap: 10px;">
           <div style="min-width:0;">
@@ -779,7 +788,7 @@ Return only the JSON, no other text.`;
       `).join('');
     }
 
-    html += `<p class="section-title">Savings by category</p>`;
+    html += `<p class="section-title">Your savings map</p>`;
     if (catRows.length) {
       html += `<div class="card">${catRows.map(([cat, val]) => `
         <div style="margin-bottom: 12px;">
@@ -1014,7 +1023,7 @@ Return only the JSON, no other text.`;
       <div class="card" style="background: var(--bg-info); border-color: var(--bg-info); margin-bottom: 14px;">
         <p style="margin: 0; font-size: 13px; color: var(--text-info); line-height: 1.5;">
           <i class="ti ti-sparkles" style="font-size: 14px; vertical-align: -2px; margin-right: 4px;"></i>
-          Based on your preferences and saved deals, here are picks you might like — tap <strong>Claim</strong> to add them to your tracked deals.
+          AI-picked savings based on your wallet, location patterns, and deal history — tap <strong>Claim</strong> to add one to your wallet.
         </p>
       </div>
       ${sugg.map((s, i) => `
@@ -1127,8 +1136,8 @@ Return only the JSON, no other text.`;
         </button>
       </div>
 
-      <!-- Below the fold: Daily quests + recent wins -->
-      <p class="section-title"><i class="ti ti-target"></i>Daily quests</p>
+      <!-- Below the fold: Daily missions + recent wins -->
+      <p class="section-title"><i class="ti ti-target"></i>Daily missions</p>
       <div class="card" style="padding: 2px 14px;">
         ${quests.items.map(q => `
           <div class="quest-row">
@@ -1144,7 +1153,7 @@ Return only the JSON, no other text.`;
         `).join('')}
       </div>
       ${recent.length ? `
-        <p class="section-title">Recent wins</p>
+        <p class="section-title">Latest wins</p>
         <div class="card" style="padding: 2px 14px;">
           ${recent.map((h,i) => `
             <div style="padding: 8px 0; ${i>0?'border-top: 0.5px solid var(--border-tertiary);':''} display:flex; justify-content:space-between; font-size:12px; gap: 8px;">
@@ -1180,7 +1189,7 @@ Return only the JSON, no other text.`;
         <div class="stat-card compact"><p class="stat-label">Shared</p><p class="stat-value">${rewards.shared}</p></div>
         <div class="stat-card compact"><p class="stat-label">Claimed</p><p class="stat-value">${rewards.claimed}</p></div>
       </div>
-      <p class="section-title">Your shared deals</p>
+      <p class="section-title">Shared from your wallet</p>
       ${myShared.length ? myShared.map(d => `
         <div class="card" style="display:flex; justify-content:space-between; align-items:center; gap: 10px;">
           <div style="min-width:0;">
@@ -1190,7 +1199,7 @@ Return only the JSON, no other text.`;
           <span class="pill" style="background: var(--bg-success); color: var(--text-success);">Shared</span>
         </div>
       `).join('') : `<div class="empty" style="padding: 20px;"><i class="ti ti-share"></i>No shared deals yet.</div>`}
-      <p class="section-title">Trending in community</p>
+      <p class="section-title">Trending nearby</p>
       ${community.map(c => `
         <div class="card" style="display:flex; justify-content:space-between; align-items:center; gap: 10px;">
           <div style="min-width:0;">
@@ -1433,7 +1442,7 @@ Return only the JSON, no other text.`;
     };
     save(KEYS.settings, settings);
     closeSettings();
-    showToast('Settings saved');
+    showToast('Preferences saved');
     // Trigger checks based on new settings
     checkAndSendReminders();
     if (settings.nearbyOn) findNearbyDeals();

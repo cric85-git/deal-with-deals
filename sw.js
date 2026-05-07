@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dwd-v10';
+const CACHE_NAME = 'dwd-v11-premium';
 const ASSETS = [
   './', './index.html', './app.js', './manifest.json',
   './icon-180.png', './icon-192.png', './icon-512.png', './icon-maskable-512.png',
