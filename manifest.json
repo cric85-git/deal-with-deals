@@ -1,14 +1,17 @@
 {
   "name": "Deal with Deals",
   "short_name": "DwD Deals",
-  "description": "Snap a coupon. Forget about it. Get reminded when it's time to use it.",
+  "description": "Your AI savings wallet for discovering, saving, and using deals nearby.",
   "start_url": "./index.html?source=pwa",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["standalone", "minimal-ui"],
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
   "orientation": "portrait",
-  "background_color": "#185FA5",
-  "theme_color": "#185FA5",
+  "background_color": "#090A0C",
+  "theme_color": "#090A0C",
   "icons": [
     {
       "src": "icon-192.png",
@@ -29,21 +32,35 @@
       "purpose": "maskable"
     }
   ],
-  "categories": ["finance", "lifestyle", "shopping"],
+  "categories": [
+    "finance",
+    "lifestyle",
+    "shopping"
+  ],
   "shortcuts": [
     {
-      "name": "Snap a deal",
-      "short_name": "Snap",
+      "name": "Scan deal",
+      "short_name": "Scan",
       "description": "Take a photo of a coupon",
       "url": "./index.html?action=snap",
-      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "Add manually",
       "short_name": "Add",
       "description": "Add a deal by typing it in",
       "url": "./index.html?action=add",
-      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }
