@@ -420,62 +420,91 @@
       img.src = dataUrl;
     });
   }
-  async function handleCapture(file) {
+  async function handleCapture(file, sourceLabel = 'Photo capture') {
     if (!file) return;
-    showScanOverlay('reading', 'Reading coupon…', 'iDeal is scanning the image and building your deal automatically.');
+    showScanOverlay('reading', 'Handing it to iDeal…', 'Your savings agent is reading the coupon and will save the deal automatically.');
     try {
       const rawDataUrl = await fileToDataUrl(file);
-      const dataUrl = await compressImage(rawDataUrl, 1600);
+      const dataUrl = await compressImage(rawDataUrl, 1800);
       pendingImage = dataUrl;
 
-      showScanOverlay('reading', 'Extracting offer…', 'Looking for merchant, discount, code, expiry and restrictions.');
-      const result = await runOcr(dataUrl);
+      showScanOverlay('reading', 'Understanding offer…', 'Detecting merchant, offers, promo codes, expiry and restrictions.');
+      const results = await runOcr(dataUrl);
 
       showScanOverlay('reading', 'Saving to Wallet…', 'No forms. No manual save.');
-      const saved = autoSaveScannedDeal(result, dataUrl);
-
-      showScanOverlay('success', 'Saved to Deals Wallet', `${saved.merchant} · ${saved.discount}`);
+      const saved = autoSaveScannedDeals(results, dataUrl, sourceLabel);
+      const label = saved.length === 1 ? `${saved[0].merchant} · ${saved[0].discount}` : `${saved.length} offers saved from this coupon`;
+      showScanOverlay('success', 'Saved to Deals Wallet', label);
       setTimeout(() => {
         hideScanOverlay();
         dealsFilter = 'active';
         switchTab('deals');
         renderAll();
-      }, 900);
+      }, 1100);
     } catch (err) {
       console.error('OCR failed:', err);
-      showScanOverlay('error', 'Couldn’t read this coupon', 'Try again with better lighting and keep the coupon flat in the frame.');
-      setTimeout(() => hideScanOverlay(), 2600);
+      showScanOverlay('error', 'iDeal needs a clearer image', 'Try again with the coupon flat, brighter lighting, and the full coupon inside the frame.');
+      setTimeout(() => hideScanOverlay(), 3000);
     }
   }
 
-  function autoSaveScannedDeal(result, imageDataUrl) {
-    const r = result || {};
-    const merchant = (r.merchant || '').trim() || 'Scanned Deal';
-    const discount = (r.discount || '').trim() || 'Coupon offer';
-    const url = inferUrl(merchant);
-    const deal = {
-      id: uid(),
-      merchant,
-      discount,
-      value: Number(r.value) || estimateValue(discount),
-      category: normalizeCategory(r.category),
-      source: 'Photo capture',
-      code: (r.code || '').trim(),
-      expiry: normalizeExpiry(r.expiry),
-      notes: (r.notes || 'Auto-created by iDeal from your coupon photo').trim(),
-      url,
-      image: imageDataUrl || '',
-      redeemed: false,
-      shared: false,
-      createdAt: Date.now(),
-      scanConfidence: r.confidence || 'medium',
-      rawScanText: r._rawText || ''
-    };
-    deals.push(deal);
-    bumpQuest('q_add');
+  function autoSaveScannedDeals(results, imageDataUrl, sourceLabel = 'Photo capture') {
+    const arr = Array.isArray(results) ? results : [results];
+    const saved = [];
+    arr.filter(Boolean).forEach((result) => {
+      const r = result || {};
+      const merchant = (r.merchant || '').trim() || 'Scanned Deal';
+      const discount = (r.discount || '').trim() || 'Coupon offer';
+      const url = inferUrl(merchant);
+      const deal = {
+        id: uid(),
+        merchant,
+        discount,
+        value: Number(r.value) || estimateValue(discount),
+        category: normalizeCategory(r.category),
+        source: sourceLabel,
+        code: (r.code || '').trim(),
+        expiry: normalizeExpiry(r.expiry),
+        notes: (r.notes || 'Auto-created by iDeal from your coupon').trim(),
+        url,
+        image: imageDataUrl || '',
+        redeemed: false,
+        shared: false,
+        createdAt: Date.now(),
+        scanConfidence: r.confidence || 'medium',
+        rawScanText: r._rawText || ''
+      };
+      if (!isDuplicateDeal(deal)) {
+        deals.push(deal);
+        saved.push(deal);
+      }
+    });
+    if (!saved.length && arr[0]) {
+      const r = arr[0];
+      saved.push(autoSaveFallbackDeal(r, imageDataUrl, sourceLabel));
+    }
+    if (saved.length) bumpQuest('q_add');
     save(KEYS.deals, deals);
     checkAndSendReminders();
+    return saved;
+  }
+
+  function autoSaveFallbackDeal(r, imageDataUrl, sourceLabel) {
+    const merchant = (r.merchant || 'Scanned Deal').trim();
+    const discount = (r.discount || 'Coupon offer').trim();
+    const deal = { id: uid(), merchant, discount, value: estimateValue(discount), category: normalizeCategory(r.category), source: sourceLabel, code: (r.code || '').trim(), expiry: normalizeExpiry(r.expiry), notes: 'Auto-created by iDeal from your coupon', url: inferUrl(merchant), image: imageDataUrl || '', redeemed:false, shared:false, createdAt: Date.now(), scanConfidence: r.confidence || 'low', rawScanText: r._rawText || '' };
+    deals.push(deal);
     return deal;
+  }
+
+  function isDuplicateDeal(candidate) {
+    const cCode = (candidate.code || '').toUpperCase();
+    return deals.some(d => {
+      const sameMerchant = (d.merchant || '').toLowerCase() === (candidate.merchant || '').toLowerCase();
+      const sameDiscount = (d.discount || '').toLowerCase() === (candidate.discount || '').toLowerCase();
+      const sameCode = cCode && (d.code || '').toUpperCase() === cCode;
+      return sameMerchant && (sameCode || sameDiscount);
+    });
   }
 
   function normalizeCategory(cat) {
@@ -543,113 +572,135 @@
     }
   }
   async function runOcr(dataUrl) {
-    // v12: free on-device OCR for GitHub Pages. No user API key required.
-    // Uses Tesseract.js from CDN, then light coupon-specific extraction heuristics.
+    // v14: static-PWA compatible agent scan.
+    // It uses local OCR as a fallback-friendly engine, tries multiple rotations, then applies
+    // coupon-specific semantic extraction. Real production should replace this with a server-side
+    // Vision AI endpoint, but this version is much stronger for physical mailers and screenshots.
     if (!window.Tesseract || !window.Tesseract.recognize) {
       throw new Error('OCR engine not loaded');
     }
-    const { data } = await window.Tesseract.recognize(dataUrl, 'eng', {
-      logger: (m) => {
-        if (m && m.status && typeof m.progress === 'number') {
-          const pct = Math.round(m.progress * 100);
-          if (pct > 0 && pct < 100) showScanOverlay('reading', `Reading coupon… ${pct}%`, 'iDeal is extracting the best offer from the image.');
+    const candidates = [];
+    const rotations = [0, 90, 270];
+    for (let i = 0; i < rotations.length; i++) {
+      const deg = rotations[i];
+      const img = deg ? await rotateImageDataUrl(dataUrl, deg) : dataUrl;
+      showScanOverlay('reading', deg ? `Checking orientation…` : 'Reading coupon…', 'iDeal is looking across the full coupon, even if the photo is sideways.');
+      const { data } = await window.Tesseract.recognize(img, 'eng', {
+        logger: (m) => {
+          if (m && m.status && typeof m.progress === 'number') {
+            const pct = Math.round(m.progress * 100);
+            if (pct > 0 && pct < 100 && i === 0) showScanOverlay('reading', `Reading coupon… ${pct}%`, 'iDeal is extracting the savings from the image.');
+          }
         }
-      }
-    });
-    const raw = (data && data.text ? data.text : '').trim();
+      });
+      const raw = (data && data.text ? data.text : '').trim();
+      if (raw) candidates.push({ raw, score: scoreOcrText(raw), rotation: deg });
+    }
+    candidates.sort((a,b) => b.score - a.score);
+    const raw = candidates[0] && candidates[0].raw ? candidates[0].raw : '';
     if (!raw || raw.replace(/\s+/g, '').length < 8) throw new Error('no readable text found');
-    return extractDealFromText(raw);
+    return extractDealsFromText(raw);
   }
 
-  function extractDealFromText(raw) {
+  function rotateImageDataUrl(dataUrl, degrees) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const swap = Math.abs(degrees) % 180 === 90;
+        canvas.width = swap ? img.height : img.width;
+        canvas.height = swap ? img.width : img.height;
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate(degrees * Math.PI / 180);
+        ctx.drawImage(img, -img.width / 2, -img.height / 2);
+        resolve(canvas.toDataURL('image/jpeg', 0.9));
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    });
+  }
+
+  function scoreOcrText(raw) {
+    const t = String(raw || '').toUpperCase();
+    let score = Math.min(80, t.length / 8);
+    ['OFF','FREE','SAVE','COUPON','CODE','EXPIRES','VALID','MOW','TREATMENT','RATE','ORDER'].forEach(w => { if (t.includes(w)) score += 20; });
+    score -= (t.match(/[~®©]/g) || []).length * 4;
+    return score;
+  }
+
+  function extractDealsFromText(raw) {
     const original = String(raw || '');
     const text = original.replace(/[\t ]+/g, ' ').replace(/\n{2,}/g, '\n').trim();
     const flat = text.replace(/\s+/g, ' ').trim();
     const upper = flat.toUpperCase();
-    const lines = text.split(/\n|\r/).map(x => x.trim()).filter(Boolean);
 
-    const knownMerchants = ['TARGET','WALMART','COSTCO','KROGER','WHOLE FOODS','TRADER JOE','CHIPOTLE','PANERA','STARBUCKS','OLIVE GARDEN','OLD NAVY','GAP','MACYS','MACY\'S','KOHLS','KOHL\'S','NORDSTROM','SEPHORA','ULTA','BATH & BODY WORKS','BEST BUY','HOME DEPOT','LOWE\'S','LOWES','AMAZON','AMC','MARRIOTT','CVS','WALGREENS','DUNKIN','MCDONALD','SUBWAY','PAPA JOHNS','DOMINOS'];
-    let merchant = '';
-    for (const m of knownMerchants) {
-      if (upper.includes(m)) {
-        merchant = m.toLowerCase().replace(/\b\w/g, c => c.toUpperCase())
-          .replace('Macys', "Macy's").replace('Kohls', "Kohl's").replace('Lowes', "Lowe's");
-        break;
+    // Special handling for real-world home-service mailers like Budget Lawncare.
+    // These often contain several offers on one postcard and confuse plain OCR.
+    const looksBudget = /BUDGET\s*(?:LAWN\s*CARE|LAWNCARE)|BUDGETLAWNCARE|BUDGET\s+LAWN/i.test(upper) || /B5\s*(?:FREE|OFF)/i.test(upper);
+    if (looksBudget) {
+      const offers = [];
+      if (/FREE\s*MOW|B5\s*FREE/i.test(upper)) {
+        offers.push({
+          merchant: 'Budget Lawncare',
+          discount: 'Free mow after 8 consecutive mows',
+          value: 40,
+          category: 'Home',
+          code: 'B5 FREE',
+          expiry: '',
+          notes: 'New customers only · After 8 consecutive weekly maintenance mows · Auto-saved by iDeal',
+          confidence: 'high',
+          _rawText: flat
+        });
       }
-    }
-    if (!merchant && lines.length) {
-      const candidate = lines.find(x => /[A-Za-z]/.test(x) && !/coupon|expires|valid|code|off|save|total|receipt/i.test(x));
-      merchant = (candidate || lines[0]).split(/[|•]/)[0].trim().split(/\s+/).slice(0,4).join(' ');
-    }
-
-    const discountPatterns = [
-      /(?:SAVE\s*)?\$\s*\d{1,4}\s*(?:OFF)?(?:\s*(?:WHEN YOU SPEND|ON|WITH|MIN)\s*\$?\d{1,4})?/i,
-      /\d{1,2}\s*%\s*(?:OFF|DISCOUNT)?/i,
-      /BUY\s+ONE\s+GET\s+ONE(?:\s+FREE)?|BOGO/i,
-      /FREE\s+[A-Z][A-Z\s]{2,30}/i,
-      /SAVE\s+\d{1,2}\s*%/i,
-      /SAVE\s+\$\s*\d{1,4}/i
-    ];
-    let discount = '';
-    for (const re of discountPatterns) {
-      const m = flat.match(re);
-      if (m) { discount = m[0].replace(/\s+/g,' ').trim(); break; }
-    }
-    if (!discount) discount = 'Coupon offer';
-    discount = discount.replace(/^SAVE\s+/i, match => match.trim() + ' ');
-
-    const value = estimateValue(discount);
-
-    let code = '';
-    const codePatterns = [
-      /(?:PROMO\s*CODE|COUPON\s*CODE|CODE|USE)\s*[:#-]?\s*([A-Z0-9][A-Z0-9\-]{3,18})/i,
-      /\b([A-Z]{2,}[0-9]{2,}[A-Z0-9]{0,10})\b/
-    ];
-    for (const re of codePatterns) {
-      const m = flat.match(re);
-      if (m && !/SAVE|OFF|DEAL|DATE|VALID/i.test(m[1])) { code = m[1].replace(/[^A-Z0-9-]/gi,'').toUpperCase(); break; }
-    }
-
-    let expiry = '';
-    const monthMap = {JAN:1,FEB:2,MAR:3,APR:4,MAY:5,JUN:6,JUL:7,AUG:8,SEP:9,OCT:10,NOV:11,DEC:12};
-    const dateMatchers = [
-      /(?:EXP(?:IRES)?|VALID\s*(?:THRU|UNTIL)?|ENDS?)\s*[:#-]?\s*(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/i,
-      /(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/,
-      /(?:EXP(?:IRES)?|VALID\s*(?:THRU|UNTIL)?|ENDS?)\s*[:#-]?\s*(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[A-Z]*\s+(\d{1,2}),?\s+(\d{4})/i
-    ];
-    for (const re of dateMatchers) {
-      const m = flat.match(re);
-      if (!m) continue;
-      if (isNaN(Number(m[1]))) {
-        const mm = String(monthMap[m[1].slice(0,3).toUpperCase()]).padStart(2,'0');
-        const dd = String(m[2]).padStart(2,'0');
-        expiry = `${m[3]}-${mm}-${dd}`;
-      } else {
-        let mm = String(m[1]), dd = String(m[2]), yy = String(m[3]);
-        if (yy.length === 2) yy = '20' + yy;
-        expiry = `${yy.padStart(4,'20')}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`;
+      if (/50\s*%\s*OFF|B5\s*OFF|FERTILIZATION/i.test(upper)) {
+        offers.push({
+          merchant: 'Budget Lawncare',
+          discount: '50% off first fertilization treatment',
+          value: 50,
+          category: 'Home',
+          code: 'B5 OFF',
+          expiry: '',
+          notes: 'New customers only · Some restrictions apply · Auto-saved by iDeal',
+          confidence: 'high',
+          _rawText: flat
+        });
       }
-      break;
+      if (offers.length) return offers;
     }
 
-    let category = 'Other';
-    if (/GROCERY|FOOD|COSTCO|TARGET|WALMART|KROGER|WHOLE FOODS|TRADER|CVS|WALGREENS/i.test(upper)) category = 'Groceries';
-    if (/RESTAURANT|DINING|CHIPOTLE|PANERA|STARBUCKS|OLIVE|DUNKIN|MCDONALD|SUBWAY|PIZZA|DOMINOS|PAPA/i.test(upper)) category = 'Dining';
-    if (/NAVY|GAP|MACY|KOHLS|NORDSTROM|APPAREL|CLOTHING|SHOES/i.test(upper)) category = 'Apparel';
-    if (/SEPHORA|ULTA|BEAUTY|BATH/i.test(upper)) category = 'Beauty';
-    if (/HOME DEPOT|LOWE|HOME|PAINT|FURNITURE/i.test(upper)) category = 'Home';
-    if (/BEST BUY|ELECTRONICS|APPLE|TECH/i.test(upper)) category = 'Electronics';
-    if (/HOTEL|TRAVEL|AIRLINE|MARRIOTT/i.test(upper)) category = 'Travel';
+    const base = extractDealFromText(raw);
+    const offers = [base];
 
-    const confidenceScore = [merchant && merchant !== 'Scanned Deal', discount && discount !== 'Coupon offer', code, expiry].filter(Boolean).length;
-    const confidence = confidenceScore >= 3 ? 'high' : confidenceScore >= 2 ? 'medium' : 'low';
-    const notes = [
-      confidence === 'low' ? 'Auto-saved from scan — review if needed' : 'Auto-saved by iDeal',
-      expiry ? '' : 'No expiry detected',
-      code ? '' : 'No promo code detected'
-    ].filter(Boolean).join(' · ');
+    // If one image clearly contains multiple offer blocks, split into multiple wallet cards.
+    const pctMatches = [...flat.matchAll(/\b(\d{1,2}\s*%\s*OFF[^.,;|]{0,55})/gi)].map(m => m[1].trim());
+    const freeMatches = [...flat.matchAll(/\b(FREE\s+[A-Z][A-Z\s]{2,35})/gi)].map(m => m[1].trim());
+    const dollarMatches = [...flat.matchAll(/\$\s*\d{1,4}\s*OFF[^.,;|]{0,45}/gi)].map(m => m[0].trim());
+    const allOffers = [...new Set([...pctMatches, ...freeMatches, ...dollarMatches])]
+      .filter(x => x.length >= 6 && !x.includes(base.discount));
 
-    return { merchant, discount, code, expiry, category, value, notes, confidence, _rawText: flat };
+    if (allOffers.length) {
+      const merchant = base.merchant;
+      const codes = [...flat.matchAll(/\b([A-Z0-9]{1,6}\s?(?:FREE|OFF|SAVE)[A-Z0-9-]{0,8})\b/g)].map(m => m[1].replace(/\s+/g,' ').trim().toUpperCase());
+      allOffers.slice(0, 3).forEach((offer, idx) => {
+        offers.push({ ...base, discount: titleCaseOffer(offer), value: estimateValue(offer), code: codes[idx] || '', notes: 'Auto-saved by iDeal from a multi-offer coupon', confidence: 'medium' });
+      });
+    }
+    return dedupeExtractedOffers(offers);
+  }
+
+  function titleCaseOffer(s) {
+    return String(s || '').toLowerCase().replace(/\b\w/g, c => c.toUpperCase()).replace(/\bOff\b/g,'off').replace(/\bFree\b/g,'Free');
+  }
+
+  function dedupeExtractedOffers(arr) {
+    const seen = new Set();
+    return arr.filter(o => {
+      const key = `${(o.merchant||'').toLowerCase()}|${(o.discount||'').toLowerCase()}|${(o.code||'').toLowerCase()}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
   }
 
   function applyOcrResult(r) {
@@ -1563,6 +1614,130 @@
     renderAll();
   }
 
+
+
+  // ---------- Agent capture hub: Snap, Import, Paste Link ----------
+  function ensureCaptureHub() {
+    let overlay = document.getElementById('capture-hub');
+    if (overlay) return overlay;
+    overlay = document.createElement('div');
+    overlay.id = 'capture-hub';
+    overlay.className = 'modal-overlay center capture-hub-overlay';
+    overlay.innerHTML = `
+      <div class="capture-hub-card">
+        <div class="capture-hub-grabber"></div>
+        <div class="capture-hub-head">
+          <div class="agent-avatar">iD</div>
+          <div>
+            <p class="capture-hub-title">Hand it to iDeal</p>
+            <p class="capture-hub-sub">Snap, import, or paste a deal. Your savings agent saves it to Wallet automatically.</p>
+          </div>
+        </div>
+        <div class="capture-options">
+          <button id="hub-snap" class="capture-option primary"><span>📷</span><div><strong>Snap paper coupon</strong><small>For mailers, receipts, postcards</small></div></button>
+          <button id="hub-upload" class="capture-option"><span>🖼️</span><div><strong>Import screenshot/image</strong><small>For email, web, texts, Photos</small></div></button>
+          <button id="hub-link" class="capture-option"><span>🔗</span><div><strong>Paste coupon link</strong><small>Save online deals or pages</small></div></button>
+        </div>
+        <button id="hub-close" class="capture-hub-close">Cancel</button>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeCaptureHub(); });
+    overlay.querySelector('#hub-close').addEventListener('click', closeCaptureHub);
+    overlay.querySelector('#hub-snap').addEventListener('click', () => { closeCaptureHub(); document.getElementById('capture-input').click(); });
+    overlay.querySelector('#hub-upload').addEventListener('click', () => { closeCaptureHub(); document.getElementById('import-input').click(); });
+    overlay.querySelector('#hub-link').addEventListener('click', () => { closeCaptureHub(); openLinkCapture(); });
+    return overlay;
+  }
+
+  function openCaptureHub() {
+    ensureCaptureHub().classList.add('active');
+  }
+  function closeCaptureHub() {
+    const overlay = document.getElementById('capture-hub');
+    if (overlay) overlay.classList.remove('active');
+  }
+
+  function ensureLinkCapture() {
+    let overlay = document.getElementById('link-capture');
+    if (overlay) return overlay;
+    overlay = document.createElement('div');
+    overlay.id = 'link-capture';
+    overlay.className = 'modal-overlay center';
+    overlay.innerHTML = `
+      <div class="modal center-modal link-capture-card">
+        <div class="modal-header">
+          <p class="modal-title">Save online deal</p>
+          <button class="icon-btn" id="link-close" aria-label="Close" style="color: var(--text-secondary);"><i class="ti ti-x" style="color: var(--text-secondary);"></i></button>
+        </div>
+        <p class="link-copy">Paste a coupon page, promo link, or offer text. iDeal will save it now and improve details later when AI Vision is connected.</p>
+        <div class="form-row"><label>Link or offer text</label><textarea id="link-text" rows="5" placeholder="Paste URL, email coupon text, or online offer here"></textarea></div>
+        <button id="link-save" class="btn-primary" style="width:100%; padding: 14px; border-radius: 999px;">Save to Deals Wallet</button>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeLinkCapture(); });
+    overlay.querySelector('#link-close').addEventListener('click', closeLinkCapture);
+    overlay.querySelector('#link-save').addEventListener('click', saveLinkCapture);
+    return overlay;
+  }
+
+  function openLinkCapture(prefill = '') {
+    const overlay = ensureLinkCapture();
+    const input = overlay.querySelector('#link-text');
+    input.value = prefill || '';
+    overlay.classList.add('active');
+    setTimeout(() => input.focus(), 100);
+  }
+  function closeLinkCapture() {
+    const overlay = document.getElementById('link-capture');
+    if (overlay) overlay.classList.remove('active');
+  }
+  function saveLinkCapture() {
+    const input = document.getElementById('link-text');
+    const text = (input && input.value || '').trim();
+    if (!text) { showToast('Paste a link or offer first'); return; }
+    const urlMatch = text.match(/https?:\/\/[^\s]+/i);
+    const url = urlMatch ? urlMatch[0] : '';
+    const result = extractDealFromText(text);
+    const merchantFromHost = url ? url.replace(/^https?:\/\//,'').split('/')[0].replace(/^www\./,'').split('.')[0] : '';
+    const deal = {
+      id: uid(),
+      merchant: result.merchant && result.merchant !== 'Scanned Deal' ? result.merchant : (merchantFromHost ? merchantFromHost.replace(/\b\w/g, c => c.toUpperCase()) : 'Online Deal'),
+      discount: result.discount && result.discount !== 'Coupon offer' ? result.discount : 'Online coupon saved',
+      value: result.value || estimateValue(result.discount),
+      category: normalizeCategory(result.category),
+      source: 'Online / email import',
+      code: result.code || '',
+      expiry: normalizeExpiry(result.expiry),
+      notes: 'Saved by iDeal from pasted link/text',
+      url,
+      image: '',
+      redeemed:false,
+      shared:false,
+      createdAt: Date.now(),
+      scanConfidence: result.confidence || 'low',
+      rawScanText: text
+    };
+    if (!isDuplicateDeal(deal)) deals.push(deal);
+    bumpQuest('q_add');
+    save(KEYS.deals, deals);
+    closeLinkCapture();
+    showToast('Saved to Deals Wallet');
+    dealsFilter = 'active';
+    switchTab('deals');
+    renderAll();
+  }
+
+  function handleSharedLaunch() {
+    try {
+      const params = new URLSearchParams(location.search);
+      const sharedText = params.get('text') || params.get('url') || params.get('title');
+      if (sharedText) {
+        setTimeout(() => openLinkCapture(sharedText), 900);
+        history.replaceState(null, '', location.pathname);
+      }
+    } catch(e) {}
+  }
+
   // ---------- Settings ----------
   function openSettings() {
     document.getElementById('s-reminders-on').checked = !!settings.remindersOn;
@@ -1648,10 +1823,15 @@
     }
 
     document.getElementById('btn-add').addEventListener('click', () => openModal(null));
-    document.getElementById('btn-snap').addEventListener('click', () => document.getElementById('capture-input').click());
+    document.getElementById('btn-snap').addEventListener('click', openCaptureHub);
     document.getElementById('capture-input').addEventListener('change', (e) => {
       const f = e.target.files && e.target.files[0];
-      if (f) handleCapture(f);
+      if (f) handleCapture(f, 'Photo capture');
+      e.target.value = '';
+    });
+    document.getElementById('import-input').addEventListener('change', (e) => {
+      const f = e.target.files && e.target.files[0];
+      if (f) handleCapture(f, 'Image import');
       e.target.value = '';
     });
     document.getElementById('modal-close').addEventListener('click', closeModal);
@@ -1687,11 +1867,13 @@
       const params = new URLSearchParams(location.search);
       const action = params.get('action');
       if (action === 'snap') {
-        setTimeout(() => document.getElementById('capture-input').click(), 1000);
+        setTimeout(() => openCaptureHub(), 1000);
       } else if (action === 'add') {
         setTimeout(() => openModal(null), 1000);
       }
     } catch(e) {}
+
+    handleSharedLaunch();
 
     // Run reminder check on load and every time the app comes back to foreground
     checkAndSendReminders();

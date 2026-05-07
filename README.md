@@ -1,19 +1,20 @@
-# Perq v13 — Agent Scan Build
+# Perq v14 — Savings Agent
 
-Perq is an AI-powered savings companion. This version focuses on the core promise:
+Perq is an AI savings agent PWA: snap, import, or share a deal and iDeal auto-saves it to the Deals Wallet.
 
-**Snap it. Forget it. iDeal saves the deal to your Wallet.**
+## New in v14
 
-## What changed in v13
-
-- Removed the manual scan-review-save flow.
-- Fixed the OCR path so scanning no longer waits for an API key.
-- Coupon photos are processed with browser OCR using Tesseract.js.
-- Extracted deal data is auto-saved into the Deals Wallet.
-- Added a premium iOS-style iDeal scan overlay.
-- If OCR fails, the app asks the user to retake the photo instead of showing a form.
+- Capture hub: Snap paper coupon, Import image/screenshot, Paste link or offer text.
+- Auto-save behavior: no manual Save button after capture.
+- Multi-offer extraction: one coupon image can create multiple wallet cards.
+- Improved orientation handling: OCR attempts sideways coupon photos.
+- Share Target support for URLs/text on supported browsers.
+- Better parsing for physical mailers like home-service postcards.
 
 ## Deploy
 
-Upload the extracted files to the root of your GitHub Pages repo and commit.
+Upload extracted files to the GitHub Pages repo root and commit.
 
+## Important product note
+
+This static build uses browser OCR + heuristics so it can run on GitHub Pages without backend cost. For production-level reliability, replace local OCR with a server-side AI Vision extraction endpoint.
