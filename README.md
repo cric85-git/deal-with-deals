@@ -1,14 +1,10 @@
-# Perq v15 — Capture Fixes
+# Perq v17 — Link Save Only Fix
 
-Static PWA build for GitHub Pages.
+This build removes all paste-triggered auto-save behavior. Pasted links/text stay idle until the user explicitly taps **Save to Deals Wallet**.
 
-## Fixes in v15
-- Keeps product name as **Perq**.
-- Renames the primary camera action to **Snap Deal**.
-- Fixes the online deal paste flow so the save action works on mobile Safari/PWA.
-- Auto-saves pasted links after paste when possible.
-- Improves merchant extraction from URLs, including The Car Wash Express.
-- Keeps online imports saved into Deals Wallet without requiring AI Vision yet.
-
-## Deploy
-Upload all extracted files to the GitHub repository root and commit.
+## Fixes
+- Click-only save handler for online deal modal
+- No autofocus on mobile to avoid accidental submit/touch events
+- Reset button state when modal opens/closes
+- 5-second safety reset if save ever gets stuck
+- Keeps app name as Perq and camera CTA as Snap Deal

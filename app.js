@@ -629,6 +629,87 @@
     return score;
   }
 
+
+  function extractDealFromText(raw) {
+    const original = String(raw || '');
+    const flat = original.replace(/[\t\n\r]+/g, ' ').replace(/\s+/g, ' ').trim();
+    const upper = flat.toUpperCase();
+
+    const urlMatch = flat.match(/https?:\/\/[^\s)>,]+/i);
+    const url = urlMatch ? urlMatch[0].replace(/[),.;]+$/,'') : '';
+
+    let merchant = '';
+    if (url) merchant = merchantFromUrl(url);
+
+    // Common merchant/logo clues from OCR or pasted copy.
+    if (!merchant) {
+      const known = [
+        ['BUDGET LAWNCARE', 'Budget Lawncare'], ['BUDGETLAWNCARE', 'Budget Lawncare'],
+        ['THE CAR WASH EXPRESS', 'The Car Wash Express'], ['CAR WASH EXPRESS', 'The Car Wash Express'],
+        ['TARGET', 'Target'], ['WALMART', 'Walmart'], ['COSTCO', 'Costco'], ['KOHLS', "Kohl's"],
+        ['MACY', "Macy's"], ['CHIPOTLE', 'Chipotle'], ['STARBUCKS', 'Starbucks'], ['BEST BUY', 'Best Buy']
+      ];
+      const hit = known.find(([needle]) => upper.includes(needle));
+      if (hit) merchant = hit[1];
+    }
+
+    if (!merchant) {
+      const firstUseful = flat.split(/[|•.;]/).map(x => x.trim()).find(x => x.length >= 3 && x.length <= 40 && !/coupon|discount|offer|promo|https?:/i.test(x));
+      merchant = titleCaseWords(firstUseful || 'Online Deal');
+    }
+
+    let discount = '';
+    const patterns = [
+      /FREE\s+[A-Z][A-Z\s]{1,40}/i,
+      /\d{1,2}\s*%\s*OFF[^.,;|]{0,55}/i,
+      /\$\s*\d{1,4}\s*OFF[^.,;|]{0,55}/i,
+      /BUY\s+ONE\s+GET\s+ONE[^.,;|]{0,45}/i,
+      /BOGO[^.,;|]{0,45}/i,
+      /DISCOUNT\s+COUPON/i,
+      /PROMO\s+OFFER/i
+    ];
+    for (const re of patterns) {
+      const m = flat.match(re);
+      if (m) { discount = titleCaseOffer(m[0]); break; }
+    }
+    if (!discount && url) discount = discountFromUrlOrText(url, flat, {});
+    if (!discount) discount = 'Online deal saved';
+
+    let code = '';
+    const codePatterns = [
+      /(?:CODE|PROMO\s*CODE|COUPON\s*CODE)\s*[:#-]?\s*([A-Z0-9][A-Z0-9\s-]{2,18})/i,
+      /\b(B5\s*(?:FREE|OFF))\b/i,
+      /\b([A-Z0-9]{3,10}(?:FREE|OFF|SAVE)[A-Z0-9-]{0,8})\b/i
+    ];
+    for (const re of codePatterns) {
+      const m = flat.match(re);
+      if (m && m[1]) { code = m[1].replace(/\s+/g, ' ').trim().toUpperCase(); break; }
+    }
+
+    let expiry = '';
+    const expiryMatch = flat.match(/(?:EXPIRES?|VALID\s+UNTIL|EXP)\s*[:#-]?\s*(\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4}|[A-Z][a-z]{2,8}\s+\d{1,2},?\s+\d{4})/i);
+    if (expiryMatch) expiry = expiryMatch[1];
+
+    let category = 'Other';
+    if (/lawn|mow|fertiliz|home|paint|repair|wash/i.test(flat)) category = 'Home';
+    if (/restaurant|pizza|coffee|burger|food|dining|chipotle|starbucks/i.test(flat)) category = 'Dining';
+    if (/grocery|costco|target|walmart|produce/i.test(flat)) category = 'Groceries';
+    if (/beauty|salon|sephora|ulta/i.test(flat)) category = 'Beauty';
+    if (/electronics|best buy|phone|computer/i.test(flat)) category = 'Electronics';
+
+    return {
+      merchant,
+      discount,
+      value: estimateValue(discount),
+      category,
+      code,
+      expiry,
+      notes: url ? `Saved from ${url}` : 'Saved from pasted offer text',
+      confidence: url || code || /%|\$|FREE|BOGO|COUPON/i.test(discount) ? 'medium' : 'low',
+      _rawText: flat
+    };
+  }
+
   function extractDealsFromText(raw) {
     const original = String(raw || '');
     const text = original.replace(/[\t ]+/g, ' ').replace(/\n{2,}/g, '\n').trim();
@@ -1630,7 +1711,7 @@
           <div class="agent-avatar">iD</div>
           <div>
             <p class="capture-hub-title">Hand it to iDeal</p>
-            <p class="capture-hub-sub">Snap, import, or paste a deal. Your savings agent saves it to Wallet automatically.</p>
+            <p class="capture-hub-sub">Snap, import, or paste a deal. Tap Save and Perq will add it to Wallet.</p>
           </div>
         </div>
         <div class="capture-options">
@@ -1658,7 +1739,6 @@
   }
 
   let linkSaveInProgress = false;
-  let linkAutoSaveTimer = null;
 
   function ensureLinkCapture() {
     let overlay = document.getElementById('link-capture');
@@ -1672,7 +1752,7 @@
           <p class="modal-title">Save online deal</p>
           <button type="button" class="icon-btn" id="link-close" aria-label="Close" style="color: var(--text-secondary);"><i class="ti ti-x" style="color: var(--text-secondary);"></i></button>
         </div>
-        <p class="link-copy">Paste a coupon page, promo link, or offer text. Perq will save it to your Deals Wallet automatically.</p>
+        <p class="link-copy">Paste a coupon page, promo link, or offer text. Nothing is saved until you tap the button below.</p>
         <div class="form-row"><label>Link or offer text</label><textarea id="link-text" rows="5" placeholder="Paste URL, email coupon text, or online offer here"></textarea></div>
         <button type="button" id="link-save" class="btn-primary" style="width:100%; padding: 14px; border-radius: 999px; pointer-events:auto; touch-action:manipulation;">Save to Deals Wallet</button>
       </div>`;
@@ -1681,15 +1761,20 @@
     overlay.querySelector('#link-close').addEventListener('click', closeLinkCapture);
     const btn = overlay.querySelector('#link-save');
     const txt = overlay.querySelector('#link-text');
-    ['click','pointerup','touchend'].forEach(evt => {
-      btn.addEventListener(evt, (e) => { e.preventDefault(); e.stopPropagation(); saveLinkCapture(); }, { passive: false });
+
+    // Save must be explicitly user-triggered. Do not attach paste/input/touchend handlers.
+    // iOS can fire touchend during text editing, so click-only avoids accidental auto-save.
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      saveLinkCapture();
     });
-    txt.addEventListener('paste', () => {
-      clearTimeout(linkAutoSaveTimer);
-      linkAutoSaveTimer = setTimeout(() => {
-        const val = (txt.value || '').trim();
-        if (/https?:\/\//i.test(val) || val.length > 20) saveLinkCapture();
-      }, 650);
+    txt.addEventListener('paste', (e) => e.stopPropagation());
+    txt.addEventListener('input', () => {
+      if (btn && !linkSaveInProgress) {
+        btn.disabled = false;
+        btn.textContent = 'Save to Deals Wallet';
+      }
     });
     return overlay;
   }
@@ -1697,19 +1782,18 @@
   function openLinkCapture(prefill = '') {
     const overlay = ensureLinkCapture();
     const input = overlay.querySelector('#link-text');
+    const btn = overlay.querySelector('#link-save');
     input.value = prefill || '';
     linkSaveInProgress = false;
+    if (btn) { btn.disabled = false; btn.textContent = 'Save to Deals Wallet'; }
     overlay.classList.add('active');
-    setTimeout(() => input.focus(), 100);
-    if (prefill && String(prefill).trim().length > 10) {
-      clearTimeout(linkAutoSaveTimer);
-      linkAutoSaveTimer = setTimeout(saveLinkCapture, 700);
-    }
+    // Do not autofocus on mobile; it can cause accidental keyboard/touch interactions.
   }
   function closeLinkCapture() {
     const overlay = document.getElementById('link-capture');
+    const btn = document.getElementById('link-save');
     if (overlay) overlay.classList.remove('active');
-    clearTimeout(linkAutoSaveTimer);
+    if (btn) { btn.disabled = false; btn.textContent = 'Save to Deals Wallet'; }
     linkSaveInProgress = false;
   }
   function titleCaseWords(str) {
@@ -1746,40 +1830,75 @@
     const btn = document.getElementById('link-save');
     const text = (input && input.value || '').trim();
     if (!text) { showToast('Paste a link or offer first'); return; }
+
     linkSaveInProgress = true;
-    if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
-    const urlMatch = text.match(/https?:\/\/[^\s]+/i);
-    const url = urlMatch ? urlMatch[0].replace(/[),.;]+$/,'') : '';
-    const result = extractDealFromText(text);
-    const merchant = result.merchant && result.merchant !== 'Scanned Deal' ? result.merchant : (url ? merchantFromUrl(url) : 'Online Deal');
-    const discount = discountFromUrlOrText(url, text, result);
-    const deal = {
-      id: uid(),
-      merchant: merchant || 'Online Deal',
-      discount,
-      value: result.value || estimateValue(discount),
-      category: normalizeCategory(result.category || 'Other'),
-      source: 'Online / email import',
-      code: result.code || '',
-      expiry: normalizeExpiry(result.expiry),
-      notes: 'Auto-saved by Perq from pasted link/text',
-      url,
-      image: '',
-      redeemed:false,
-      shared:false,
-      createdAt: Date.now(),
-      scanConfidence: url ? 'medium' : (result.confidence || 'low'),
-      rawScanText: text
-    };
-    if (!isDuplicateDeal(deal)) deals.push(deal);
-    bumpQuest('q_add');
-    save(KEYS.deals, deals);
-    closeLinkCapture();
-    showToast(`${deal.merchant} saved to Deals Wallet`);
-    dealsFilter = 'active';
-    switchTab('deals');
-    renderAll();
-    setTimeout(() => { const b = document.getElementById('link-save'); if (b) { b.disabled = false; b.textContent = 'Save to Deals Wallet'; } }, 100);
+    if (btn) { btn.disabled = true; btn.textContent = 'Scanning deal…'; }
+    showScanOverlay('reading', 'Scanning online deal…', 'Perq is extracting the merchant, offer, promo code and reminder details.');
+
+    const resetLinkSaveIfStuck = setTimeout(() => {
+      if (linkSaveInProgress) {
+        linkSaveInProgress = false;
+        if (btn) { btn.disabled = false; btn.textContent = 'Save to Deals Wallet'; }
+        hideScanOverlay();
+        showToast('Save took too long — tap Save again');
+      }
+    }, 5000);
+
+    // Keep the flow deterministic and static-hosting friendly. A real backend can later fetch the
+    // page and run Vision/LLM extraction; this local path never hangs if the page blocks scraping.
+    setTimeout(() => {
+      try {
+        const urlMatch = text.match(/https?:\/\/[^\s]+/i);
+        const url = urlMatch ? urlMatch[0].replace(/[),.;]+$/,'') : '';
+        const result = extractDealFromText(text);
+        const merchant = result.merchant && result.merchant !== 'Scanned Deal' ? result.merchant : (url ? merchantFromUrl(url) : 'Online Deal');
+        const discount = discountFromUrlOrText(url, text, result);
+        const deal = {
+          id: uid(),
+          merchant: merchant || 'Online Deal',
+          discount,
+          value: result.value || estimateValue(discount),
+          category: normalizeCategory(result.category || 'Other'),
+          source: 'Online / email import',
+          code: result.code || '',
+          expiry: normalizeExpiry(result.expiry),
+          notes: result.notes || 'Saved by Perq from pasted link/text',
+          url,
+          image: '',
+          redeemed:false,
+          shared:false,
+          createdAt: Date.now(),
+          scanConfidence: url ? 'medium' : (result.confidence || 'low'),
+          rawScanText: text
+        };
+        if (!isDuplicateDeal(deal)) {
+          deals.push(deal);
+          bumpQuest('q_add');
+          save(KEYS.deals, deals);
+          showScanOverlay('success', 'Saved to Deals Wallet', `${deal.merchant} · ${deal.discount}`);
+          showToast(`${deal.merchant} saved to Deals Wallet`);
+        } else {
+          showScanOverlay('success', 'Already in Wallet', `${deal.merchant} · ${deal.discount}`);
+          showToast('That deal is already in your Wallet');
+        }
+        clearTimeout(resetLinkSaveIfStuck);
+        setTimeout(() => {
+          hideScanOverlay();
+          closeLinkCapture();
+          dealsFilter = 'active';
+          switchTab('deals');
+          renderAll();
+        }, 850);
+      } catch (err) {
+        clearTimeout(resetLinkSaveIfStuck);
+        console.error('Link save failed:', err);
+        showScanOverlay('error', 'Could not save this deal', 'Try pasting the offer text or a clearer coupon link.');
+        showToast('Could not save this deal');
+        setTimeout(() => hideScanOverlay(), 1600);
+        if (btn) { btn.disabled = false; btn.textContent = 'Save to Deals Wallet'; }
+        linkSaveInProgress = false;
+      }
+    }, 120);
   }
 
   function handleSharedLaunch() {
