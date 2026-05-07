@@ -176,7 +176,7 @@
     q.claimed = true;
     game.spins += q.reward;
     save(KEYS.quests, quests); save(KEYS.game, game);
-    showToast(`Quest complete — +${q.reward} spin`);
+    showToast(`Mission complete — +${q.reward} reveal`);
     renderAll();
   }
 
@@ -454,50 +454,95 @@
       el.innerHTML = `<i class="ti ${icon}" style="font-size:16px;"></i><span>${escapeHtml(msg)}</span>`;
     }
   }
-  async function runOcr(dataUrl, apiKey) {
-    const match = dataUrl.match(/^data:(image\/[a-z]+);base64,(.+)$/);
-    if (!match) throw new Error('Invalid image format');
-    const mediaType = match[1];
-    const b64 = match[2];
-    const prompt = `Extract coupon/deal details from this image. Return ONLY a JSON object:
-{
-  "merchant": "store/brand name",
-  "discount": "discount amount like '20% off' or '$10 off $50'",
-  "code": "promo code if visible, else null",
-  "expiry": "YYYY-MM-DD format if a date is visible, else null",
-  "category": "one of: Groceries, Dining, Apparel, Travel, Beauty, Home, Electronics, Other",
-  "value": estimated dollar value as a number,
-  "notes": "any restrictions like 'min $50', 'in-store only', else null"
-}
-Return only the JSON, no other text.`;
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
-        max_tokens: 500,
-        messages: [{ role: 'user', content: [
-          { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
-          { type: 'text', text: prompt }
-        ]}]
-      })
-    });
-    if (!response.ok) {
-      const errText = await response.text();
-      let errMsg = `API error ${response.status}`;
-      try { const errJson = JSON.parse(errText); if (errJson.error && errJson.error.message) errMsg = errJson.error.message; } catch(e) {}
-      throw new Error(errMsg);
+  async function runOcr(dataUrl) {
+    // v12: free on-device OCR for GitHub Pages. No user API key required.
+    // Uses Tesseract.js from CDN, then light coupon-specific extraction heuristics.
+    if (!window.Tesseract || !window.Tesseract.recognize) {
+      throw new Error('OCR engine not loaded');
     }
-    const data = await response.json();
-    const text = (data.content || []).map(b => b.text || '').join('').trim();
-    const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
-    try { return JSON.parse(cleaned); } catch(e) { throw new Error('AI returned non-JSON response'); }
+    const { data } = await window.Tesseract.recognize(dataUrl, 'eng', {
+      logger: (m) => {
+        if (m && m.status && typeof m.progress === 'number') {
+          const pct = Math.round(m.progress * 100);
+          if (pct > 0 && pct < 100) showOcrStatus('reading', `Reading coupon… ${pct}%`);
+        }
+      }
+    });
+    const raw = (data && data.text ? data.text : '').replace(/\s+/g, ' ').trim();
+    if (!raw || raw.length < 8) throw new Error('no readable text found');
+    return extractDealFromText(raw);
   }
+
+  function extractDealFromText(raw) {
+    const text = String(raw || '');
+    const upper = text.toUpperCase();
+    const knownMerchants = ['TARGET','WALMART','COSTCO','KROGER','WHOLE FOODS','TRADER JOE','CHIPOTLE','PANERA','STARBUCKS','OLIVE GARDEN','OLD NAVY','GAP','MACYS','MACY\'S','KOHLS','KOHL\'S','NORDSTROM','SEPHORA','ULTA','BATH & BODY WORKS','BEST BUY','HOME DEPOT','LOWE\'S','LOWES','AMAZON','AMC','MARRIOTT'];
+    let merchant = '';
+    for (const m of knownMerchants) {
+      if (upper.includes(m)) { merchant = m.replace(/\b\w/g, c => c.toUpperCase()).replace('Macys', "Macy's").replace('Kohls', "Kohl's").replace('Lowes', "Lowe's"); break; }
+    }
+    if (!merchant) {
+      const firstLine = text.split(/[\n\.\|]/).map(x => x.trim()).find(x => x.length >= 3 && /[A-Za-z]/.test(x));
+      merchant = firstLine ? firstLine.split(/\s+/).slice(0,3).join(' ') : '';
+    }
+
+    let discount = '';
+    const discountPatterns = [
+      /(\d{1,2})\s*%\s*(?:OFF|DISCOUNT)/i,
+      /\$\s*(\d{1,4})\s*(?:OFF|DISCOUNT)/i,
+      /BUY\s+ONE\s+GET\s+ONE|BOGO/i,
+      /FREE\s+[A-Z][A-Z\s]{2,30}/i,
+      /(\d{1,2})\s*%/i,
+      /\$\s*(\d{1,4})/i
+    ];
+    for (const re of discountPatterns) {
+      const m = text.match(re);
+      if (m) { discount = m[0].replace(/\s+/g,' ').trim(); break; }
+    }
+    if (!discount) discount = 'Coupon offer';
+
+    let value = 0;
+    const dollarOff = discount.match(/\$\s*(\d{1,4})/);
+    const pctOff = discount.match(/(\d{1,2})\s*%/);
+    if (dollarOff) value = Number(dollarOff[1]) || 0;
+    else if (pctOff) value = Math.max(5, Math.round((Number(pctOff[1]) || 0) * 0.75));
+    else if (/BOGO/i.test(discount)) value = 10;
+    else if (/FREE/i.test(discount)) value = 5;
+
+    let code = '';
+    const codeMatch = text.match(/(?:CODE|PROMO|COUPON|USE)\s*[:#-]?\s*([A-Z0-9]{4,16})/i) || text.match(/\b([A-Z]{2,}[0-9]{2,}[A-Z0-9]{0,8})\b/);
+    if (codeMatch) code = codeMatch[1].toUpperCase();
+
+    let expiry = '';
+    const datePatterns = [
+      /(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/,
+      /(?:EXP|EXPIRES|VALID THRU|VALID UNTIL)\s*[:#-]?\s*(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/i
+    ];
+    for (const re of datePatterns) {
+      const m = text.match(re);
+      if (m) {
+        const parts = m.length >= 4 ? m.slice(-3) : null;
+        if (parts) {
+          let [mm, dd, yy] = parts.map(x => String(x));
+          if (yy.length === 2) yy = '20' + yy;
+          expiry = `${yy.padStart(4,'20')}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`;
+          break;
+        }
+      }
+    }
+
+    let category = 'Other';
+    if (/GROCERY|FOOD|COSTCO|TARGET|WALMART|KROGER|WHOLE FOODS|TRADER/i.test(upper)) category = 'Groceries';
+    if (/RESTAURANT|DINING|CHIPOTLE|PANERA|STARBUCKS|OLIVE/i.test(upper)) category = 'Dining';
+    if (/NAVY|GAP|MACY|KOHLS|NORDSTROM|APPAREL|CLOTHING/i.test(upper)) category = 'Apparel';
+    if (/SEPHORA|ULTA|BEAUTY|BATH/i.test(upper)) category = 'Beauty';
+    if (/HOME DEPOT|LOWE|HOME|PAINT|FURNITURE/i.test(upper)) category = 'Home';
+    if (/BEST BUY|ELECTRONICS|APPLE|TECH/i.test(upper)) category = 'Electronics';
+    if (/HOTEL|TRAVEL|AIRLINE|MARRIOTT/i.test(upper)) category = 'Travel';
+
+    return { merchant, discount, code, expiry, category, value, notes: 'Scanned on device', _rawText: text };
+  }
+
   function applyOcrResult(r) {
     if (!r) return;
     if (r.merchant) document.getElementById('f-merchant').value = r.merchant;
@@ -553,7 +598,7 @@ Return only the JSON, no other text.`;
     rewards.points -= POINTS_PER_SPIN;
     game.spins += 1;
     save(KEYS.rewards, rewards); save(KEYS.game, game);
-    showToast(`Redeemed — +1 spin (${rewards.points} pts left)`);
+    showToast(`Redeemed — +1 reveal (${rewards.points} pts left)`);
     renderAll();
   }
   function redeemPointsForPremiumDeal() {
@@ -591,7 +636,7 @@ Return only the JSON, no other text.`;
     // Manual claim button — kept for the rare case spin wasn't auto-granted
     const result = autoGrantDailySpin();
     if (!result) return;
-    showToast(`Daily reward — +${result.bonus} spin${result.bonus===1?'':'s'} (day ${result.streak})`);
+    showToast(`Daily reward — +${result.bonus} reveal${result.bonus===1?'':'s'} (day ${result.streak})`);
     renderRewards(); updateHeader();
   }
   function spinWheel() {
@@ -612,7 +657,7 @@ Return only the JSON, no other text.`;
     updateHeader();
     const btn = document.getElementById('spin-btn');
     if (btn) btn.disabled = true;
-    setTimeout(() => awardPrize(idx), 4600);
+    setTimeout(() => awardPrize(idx), 900);
   }
   function awardPrize(idx) {
     const slice = SLICES[idx];
@@ -695,9 +740,9 @@ Return only the JSON, no other text.`;
         <div class="hero-copy">
           <p class="eyebrow">SMART SAVINGS NEAR YOU</p>
           <h2>$${Math.round(potential)} waiting in your wallet</h2>
-          <p>${active.length} active deal${active.length===1?'':'s'} · ${soon.length} expiring soon · ${game.spins} reward spin${game.spins===1?'':'s'} ready</p>
+          <p>${active.length} active deal${active.length===1?'':'s'} · ${soon.length} expiring soon · ${game.spins} reward reveal${game.spins===1?'':'s'} ready</p>
         </div>
-        <button class="hero-cta" data-goto="deals">Open Wallet</button>
+        <button class="hero-cta" data-goto="deals">Open Deals Wallet</button>
       </div>
       <div class="stat-grid">
         <div class="stat-card stat-clickable" data-filter="active"><p class="stat-label">Wallet</p><p class="stat-value">${active.length}</p><p class="stat-hint">Active deals →</p></div>
@@ -767,10 +812,10 @@ Return only the JSON, no other text.`;
       html += `
         <div class="card" style="background: var(--bg-info); border-color: var(--bg-info); display: flex; justify-content: space-between; align-items: center; gap: 12px;">
           <div style="min-width:0;">
-            <p style="margin:0; font-weight:500; font-size:14px; color: var(--text-info);">${game.spins} spin${game.spins===1?'':'s'} ready</p>
-            <p style="margin:2px 0 0; font-size:12px; color: var(--text-info); opacity: 0.85;">Spin to win points, bonus deals, or jackpot.</p>
+            <p style="margin:0; font-weight:500; font-size:14px; color: var(--text-info);">${game.spins} reward reveal${game.spins===1?'':'s'} ready</p>
+            <p style="margin:2px 0 0; font-size:12px; color: var(--text-info); opacity: 0.85;">Reveal points, bonus deals, or a jackpot.</p>
           </div>
-          <button data-goto="rewards" style="white-space:nowrap; background: var(--text-info); color: var(--bg-primary); border-color: var(--text-info); font-weight: 500;"><i class="ti ti-confetti" style="font-size:14px; vertical-align:-2px; margin-right:4px;"></i>Spin now</button>
+          <button data-goto="rewards" style="white-space:nowrap; background: var(--text-info); color: var(--bg-primary); border-color: var(--text-info); font-weight: 500;"><i class="ti ti-confetti" style="font-size:14px; vertical-align:-2px; margin-right:4px;"></i>Reveal</button>
         </div>
       `;
     }
@@ -1070,63 +1115,53 @@ Return only the JSON, no other text.`;
   function renderRewards() {
     const root = document.getElementById('panel-rewards');
     const dailyReady = canDailySpin();
+    const recent = (game.history || []).slice(0, 5);
+    const tier = currentTier();
+    const next = nextTier();
+    const prevMin = tier.min || 0;
+    const tierProgress = next ? Math.max(5, Math.min(100, Math.round(((rewards.points - prevMin) / Math.max(1, next.min - prevMin)) * 100))) : 100;
     const streakDots = Array.from({length:7}, (_,i) => {
       const on = i < game.streak;
       return `<span class="streak-dot ${on?'streak-on':'streak-off'}">${i+1}</span>`;
     }).join('');
-    const recent = (game.history || []).slice(0, 5);
-    const tier = currentTier();
-    const next = nextTier();
 
     root.innerHTML = `
-      <!-- Hero card: wheel + stats + spin button + tier all in one block -->
-      <div class="rewards-hero">
-        <div class="rewards-hero-top">
-          <div class="rewards-stats-side">
-            <div class="hero-stat">
-              <p class="hero-stat-val">${rewards.points}</p>
-              <p class="hero-stat-lbl">POINTS</p>
-            </div>
-            <div class="hero-stat">
-              <p class="hero-stat-val" style="color: var(--text-warning);">${game.spins}</p>
-              <p class="hero-stat-lbl">SPINS</p>
-            </div>
-            <div class="hero-stat">
-              <p class="hero-stat-val">${game.streak}</p>
-              <p class="hero-stat-lbl">STREAK</p>
-            </div>
+      <div class="rewards-v12-hero">
+        <p class="eyebrow">PERQ REWARDS</p>
+        <h2>${tier.name} Saver</h2>
+        <p>${next ? `${next.min - rewards.points} points to ${next.name}` : 'Top tier unlocked'} · ${game.streak || 0}-day streak</p>
+        <div class="reward-ring-row">
+          <div class="reward-ring" style="--ring:${tierProgress}%;">
+            <div class="reward-ring-inner"><div><strong>${tierProgress}</strong><br><span>LEVEL %</span></div></div>
           </div>
-          <div class="wheel-container compact">
-            <div class="wheel-pointer"><svg width="18" height="22" viewBox="0 0 22 28"><polygon points="11,28 0,4 22,4" fill="var(--text-primary)"/><polygon points="11,4 4,0 18,0" fill="var(--text-primary)"/></svg></div>
-            ${buildWheelSVG()}
-            <div class="wheel-hub">SPIN</div>
+          <div class="reward-metric-grid">
+            <div class="reward-metric"><strong>${rewards.points}</strong><span>POINTS</span></div>
+            <div class="reward-metric"><strong>${game.spins}</strong><span>REVEALS</span></div>
+            <div class="reward-metric"><strong>${rewards.shared}</strong><span>SHARED</span></div>
+            <div class="reward-metric"><strong>${rewards.claimed}</strong><span>CLAIMED</span></div>
           </div>
         </div>
-        <button id="spin-btn" ${game.spins<=0?'disabled':''} class="btn-primary spin-cta">
-          <i class="ti ti-player-play" style="font-size:14px; vertical-align:-2px; margin-right:6px;"></i>${game.spins > 0 ? `Spin to win (${game.spins})` : 'No spins yet'}
-        </button>
-        <div class="streak-strip">
-          ${streakDots}
-        </div>
-        <div class="tier-strip" style="background: ${tier.bg};">
-          <div style="display:flex; justify-content:space-between; align-items:center; gap: 8px;">
-            <p style="margin:0; font-size:11px; font-weight:600; color:${tier.color}; text-transform:uppercase; letter-spacing:0.4px;">${tier.name} · ${tier.perk}</p>
-            ${next ? `<p style="margin:0; font-size:10px; color: var(--text-secondary); white-space: nowrap;">${next.min - rewards.points} pts to ${next.name}</p>` : ''}
-          </div>
-          ${next ? `<div class="progress-bar" style="margin-top:4px;"><div class="progress-fill" style="width:${Math.min(100, Math.round((rewards.points / next.min) * 100))}%;"></div></div>` : ''}
-        </div>
-        ${dailyReady ? `
-          <div style="text-align: center; margin-top: 8px;">
-            <button id="daily-btn" style="font-size: 11px; padding: 4px 10px;"><i class="ti ti-gift" style="font-size:11px; vertical-align:-2px; margin-right:3px;"></i>Claim today's free spin</button>
-          </div>
-        ` : ''}
+        <div class="streak-strip v12">${streakDots}</div>
+        ${dailyReady ? `<button id="daily-btn" class="reveal-btn" style="background:white!important;color:#111!important;margin-top:16px;"><i class="ti ti-gift" style="font-size:15px;vertical-align:-2px;margin-right:6px;"></i>Claim today’s reward</button>` : ''}
       </div>
 
-      <!-- Spend points: compact horizontal pills -->
-      <div class="spend-row">
+      <div class="reward-reveal-card">
+        <div class="reward-reveal-top">
+          <div>
+            <p class="reward-reveal-title">Daily Perq Drop</p>
+            <p class="reward-reveal-sub">Reveal a surprise: points, bonus deals, or a premium unlock. No spinner — just a fast reward moment.</p>
+          </div>
+          <div class="reward-token">✦</div>
+        </div>
+        <button id="spin-btn" ${game.spins<=0?'disabled':''} class="reveal-btn">
+          ${game.spins > 0 ? `Reveal reward (${game.spins})` : 'No reveals available'}
+        </button>
+      </div>
+
+      <div class="spend-row v12">
         <button id="redeem-spin-btn" ${rewards.points < POINTS_PER_SPIN ? 'disabled' : ''} class="spend-pill ${rewards.points >= POINTS_PER_SPIN ? 'spend-active' : ''}">
           <span class="spend-pill-icon">⚡</span>
-          <span class="spend-pill-label">Buy spin</span>
+          <span class="spend-pill-label">Buy reveal</span>
           <span class="spend-pill-cost">${POINTS_PER_SPIN} pts</span>
         </button>
         <button id="redeem-deal-btn" ${rewards.points < POINTS_PER_PREMIUM_DEAL ? 'disabled' : ''} class="spend-pill ${rewards.points >= POINTS_PER_PREMIUM_DEAL ? 'spend-active' : ''}">
@@ -1136,27 +1171,26 @@ Return only the JSON, no other text.`;
         </button>
       </div>
 
-      <!-- Below the fold: Daily missions + recent wins -->
-      <p class="section-title"><i class="ti ti-target"></i>Daily missions</p>
-      <div class="card" style="padding: 2px 14px;">
+      <p class="section-title"><i class="ti ti-target"></i>Today’s missions</p>
+      <div class="mission-card">
         ${quests.items.map(q => `
-          <div class="quest-row">
-            <div style="flex:1; min-width:0;">
-              <p style="margin:0; font-size:13px;">${escapeHtml(q.label)}</p>
-              <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
-                <div class="progress-bar" style="flex:1;"><div class="progress-fill" style="width:${Math.round((q.progress/q.target)*100)}%;"></div></div>
-                <span style="font-size:10px; color: var(--text-secondary);">${q.progress}/${q.target}</span>
-              </div>
+          <div class="mission-row-v12">
+            <div class="mission-icon"><i class="ti ${q.id === 'q_add' ? 'ti-camera-plus' : q.id === 'q_share' ? 'ti-share' : 'ti-check'}"></i></div>
+            <div style="flex:1;min-width:0;">
+              <p class="mission-title">${escapeHtml(q.label)}</p>
+              <p class="mission-sub">${q.progress}/${q.target} completed · +${q.reward} reveal</p>
+              <div class="progress-bar" style="margin-top:7px;"><div class="progress-fill" style="width:${Math.round((q.progress/q.target)*100)}%;"></div></div>
             </div>
-            <button data-claim-quest="${q.id}" ${(q.progress<q.target||q.claimed)?'disabled':''} style="font-size:12px; padding: 6px 10px;">${q.claimed ? 'Claimed' : `+${q.reward}`}</button>
+            <button data-claim-quest="${q.id}" ${(q.progress<q.target||q.claimed)?'disabled':''}>${q.claimed ? 'Done' : 'Claim'}</button>
           </div>
         `).join('')}
       </div>
+
       ${recent.length ? `
-        <p class="section-title">Latest wins</p>
-        <div class="card" style="padding: 2px 14px;">
+        <p class="section-title">Recent reward moments</p>
+        <div class="mission-card">
           ${recent.map((h,i) => `
-            <div style="padding: 8px 0; ${i>0?'border-top: 0.5px solid var(--border-tertiary);':''} display:flex; justify-content:space-between; font-size:12px; gap: 8px;">
+            <div style="padding: 10px 0; ${i>0?'border-top: 0.5px solid rgba(0,0,0,0.07);':''} display:flex; justify-content:space-between; font-size:13px; gap: 8px;">
               <span>${escapeHtml(h.label)}</span>
               <span style="color: var(--text-secondary); font-size:11px; white-space:nowrap;">${new Date(h.ts).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</span>
             </div>
@@ -1422,7 +1456,6 @@ Return only the JSON, no other text.`;
 
   // ---------- Settings ----------
   function openSettings() {
-    document.getElementById('s-api-key').value = load(KEYS.apiKey, '');
     document.getElementById('s-reminders-on').checked = !!settings.remindersOn;
     document.getElementById('s-reminder-days').value = String(settings.reminderDays);
     document.getElementById('s-nearby-on').checked = !!settings.nearbyOn;
@@ -1432,8 +1465,6 @@ Return only the JSON, no other text.`;
   }
   function closeSettings() { document.getElementById('modal-settings').classList.remove('active'); }
   function saveSettings() {
-    const key = document.getElementById('s-api-key').value.trim();
-    save(KEYS.apiKey, key);
     settings = {
       remindersOn: document.getElementById('s-reminders-on').checked,
       reminderDays: Number(document.getElementById('s-reminder-days').value) || 3,
@@ -1503,7 +1534,7 @@ Return only the JSON, no other text.`;
     const dailyResult = autoGrantDailySpin();
     if (dailyResult) {
       setTimeout(() => {
-        showToast(`🎉 +${dailyResult.bonus} daily spin${dailyResult.bonus===1?'':'s'} (day ${dailyResult.streak} streak)`);
+        showToast(`🎉 +${dailyResult.bonus} daily reveal${dailyResult.bonus===1?'':'s'} (day ${dailyResult.streak} streak)`);
       }, 1400);
     }
 
@@ -1559,7 +1590,7 @@ Return only the JSON, no other text.`;
       if (document.visibilityState === 'visible') {
         refreshDailyQuests();
         const r = autoGrantDailySpin();
-        if (r) showToast(`🎉 +${r.bonus} daily spin${r.bonus===1?'':'s'} (day ${r.streak} streak)`);
+        if (r) showToast(`🎉 +${r.bonus} daily reveal${r.bonus===1?'':'s'} (day ${r.streak} streak)`);
         checkAndSendReminders();
         if (settings.nearbyOn) findNearbyDeals();
         renderAll();

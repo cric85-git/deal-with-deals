@@ -3,18 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-<meta name="theme-color" content="#185FA5">
+<meta name="theme-color" content="#111318">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="DwD Deals">
+<meta name="apple-mobile-web-app-title" content="Perq">
 <meta name="mobile-web-app-capable" content="yes">
-<title>Deal with Deals — Smart Savings</title>
+<title>Perq — Smart Savings Wallet</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.0.0/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
   :root {
     --bg-primary: #ffffff;
@@ -1038,6 +1039,163 @@ input, select, textarea {
 .ai-managed-title { margin: 0; font-weight: 750; font-size: 14px; letter-spacing: -0.2px; }
 .ai-managed-sub { margin: 3px 0 0; color: rgba(17,19,24,0.58); font-size: 12px; line-height: 1.35; }
 .toast { background: rgba(17,19,24,0.92); backdrop-filter: blur(18px); border-radius: 20px; bottom: calc(100px + var(--safe-bottom)); }
+/* ===== v12 Perq brand + iOS-native refinements ===== */
+.header {
+  padding: calc(7px + var(--safe-top)) 16px 8px !important;
+  min-height: 58px;
+}
+.brand-mark {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 13px !important;
+  background:
+    radial-gradient(circle at 72% 22%, #B8FF4D 0 15%, transparent 16%),
+    linear-gradient(145deg, #111318 0%, #242936 54%, #0A84FF 140%) !important;
+}
+.brand-mark .mono, .splash-mark .mono, .install-screen-mark .mono {
+  font-weight: 900 !important;
+  letter-spacing: -0.7px !important;
+}
+.brand-mark .pct, .splash-mark .pct, .install-screen-mark .pct { display: none !important; }
+.header h1 { font-size: 17px !important; }
+.header p { font-size: 11px !important; margin-top: 0 !important; }
+.settings-btn { width: 32px !important; height: 32px !important; }
+.content { padding-top: 12px !important; }
+.premium-discover-hero {
+  min-height: 156px !important;
+  padding: 18px !important;
+  border-radius: 28px !important;
+  margin-bottom: 12px !important;
+}
+.premium-discover-hero .hero-copy { max-width: 100% !important; padding-right: 10px; padding-bottom: 48px; }
+.premium-discover-hero .eyebrow { font-size: 10px !important; margin-bottom: 6px !important; }
+.premium-discover-hero h2 { font-size: 27px !important; max-width: 78%; }
+.premium-discover-hero p:not(.eyebrow) { font-size: 12px !important; margin-top: 7px !important; max-width: 70%; }
+.hero-cta {
+  left: 18px !important;
+  bottom: 16px !important;
+  padding: 9px 14px !important;
+  font-size: 13px !important;
+  max-width: calc(100% - 36px);
+  white-space: nowrap;
+}
+.action-bar { margin-bottom: 12px !important; }
+.action-btn { min-height: 50px !important; border-radius: 18px !important; }
+
+/* Scan modal: native bottom sheet, sticky save, better camera feel */
+.modal-overlay#modal-deal { align-items: flex-end !important; }
+#modal-deal .modal {
+  max-height: calc(96vh - var(--safe-top));
+  padding: 14px 16px calc(88px + var(--safe-bottom)) !important;
+  border-radius: 30px 30px 0 0 !important;
+}
+#modal-deal .modal-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.86));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  margin: -14px -16px 12px;
+  padding: 14px 16px 10px;
+  border-bottom: 0.5px solid rgba(0,0,0,0.06);
+}
+#modal-deal .form-actions {
+  position: fixed;
+  left: 14px;
+  right: 14px;
+  bottom: calc(12px + var(--safe-bottom));
+  z-index: 260;
+  background: rgba(255,255,255,0.82);
+  border: 0.5px solid rgba(255,255,255,0.82);
+  border-radius: 24px;
+  padding: 8px;
+  box-shadow: 0 18px 50px rgba(18,24,40,0.18);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+}
+.capture-preview {
+  aspect-ratio: 1.45 / 1 !important;
+  border-radius: 26px !important;
+  background: #111318 !important;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), 0 20px 50px rgba(0,0,0,0.16);
+}
+.ocr-status {
+  border-radius: 20px !important;
+  padding: 12px 14px !important;
+  background: linear-gradient(135deg, rgba(10,132,255,0.12), rgba(184,255,77,0.15)) !important;
+  color: #111318 !important;
+}
+.form-row label { font-weight: 700; color: rgba(17,19,24,0.58); }
+
+/* Rewards v12: no spinner, Apple-style progress + reveal card */
+.rewards-v12-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 32px;
+  padding: 22px;
+  color: white;
+  background:
+    radial-gradient(circle at 85% 22%, rgba(184,255,77,0.85), transparent 18%),
+    radial-gradient(circle at 15% 86%, rgba(10,132,255,0.65), transparent 32%),
+    linear-gradient(145deg, #090A0C 0%, #171C27 64%, #263144 100%);
+  box-shadow: 0 28px 76px rgba(10,22,42,0.28);
+  margin-bottom: 12px;
+}
+.rewards-v12-hero::after {
+  content: "★";
+  position: absolute;
+  right: -10px;
+  bottom: -44px;
+  font-size: 168px;
+  color: rgba(255,255,255,0.07);
+}
+.rewards-v12-hero .eyebrow { margin: 0 0 8px; color: rgba(184,255,77,0.92); font-weight: 900; letter-spacing: 1px; font-size: 10px; }
+.rewards-v12-hero h2 { margin: 0; font-size: 34px; letter-spacing: -1.2px; line-height: 1; }
+.rewards-v12-hero p { margin: 8px 0 0; color: rgba(255,255,255,0.72); font-size: 13px; line-height: 1.4; }
+.reward-ring-row { display: grid; grid-template-columns: 118px 1fr; gap: 14px; align-items: center; margin-top: 18px; position: relative; z-index: 1; }
+.reward-ring {
+  width: 112px; height: 112px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: conic-gradient(#B8FF4D var(--ring), rgba(255,255,255,0.14) 0);
+  box-shadow: inset 0 0 0 10px rgba(255,255,255,0.10);
+}
+.reward-ring-inner { width: 78px; height: 78px; border-radius: 50%; display:grid; place-items:center; background: rgba(9,10,12,0.92); text-align:center; }
+.reward-ring-inner strong { font-size: 24px; line-height:1; }
+.reward-ring-inner span { font-size: 9px; color: rgba(255,255,255,0.62); font-weight:800; letter-spacing:0.7px; }
+.reward-metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.reward-metric { background: rgba(255,255,255,0.12); border: 0.5px solid rgba(255,255,255,0.12); border-radius: 18px; padding: 10px; }
+.reward-metric strong { display:block; font-size: 21px; letter-spacing:-0.5px; }
+.reward-metric span { display:block; margin-top: 2px; font-size: 10px; color: rgba(255,255,255,0.62); font-weight:800; letter-spacing:0.6px; }
+.reward-reveal-card, .mission-card {
+  background: rgba(255,255,255,0.88);
+  border: 0.5px solid rgba(255,255,255,0.82);
+  border-radius: 28px;
+  box-shadow: 0 22px 60px rgba(18,24,40,0.12);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.reward-reveal-top { display:flex; align-items:center; justify-content:space-between; gap: 12px; }
+.reward-reveal-title { margin:0; font-weight:850; font-size:18px; letter-spacing:-0.35px; }
+.reward-reveal-sub { margin:4px 0 0; color: rgba(17,19,24,0.58); font-size:13px; line-height:1.35; }
+.reward-token { width:52px; height:52px; border-radius:19px; display:grid; place-items:center; background:#111318; color:white; font-size:24px; flex-shrink:0; box-shadow:0 16px 34px rgba(0,0,0,0.18); }
+.reveal-btn { margin-top:14px; width:100%; min-height:50px; border-radius:999px !important; background:#111318 !important; color:white !important; border:none !important; font-weight:850; }
+.streak-strip.v12 { gap: 6px; margin: 14px 0 0; }
+.streak-strip.v12 .streak-dot { height: 28px; border-radius: 999px; }
+.mission-row-v12 { display:flex; align-items:center; gap:12px; padding:13px 0; border-top:0.5px solid rgba(0,0,0,0.07); }
+.mission-row-v12:first-child { border-top:none; }
+.mission-icon { width:38px; height:38px; border-radius:14px; display:grid; place-items:center; background:rgba(10,132,255,0.10); color:#0A84FF; flex-shrink:0; }
+.mission-title { margin:0; font-size:14px; font-weight:750; }
+.mission-sub { margin:3px 0 0; font-size:12px; color:rgba(17,19,24,0.58); }
+.mission-row-v12 button { border-radius:999px !important; padding:8px 12px !important; font-size:12px; font-weight:800; }
+.spend-row.v12 .spend-pill { border-radius: 22px !important; padding: 12px !important; }
+
+@media (prefers-color-scheme: dark) {
+  #modal-deal .modal-header, #modal-deal .form-actions { background: rgba(28,30,36,0.86); border-color: rgba(255,255,255,0.10); }
+  .reward-reveal-card, .mission-card { background: rgba(28,30,36,0.86); border-color: rgba(255,255,255,0.10); }
+  .reward-reveal-sub, .mission-sub { color: rgba(255,255,255,0.58); }
+}
+
 @media (prefers-color-scheme: dark) {
   html, body { background: radial-gradient(circle at 20% -10%, rgba(10,132,255,0.24), transparent 36%), linear-gradient(180deg, #090A0C 0%, #111318 100%) !important; color: #F5F7FB; }
   .header { background: rgba(9,10,12,0.72) !important; border-bottom-color: rgba(255,255,255,0.08); }
@@ -1055,22 +1213,22 @@ input, select, textarea {
 <!-- Splash screen (shown briefly on launch) -->
 <div class="splash" id="splash">
   <div class="splash-mark">
-    <span class="mono">DwD</span>
+    <span class="mono">P</span>
     <span class="pct">%</span>
   </div>
-  <p class="splash-title">Deal with Deals</p>
-  <p class="splash-sub">Discover. Save. Use nearby.</p>
+  <p class="splash-title">Perq</p>
+  <p class="splash-sub">Snap. Save. Spend smarter.</p>
 </div>
 
 <!-- iOS install instructions screen -->
 <div class="install-screen" id="install-screen">
   <div class="install-screen-content">
     <div class="install-screen-mark">
-      <span class="mono">DwD</span>
+      <span class="mono">P</span>
       <span class="pct">%</span>
     </div>
     <h2>Add to your home screen</h2>
-    <p class="lead">For the best experience, install Deal with deals as an app. It's faster, works offline, and feels native.</p>
+    <p class="lead">For the best experience, install Perq as an app. It's faster, works offline, and feels native.</p>
 
     <div class="install-step">
       <div class="install-step-num">1</div>
@@ -1090,7 +1248,7 @@ input, select, textarea {
       <div class="install-step-num">3</div>
       <div class="install-step-content">
         <p><strong>Tap "Add"</strong></p>
-        <p class="sub">The DwD icon will appear on your home screen.</p>
+        <p class="sub">The Perq icon will appear on your home screen.</p>
       </div>
     </div>
   </div>
@@ -1102,11 +1260,11 @@ input, select, textarea {
 <div class="header">
   <div class="header-title">
     <div class="brand-mark">
-      <span class="mono">DwD</span>
+      <span class="mono">P</span>
       <span class="pct">%</span>
     </div>
     <div>
-      <h1>Deal with Deals</h1>
+      <h1>Perq</h1>
       <p>Your AI savings wallet</p>
     </div>
   </div>
