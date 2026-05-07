@@ -1,0 +1,8 @@
+{
+  "name": "perq-pwa",
+  "version": "19.0.0",
+  "private": true,
+  "scripts": {
+    "test": "node tests/perq-agent.test.js"
+  }
+}
