@@ -39,7 +39,7 @@
   ],
   "shortcuts": [
     {
-      "name": "Hand to iDeal",
+      "name": "Snap Deal",
       "short_name": "iDeal",
       "description": "Snap or import a coupon and auto-save it",
       "url": "./index.html?action=snap",

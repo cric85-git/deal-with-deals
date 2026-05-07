@@ -1634,7 +1634,7 @@
           </div>
         </div>
         <div class="capture-options">
-          <button id="hub-snap" class="capture-option primary"><span>📷</span><div><strong>Snap paper coupon</strong><small>For mailers, receipts, postcards</small></div></button>
+          <button id="hub-snap" class="capture-option primary"><span>📷</span><div><strong>Snap Deal</strong><small>For mailers, receipts, postcards</small></div></button>
           <button id="hub-upload" class="capture-option"><span>🖼️</span><div><strong>Import screenshot/image</strong><small>For email, web, texts, Photos</small></div></button>
           <button id="hub-link" class="capture-option"><span>🔗</span><div><strong>Paste coupon link</strong><small>Save online deals or pages</small></div></button>
         </div>
@@ -1657,6 +1657,9 @@
     if (overlay) overlay.classList.remove('active');
   }
 
+  let linkSaveInProgress = false;
+  let linkAutoSaveTimer = null;
+
   function ensureLinkCapture() {
     let overlay = document.getElementById('link-capture');
     if (overlay) return overlay;
@@ -1667,16 +1670,27 @@
       <div class="modal center-modal link-capture-card">
         <div class="modal-header">
           <p class="modal-title">Save online deal</p>
-          <button class="icon-btn" id="link-close" aria-label="Close" style="color: var(--text-secondary);"><i class="ti ti-x" style="color: var(--text-secondary);"></i></button>
+          <button type="button" class="icon-btn" id="link-close" aria-label="Close" style="color: var(--text-secondary);"><i class="ti ti-x" style="color: var(--text-secondary);"></i></button>
         </div>
-        <p class="link-copy">Paste a coupon page, promo link, or offer text. iDeal will save it now and improve details later when AI Vision is connected.</p>
+        <p class="link-copy">Paste a coupon page, promo link, or offer text. Perq will save it to your Deals Wallet automatically.</p>
         <div class="form-row"><label>Link or offer text</label><textarea id="link-text" rows="5" placeholder="Paste URL, email coupon text, or online offer here"></textarea></div>
-        <button id="link-save" class="btn-primary" style="width:100%; padding: 14px; border-radius: 999px;">Save to Deals Wallet</button>
+        <button type="button" id="link-save" class="btn-primary" style="width:100%; padding: 14px; border-radius: 999px; pointer-events:auto; touch-action:manipulation;">Save to Deals Wallet</button>
       </div>`;
     document.body.appendChild(overlay);
     overlay.addEventListener('click', (e) => { if (e.target === overlay) closeLinkCapture(); });
     overlay.querySelector('#link-close').addEventListener('click', closeLinkCapture);
-    overlay.querySelector('#link-save').addEventListener('click', saveLinkCapture);
+    const btn = overlay.querySelector('#link-save');
+    const txt = overlay.querySelector('#link-text');
+    ['click','pointerup','touchend'].forEach(evt => {
+      btn.addEventListener(evt, (e) => { e.preventDefault(); e.stopPropagation(); saveLinkCapture(); }, { passive: false });
+    });
+    txt.addEventListener('paste', () => {
+      clearTimeout(linkAutoSaveTimer);
+      linkAutoSaveTimer = setTimeout(() => {
+        const val = (txt.value || '').trim();
+        if (/https?:\/\//i.test(val) || val.length > 20) saveLinkCapture();
+      }, 650);
+    });
     return overlay;
   }
 
@@ -1684,47 +1698,88 @@
     const overlay = ensureLinkCapture();
     const input = overlay.querySelector('#link-text');
     input.value = prefill || '';
+    linkSaveInProgress = false;
     overlay.classList.add('active');
     setTimeout(() => input.focus(), 100);
+    if (prefill && String(prefill).trim().length > 10) {
+      clearTimeout(linkAutoSaveTimer);
+      linkAutoSaveTimer = setTimeout(saveLinkCapture, 700);
+    }
   }
   function closeLinkCapture() {
     const overlay = document.getElementById('link-capture');
     if (overlay) overlay.classList.remove('active');
+    clearTimeout(linkAutoSaveTimer);
+    linkSaveInProgress = false;
+  }
+  function titleCaseWords(str) {
+    return String(str || '').replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim().replace(/\b\w/g, c => c.toUpperCase());
+  }
+  function merchantFromUrl(url) {
+    try {
+      const host = new URL(url).hostname.replace(/^www\./,'');
+      const base = host.split('.')[0];
+      const known = {
+        'thecarwashexpress': 'The Car Wash Express',
+        'carwashexpress': 'The Car Wash Express',
+        'budgetlawncare': 'Budget Lawncare',
+        'target': 'Target',
+        'walmart': 'Walmart',
+        'costco': 'Costco',
+        'kohls': "Kohl's",
+        'macys': "Macy's"
+      };
+      return known[base.toLowerCase()] || titleCaseWords(base.replace(/express$/i, ' express'));
+    } catch(e) { return ''; }
+  }
+  function discountFromUrlOrText(url, text, result) {
+    if (result.discount && result.discount !== 'Coupon offer') return result.discount;
+    const lower = `${url} ${text}`.toLowerCase();
+    if (lower.includes('discount-coupon')) return 'Discount Coupon';
+    if (lower.includes('coupon')) return 'Coupon Offer';
+    if (lower.includes('promo')) return 'Promo Offer';
+    return 'Online deal saved';
   }
   function saveLinkCapture() {
+    if (linkSaveInProgress) return;
     const input = document.getElementById('link-text');
+    const btn = document.getElementById('link-save');
     const text = (input && input.value || '').trim();
     if (!text) { showToast('Paste a link or offer first'); return; }
+    linkSaveInProgress = true;
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
     const urlMatch = text.match(/https?:\/\/[^\s]+/i);
-    const url = urlMatch ? urlMatch[0] : '';
+    const url = urlMatch ? urlMatch[0].replace(/[),.;]+$/,'') : '';
     const result = extractDealFromText(text);
-    const merchantFromHost = url ? url.replace(/^https?:\/\//,'').split('/')[0].replace(/^www\./,'').split('.')[0] : '';
+    const merchant = result.merchant && result.merchant !== 'Scanned Deal' ? result.merchant : (url ? merchantFromUrl(url) : 'Online Deal');
+    const discount = discountFromUrlOrText(url, text, result);
     const deal = {
       id: uid(),
-      merchant: result.merchant && result.merchant !== 'Scanned Deal' ? result.merchant : (merchantFromHost ? merchantFromHost.replace(/\b\w/g, c => c.toUpperCase()) : 'Online Deal'),
-      discount: result.discount && result.discount !== 'Coupon offer' ? result.discount : 'Online coupon saved',
-      value: result.value || estimateValue(result.discount),
-      category: normalizeCategory(result.category),
+      merchant: merchant || 'Online Deal',
+      discount,
+      value: result.value || estimateValue(discount),
+      category: normalizeCategory(result.category || 'Other'),
       source: 'Online / email import',
       code: result.code || '',
       expiry: normalizeExpiry(result.expiry),
-      notes: 'Saved by iDeal from pasted link/text',
+      notes: 'Auto-saved by Perq from pasted link/text',
       url,
       image: '',
       redeemed:false,
       shared:false,
       createdAt: Date.now(),
-      scanConfidence: result.confidence || 'low',
+      scanConfidence: url ? 'medium' : (result.confidence || 'low'),
       rawScanText: text
     };
     if (!isDuplicateDeal(deal)) deals.push(deal);
     bumpQuest('q_add');
     save(KEYS.deals, deals);
     closeLinkCapture();
-    showToast('Saved to Deals Wallet');
+    showToast(`${deal.merchant} saved to Deals Wallet`);
     dealsFilter = 'active';
     switchTab('deals');
     renderAll();
+    setTimeout(() => { const b = document.getElementById('link-save'); if (b) { b.disabled = false; b.textContent = 'Save to Deals Wallet'; } }, 100);
   }
 
   function handleSharedLaunch() {
