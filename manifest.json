@@ -1,7 +1,7 @@
 {
   "name": "Perq",
   "short_name": "Perq",
-  "description": "Your AI savings wallet for discovering, saving, and using deals nearby.",
+  "description": "Your AI savings agent. Snap, import, or share any deal and Perq remembers it for you.",
   "start_url": "./index.html?source=pwa",
   "scope": "./",
   "display": "standalone",
@@ -39,9 +39,9 @@
   ],
   "shortcuts": [
     {
-      "name": "Scan deal",
-      "short_name": "Scan",
-      "description": "Take a photo of a coupon",
+      "name": "Hand to iDeal",
+      "short_name": "iDeal",
+      "description": "Snap or import a coupon and auto-save it",
       "url": "./index.html?action=snap",
       "icons": [
         {
@@ -62,5 +62,14 @@
         }
       ]
     }
-  ]
+  ],
+  "share_target": {
+    "action": "./index.html",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
 }

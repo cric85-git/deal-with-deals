@@ -1208,6 +1208,49 @@ input, select, textarea {
 
 
 
+
+
+  /* v14 Agent capture hub */
+  .capture-hub-overlay { align-items: flex-end; padding: 16px; padding-bottom: calc(18px + var(--safe-bottom)); }
+  .capture-hub-card {
+    width: 100%; max-width: 520px; margin: 0 auto;
+    background: rgba(255,255,255,0.88);
+    border: 0.5px solid rgba(255,255,255,0.75);
+    border-radius: 32px;
+    padding: 10px 16px 18px;
+    box-shadow: 0 24px 70px rgba(0,0,0,0.24);
+    backdrop-filter: blur(28px);
+    animation: slideUp 0.22s ease-out;
+  }
+  @media (prefers-color-scheme: dark) {
+    .capture-hub-card { background: rgba(28,28,30,0.9); border-color: rgba(255,255,255,0.12); }
+  }
+  .capture-hub-grabber { width: 42px; height: 5px; border-radius: 999px; background: rgba(120,120,128,0.35); margin: 0 auto 14px; }
+  .capture-hub-head { display: flex; align-items: center; gap: 13px; margin-bottom: 16px; }
+  .agent-avatar {
+    width: 52px; height: 52px; border-radius: 17px;
+    background: radial-gradient(circle at 30% 20%, #75f0b0, #0A84FF 50%, #111318 100%);
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-weight: 850; letter-spacing: -0.6px; box-shadow: 0 12px 28px rgba(10,132,255,0.28);
+  }
+  .capture-hub-title { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.6px; }
+  .capture-hub-sub { margin: 3px 0 0; color: var(--text-secondary); font-size: 13px; line-height: 1.35; }
+  .capture-options { display: grid; gap: 10px; }
+  .capture-option {
+    width: 100%; border: 0; border-radius: 22px; background: rgba(242,242,247,0.88);
+    padding: 14px; display: flex; align-items: center; gap: 13px; text-align: left;
+  }
+  @media (prefers-color-scheme: dark) { .capture-option { background: rgba(58,58,60,0.7); } }
+  .capture-option.primary { background: #111318; color: #fff; }
+  .capture-option span { width: 42px; height: 42px; border-radius: 15px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.72); font-size: 22px; flex-shrink: 0; }
+  .capture-option.primary span { background: rgba(255,255,255,0.16); }
+  .capture-option strong { display: block; font-size: 15px; letter-spacing: -0.2px; }
+  .capture-option small { display: block; margin-top: 2px; color: var(--text-secondary); font-size: 12px; }
+  .capture-option.primary small { color: rgba(255,255,255,0.68); }
+  .capture-hub-close { width: 100%; margin-top: 10px; border: 0; background: transparent; color: var(--text-secondary); font-weight: 650; }
+  .link-copy { margin: -4px 0 14px; color: var(--text-secondary); font-size: 14px; line-height: 1.45; }
+  .link-capture-card textarea { min-height: 120px; resize: vertical; }
+
   /* iDeal agent scan overlay: Snap → auto-save → Wallet */
   .scan-overlay {
     position: fixed; inset: 0;
@@ -1284,7 +1327,7 @@ input, select, textarea {
     <span class="pct">%</span>
   </div>
   <p class="splash-title">Perq</p>
-  <p class="splash-sub">Snap. Save. Spend smarter.</p>
+  <p class="splash-sub">Snap it. Forget it.</p>
 </div>
 
 <!-- iOS install instructions screen -->
@@ -1332,7 +1375,7 @@ input, select, textarea {
     </div>
     <div>
       <h1>Perq</h1>
-      <p>Your AI savings wallet</p>
+      <p>Your AI savings agent</p>
     </div>
   </div>
   <div class="header-actions">
@@ -1353,7 +1396,7 @@ input, select, textarea {
   <div class="action-bar" id="action-bar">
     <button class="action-btn primary" id="btn-snap">
       <span class="snap-icon" aria-hidden="true">📷</span>
-      <span>Scan deal</span>
+      <span>Hand to iDeal</span>
     </button>
     <button class="action-btn add-pill" id="btn-add" aria-label="Add deal manually">
       <span class="plus-circle">+</span>
@@ -1369,6 +1412,7 @@ input, select, textarea {
 </div>
 
 <input type="file" id="capture-input" accept="image/*" capture="environment" style="display:none;">
+<input type="file" id="import-input" accept="image/*" style="display:none;">
 
 <nav class="nav-bar">
   <button class="nav-btn active" data-tab="dashboard"><i class="ti ti-compass"></i><span>Discover</span></button>
