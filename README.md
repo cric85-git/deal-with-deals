@@ -1,49 +1,34 @@
-# Deal with Deals — PWA Takeover Build
+# Perq — Smart Savings Wallet v12
 
-Deal with Deals is a mobile-first Progressive Web App for capturing, tracking, sharing, and redeeming coupons/deals.
+Perq is the rebranded, premium iPhone-style version of the Deal with Deals PWA.
 
-## Current build status
+## v12 changes
 
-This package is deployable as a static PWA. It includes:
-
-- `index.html` — UI shell and styles
-- `app.js` — client-side app logic
-- `sw.js` — service worker for asset caching/offline behavior
-- `manifest.json` — PWA install metadata and shortcuts
-- app icons for iOS/Android
-
-## Run locally
-
-Because this uses a service worker and browser APIs, run it from a local web server rather than opening `index.html` directly.
-
-```bash
-cd dwd-pwa-v10-takeover
-python3 -m http.server 8080
-```
-
-Open: `http://localhost:8080`
+- New brand name: **Perq**
+- New app icon/logo system
+- Compact iOS-style header
+- Fixed Discover hero CTA overlap
+- CTA renamed to **Open Deals Wallet**
+- Rewards page redesigned without a spinner
+- New Apple-style rewards ring, reveal card, streak strip, and missions
+- Scan flow redesigned as a native-feeling bottom sheet
+- Sticky save/cancel action bar on mobile
+- Removed Anthropic API key UX
+- Added free in-browser OCR using Tesseract.js for GitHub Pages deployments
+- Updated service worker cache to `perq-v12`
 
 ## Deploy
 
-Any static host works:
+Upload the extracted files to the root of your GitHub Pages repo:
 
-- Netlify Drop
-- Vercel static deploy
-- GitHub Pages
-- Cloudflare Pages
+- `index.html`
+- `app.js`
+- `sw.js`
+- `manifest.json`
+- icons
 
-## Important production notes
+Then commit. GitHub Pages will redeploy automatically.
 
-The current OCR flow calls Anthropic directly from the browser using a user-provided API key. That is acceptable for a personal prototype, but not production. Before broader rollout, move OCR calls behind a small server/API route so keys are never stored in browser localStorage or sent directly from the client.
+## OCR note
 
-Nearby-deals geocoding uses OpenStreetMap Nominatim. Keep request volume low and consider a proper maps/geocoding provider if this becomes a public app.
-
-## Next build milestone
-
-Recommended v10 focus:
-
-1. Backend OCR proxy and basic auth/session layer
-2. Cloud data sync instead of localStorage-only
-3. Real barcode/QR generation
-4. App analytics for capture → save → use → redeem funnel
-5. Production-grade reminders and notification strategy
+This version uses on-device OCR through Tesseract.js. It avoids user API keys and works on static hosting. Accuracy depends on photo quality, coupon font, glare, and cropping. A production version should still move to a backend OCR/LLM pipeline for better structured extraction.

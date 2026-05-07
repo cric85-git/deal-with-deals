@@ -1,6 +1,6 @@
 {
-  "name": "Deal with Deals",
-  "short_name": "DwD Deals",
+  "name": "Perq",
+  "short_name": "Perq",
   "description": "Your AI savings wallet for discovering, saving, and using deals nearby.",
   "start_url": "./index.html?source=pwa",
   "scope": "./",
