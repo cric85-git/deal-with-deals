@@ -3,19 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-<meta name="theme-color" content="#111318">
+<meta name="theme-color" content="#185FA5">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Perq">
+<meta name="apple-mobile-web-app-title" content="DwD Deals">
 <meta name="mobile-web-app-capable" content="yes">
-<title>Perq — Smart Savings Wallet</title>
+<title>Deal with Deals</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" href="icon-192.png">
-<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.0.0/tabler-icons.min.css">
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
   :root {
     --bg-primary: #ffffff;
@@ -32,9 +31,10 @@
     --text-success: #3B6D11;
     --text-warning: #854F0B;
     --text-danger: #A32D2D;
-    --brand: #185FA5;
-    --brand-dark: #0C447C;
-    --brand-accent: #FAC775;
+    --brand: #071B4D;
+    --brand-dark: #020B1D;
+    --brand-accent: #C4F02B;
+    --brand-teal: #00C9A7;
     --border-tertiary: rgba(0,0,0,0.08);
     --border-secondary: rgba(0,0,0,0.15);
     --radius-md: 8px;
@@ -84,25 +84,18 @@
   }
   .header-title { display: flex; align-items: center; gap: 10px; min-width: 0; }
   .brand-mark {
-    width: 34px; height: 34px;
-    border-radius: 9px;
-    background: rgba(255, 255, 255, 0.15);
-    display: flex; align-items: center; justify-content: center;
+    width: 38px; height: 38px;
+    border-radius: 11px;
+    overflow: hidden;
     flex-shrink: 0;
-    position: relative;
-    border: 0.5px solid rgba(255,255,255,0.2);
+    box-shadow: 0 5px 14px rgba(0,0,0,0.22);
+    background: #071B4D;
   }
-  .brand-mark .mono {
-    font-weight: 800; font-size: 12px; color: white;
-    letter-spacing: -0.4px;
-  }
-  .brand-mark .pct {
-    position: absolute; bottom: -3px; right: -3px;
-    width: 14px; height: 14px; border-radius: 50%;
-    background: var(--brand-accent); color: var(--brand-dark);
-    font-size: 9px; font-weight: 800;
-    display: flex; align-items: center; justify-content: center;
-    border: 1.5px solid var(--brand-dark);
+  .brand-mark img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
   }
   .header h1 { font-size: 16px; font-weight: 700; margin: 0; letter-spacing: -0.2px; color: white; }
   .header p { font-size: 10.5px; margin: 1px 0 0; color: rgba(255, 255, 255, 0.72); }
@@ -741,25 +734,18 @@
   }
   .splash.hide { opacity: 0; pointer-events: none; }
   .splash-mark {
-    width: 96px; height: 96px;
-    border-radius: 22px;
-    background: rgba(255, 255, 255, 0.15);
-    display: flex; align-items: center; justify-content: center;
-    border: 0.5px solid rgba(255,255,255,0.25);
-    position: relative;
-    margin-bottom: 8px;
+    width: 104px; height: 104px;
+    border-radius: 26px;
+    overflow: hidden;
+    margin-bottom: 10px;
+    box-shadow: 0 18px 50px rgba(0,0,0,0.35);
+    background: #071B4D;
   }
-  .splash-mark .mono {
-    font-size: 32px; font-weight: 800; color: white;
-    letter-spacing: -1px;
-  }
-  .splash-mark .pct {
-    position: absolute; bottom: -5px; right: -5px;
-    width: 32px; height: 32px; border-radius: 50%;
-    background: var(--brand-accent); color: var(--brand-dark);
-    font-size: 18px; font-weight: 800;
-    display: flex; align-items: center; justify-content: center;
-    border: 2.5px solid var(--brand-dark);
+  .splash-mark img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
   }
   .splash-title { font-size: 22px; font-weight: 700; margin: 0; letter-spacing: -0.3px; }
   .splash-sub { font-size: 13px; margin: 0; opacity: 0.8; }
@@ -777,21 +763,18 @@
     flex: 1; padding: 24px 20px; overflow-y: auto;
   }
   .install-screen-mark {
-    width: 80px; height: 80px;
-    border-radius: 18px;
-    background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
+    width: 84px; height: 84px;
+    border-radius: 22px;
+    overflow: hidden;
     margin: 0 auto 20px;
-    display: flex; align-items: center; justify-content: center;
-    position: relative;
+    box-shadow: 0 12px 28px rgba(0,0,0,0.18);
+    background: #071B4D;
   }
-  .install-screen-mark .mono { font-size: 26px; font-weight: 800; color: white; letter-spacing: -0.5px; }
-  .install-screen-mark .pct {
-    position: absolute; bottom: -4px; right: -4px;
-    width: 26px; height: 26px; border-radius: 50%;
-    background: var(--brand-accent); color: var(--brand-dark);
-    font-size: 14px; font-weight: 800;
-    display: flex; align-items: center; justify-content: center;
-    border: 2px solid var(--brand-dark);
+  .install-screen-mark img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
   }
   .install-screen h2 {
     font-size: 22px; font-weight: 700; text-align: center;
@@ -822,500 +805,6 @@
     border-top: 0.5px solid var(--border-tertiary);
   }
   .install-screen-footer button { width: 100%; padding: 14px; }
-
-
-/* ===== v11 Premium iPhone / Groupon + Uber UI refresh ===== */
-
-.premium-discover-hero {
-  position: relative;
-  overflow: hidden;
-  min-height: 184px;
-  border-radius: 32px;
-  padding: 22px;
-  margin: 0 0 14px;
-  background:
-    radial-gradient(circle at 85% 20%, rgba(184,255,77,0.9), transparent 20%),
-    radial-gradient(circle at 85% 80%, rgba(10,132,255,0.62), transparent 34%),
-    linear-gradient(135deg, #090A0C 0%, #151A23 58%, #202B3D 100%);
-  color: white;
-  box-shadow: 0 28px 72px rgba(10, 22, 42, 0.28);
-}
-.premium-discover-hero::after {
-  content: "%";
-  position: absolute;
-  right: 18px; bottom: -24px;
-  font-size: 128px;
-  line-height: 1;
-  font-weight: 900;
-  color: rgba(255,255,255,0.08);
-  letter-spacing: -8px;
-}
-.premium-discover-hero .hero-copy { position: relative; z-index: 1; max-width: 78%; }
-.premium-discover-hero .eyebrow { margin: 0 0 8px; font-size: 11px; font-weight: 800; letter-spacing: 1.1px; color: rgba(184,255,77,0.9); }
-.premium-discover-hero h2 { margin: 0; font-size: 31px; line-height: 1.02; letter-spacing: -1.15px; }
-.premium-discover-hero p:not(.eyebrow) { margin: 10px 0 0; font-size: 13px; color: rgba(255,255,255,0.70); line-height: 1.45; }
-.hero-cta {
-  position: absolute; left: 22px; bottom: 18px; z-index: 2;
-  background: white !important;
-  color: #111 !important;
-  border: none !important;
-  border-radius: 999px !important;
-  font-weight: 800;
-  padding: 10px 16px !important;
-  box-shadow: 0 12px 28px rgba(0,0,0,0.22);
-}
-@media (max-width: 380px) {
-  .premium-discover-hero h2 { font-size: 27px; }
-  .premium-discover-hero .hero-copy { max-width: 84%; }
-  .deal-actions-grid { width: 112px; }
-}
-
-:root {
-  --premium-black: #090A0C;
-  --premium-ink: #111318;
-  --premium-surface: rgba(255,255,255,0.78);
-  --premium-card: rgba(255,255,255,0.92);
-  --premium-glass: rgba(255,255,255,0.64);
-  --premium-shadow: 0 22px 60px rgba(18, 24, 40, 0.12);
-  --premium-blue: #0A84FF;
-  --premium-green: #30D158;
-  --premium-lime: #B8FF4D;
-  --premium-violet: #6E5BFF;
-  --premium-orange: #FF9F0A;
-}
-html, body {
-  background:
-    radial-gradient(circle at 20% -10%, rgba(10,132,255,0.22), transparent 36%),
-    radial-gradient(circle at 95% 8%, rgba(48,209,88,0.18), transparent 30%),
-    linear-gradient(180deg, #F8FAFF 0%, #F1F4F8 52%, #EEF0F3 100%) !important;
-  color: var(--premium-ink);
-}
-body { padding-bottom: calc(88px + var(--safe-bottom)); }
-.header {
-  position: sticky;
-  top: 0;
-  margin: 0;
-  padding: calc(12px + var(--safe-top)) 18px 14px;
-  background: rgba(248,250,255,0.74) !important;
-  color: var(--premium-ink) !important;
-  border-bottom: 0.5px solid rgba(0,0,0,0.06);
-  backdrop-filter: saturate(180%) blur(26px);
-  -webkit-backdrop-filter: saturate(180%) blur(26px);
-}
-.brand-mark {
-  width: 42px; height: 42px; border-radius: 15px;
-  background: linear-gradient(135deg, #090A0C 0%, #222733 70%, #0A84FF 140%) !important;
-  box-shadow: 0 10px 24px rgba(10,132,255,0.25);
-}
-.brand-mark .pct, .splash-mark .pct, .install-screen-mark .pct { background: var(--premium-lime) !important; color: #111 !important; }
-.header h1 { color: var(--premium-ink) !important; font-size: 18px; letter-spacing: -0.55px; }
-.header p { color: rgba(17,19,24,0.55) !important; font-size: 12px; }
-.settings-btn { background: rgba(255,255,255,0.72) !important; box-shadow: 0 10px 26px rgba(0,0,0,0.10) !important; backdrop-filter: blur(18px); }
-.settings-btn .gear-icon { color: #111 !important; }
-.content { max-width: 760px; padding: 16px 16px 22px; }
-.action-bar {
-  position: relative;
-  grid-template-columns: 1.55fr 1fr;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-.action-btn {
-  min-height: 56px;
-  border-radius: 20px !important;
-  box-shadow: 0 18px 44px rgba(10,132,255,0.16);
-  font-size: 15px;
-}
-.action-btn.primary {
-  background: linear-gradient(135deg, #090A0C 0%, #1E2634 50%, #0A84FF 130%) !important;
-  color: #fff !important;
-}
-.action-btn.add-pill {
-  background: rgba(255,255,255,0.76) !important;
-  border-color: rgba(255,255,255,0.75) !important;
-  backdrop-filter: blur(18px);
-  box-shadow: 0 18px 40px rgba(18,24,40,0.08);
-}
-.action-btn.add-pill .plus-circle { background: #111 !important; }
-.card, .stat-card, .rewards-hero, .modal, .claim-screen {
-  background: var(--premium-card) !important;
-  border: 0.5px solid rgba(255,255,255,0.8) !important;
-  border-radius: 24px !important;
-  box-shadow: var(--premium-shadow);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-}
-.stat-grid { gap: 12px; }
-.stat-card { padding: 15px 16px; min-height: 104px; }
-.stat-label { color: rgba(17,19,24,0.52); font-size: 11px; }
-.stat-value { font-size: 32px; letter-spacing: -1.1px; }
-.stat-hint { color: var(--premium-blue) !important; }
-.section-title { margin-top: 22px; color: rgba(17,19,24,0.58); font-size: 11px; letter-spacing: 0.8px; }
-.reminder-banner, .nearby-banner {
-  border: none !important;
-  border-radius: 24px !important;
-  box-shadow: 0 24px 60px rgba(255,159,10,0.16);
-}
-.nearby-banner { background: linear-gradient(135deg, rgba(48,209,88,0.16), rgba(10,132,255,0.12)) !important; color: #0B5C2B !important; }
-.reminder-banner { background: linear-gradient(135deg, rgba(255,159,10,0.18), rgba(255,214,10,0.16)) !important; color: #8A4B00 !important; }
-.flip-card { margin-bottom: 14px; }
-.flip-card-inner { min-height: 148px; }
-.flip-face {
-  border-radius: 28px !important;
-  border: 0.5px solid rgba(255,255,255,0.78) !important;
-  box-shadow: 0 24px 60px rgba(18,24,40,0.13);
-  padding: 18px !important;
-  overflow: hidden;
-}
-.flip-front::before {
-  content: "";
-  position: absolute; inset: 0 0 auto 0; height: 5px;
-  background: linear-gradient(90deg, #0A84FF, #30D158, #B8FF4D);
-}
-.deal-row { align-items: stretch; gap: 14px; }
-.deal-info p:first-child { font-size: 18px !important; letter-spacing: -0.35px; }
-.deal-info p { line-height: 1.35; }
-.pill { border-radius: 999px; padding: 5px 10px; font-weight: 700; }
-.deal-actions-grid { width: 124px; gap: 8px; }
-.action-mini {
-  border-radius: 18px;
-  background: rgba(246,247,251,0.9);
-  min-height: 52px;
-}
-.action-mini.use-btn { background: #111 !important; }
-.filter-chips { gap: 8px; }
-.chip {
-  border: none !important;
-  background: rgba(255,255,255,0.68) !important;
-  box-shadow: 0 10px 28px rgba(0,0,0,0.06);
-  padding: 9px 14px;
-}
-.chip-active { background: #111 !important; color: white !important; }
-.nav-bar {
-  left: 12px; right: 12px; bottom: 10px;
-  border: 0.5px solid rgba(255,255,255,0.68) !important;
-  border-radius: 30px;
-  padding: 8px 8px calc(8px + var(--safe-bottom));
-  background: rgba(255,255,255,0.78) !important;
-  box-shadow: 0 18px 60px rgba(18,24,40,0.18);
-  backdrop-filter: saturate(180%) blur(28px);
-  -webkit-backdrop-filter: saturate(180%) blur(28px);
-}
-.nav-btn { border-radius: 22px; padding: 8px 4px; }
-.nav-btn.active {
-  background: #111;
-  color: #fff !important;
-  box-shadow: 0 12px 24px rgba(0,0,0,0.18);
-}
-.nav-btn span { font-size: 9.5px; }
-.nav-btn i { font-size: 19px; }
-.rewards-hero {
-  background: linear-gradient(145deg, rgba(255,255,255,0.95), rgba(245,248,255,0.9)) !important;
-}
-.wheel-container.compact { filter: drop-shadow(0 18px 28px rgba(10,132,255,0.15)); }
-.spin-cta { background: #111 !important; color: white !important; border: none !important; }
-.spend-pill { border: none; border-radius: 20px; background: rgba(255,255,255,0.75); box-shadow: 0 14px 34px rgba(18,24,40,0.08); }
-.spend-pill.spend-active { background: rgba(10,132,255,0.12) !important; }
-.modal-overlay { backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); background: rgba(0,0,0,0.34); }
-.modal { border-radius: 32px 32px 0 0 !important; }
-input, select, textarea {
-  background: rgba(246,247,251,0.86) !important;
-  border: none !important;
-  border-radius: 18px !important;
-  padding: 14px 14px !important;
-}
-.btn-primary { background: #111 !important; border-color: #111 !important; color: #fff !important; border-radius: 18px !important; }
-.use-btn { background: #111 !important; border-color: #111 !important; color: white !important; border-radius: 16px !important; }
-.ai-managed-card {
-  display: flex; gap: 12px; align-items: center;
-  background: linear-gradient(135deg, rgba(10,132,255,0.10), rgba(48,209,88,0.12));
-  border-radius: 24px; padding: 14px;
-  margin-bottom: 12px;
-}
-.ai-orb {
-  width: 44px; height: 44px; border-radius: 16px;
-  display: flex; align-items: center; justify-content: center;
-  background: #111; color: white; flex-shrink: 0;
-}
-.ai-managed-title { margin: 0; font-weight: 750; font-size: 14px; letter-spacing: -0.2px; }
-.ai-managed-sub { margin: 3px 0 0; color: rgba(17,19,24,0.58); font-size: 12px; line-height: 1.35; }
-.toast { background: rgba(17,19,24,0.92); backdrop-filter: blur(18px); border-radius: 20px; bottom: calc(100px + var(--safe-bottom)); }
-/* ===== v12 Perq brand + iOS-native refinements ===== */
-.header {
-  padding: calc(7px + var(--safe-top)) 16px 8px !important;
-  min-height: 58px;
-}
-.brand-mark {
-  width: 36px !important;
-  height: 36px !important;
-  border-radius: 13px !important;
-  background:
-    radial-gradient(circle at 72% 22%, #B8FF4D 0 15%, transparent 16%),
-    linear-gradient(145deg, #111318 0%, #242936 54%, #0A84FF 140%) !important;
-}
-.brand-mark .mono, .splash-mark .mono, .install-screen-mark .mono {
-  font-weight: 900 !important;
-  letter-spacing: -0.7px !important;
-}
-.brand-mark .pct, .splash-mark .pct, .install-screen-mark .pct { display: none !important; }
-.header h1 { font-size: 17px !important; }
-.header p { font-size: 11px !important; margin-top: 0 !important; }
-.settings-btn { width: 32px !important; height: 32px !important; }
-.content { padding-top: 12px !important; }
-.premium-discover-hero {
-  min-height: 156px !important;
-  padding: 18px !important;
-  border-radius: 28px !important;
-  margin-bottom: 12px !important;
-}
-.premium-discover-hero .hero-copy { max-width: 100% !important; padding-right: 10px; padding-bottom: 48px; }
-.premium-discover-hero .eyebrow { font-size: 10px !important; margin-bottom: 6px !important; }
-.premium-discover-hero h2 { font-size: 27px !important; max-width: 78%; }
-.premium-discover-hero p:not(.eyebrow) { font-size: 12px !important; margin-top: 7px !important; max-width: 70%; }
-.hero-cta {
-  left: 18px !important;
-  bottom: 16px !important;
-  padding: 9px 14px !important;
-  font-size: 13px !important;
-  max-width: calc(100% - 36px);
-  white-space: nowrap;
-}
-.action-bar { margin-bottom: 12px !important; }
-.action-btn { min-height: 50px !important; border-radius: 18px !important; }
-
-/* Scan modal: native bottom sheet, sticky save, better camera feel */
-.modal-overlay#modal-deal { align-items: flex-end !important; }
-#modal-deal .modal {
-  max-height: calc(96vh - var(--safe-top));
-  padding: 14px 16px calc(88px + var(--safe-bottom)) !important;
-  border-radius: 30px 30px 0 0 !important;
-}
-#modal-deal .modal-header {
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.86));
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  margin: -14px -16px 12px;
-  padding: 14px 16px 10px;
-  border-bottom: 0.5px solid rgba(0,0,0,0.06);
-}
-#modal-deal .form-actions {
-  position: fixed;
-  left: 14px;
-  right: 14px;
-  bottom: calc(12px + var(--safe-bottom));
-  z-index: 260;
-  background: rgba(255,255,255,0.82);
-  border: 0.5px solid rgba(255,255,255,0.82);
-  border-radius: 24px;
-  padding: 8px;
-  box-shadow: 0 18px 50px rgba(18,24,40,0.18);
-  backdrop-filter: blur(22px);
-  -webkit-backdrop-filter: blur(22px);
-}
-.capture-preview {
-  aspect-ratio: 1.45 / 1 !important;
-  border-radius: 26px !important;
-  background: #111318 !important;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), 0 20px 50px rgba(0,0,0,0.16);
-}
-.ocr-status {
-  border-radius: 20px !important;
-  padding: 12px 14px !important;
-  background: linear-gradient(135deg, rgba(10,132,255,0.12), rgba(184,255,77,0.15)) !important;
-  color: #111318 !important;
-}
-.form-row label { font-weight: 700; color: rgba(17,19,24,0.58); }
-
-/* Rewards v12: no spinner, Apple-style progress + reveal card */
-.rewards-v12-hero {
-  position: relative;
-  overflow: hidden;
-  border-radius: 32px;
-  padding: 22px;
-  color: white;
-  background:
-    radial-gradient(circle at 85% 22%, rgba(184,255,77,0.85), transparent 18%),
-    radial-gradient(circle at 15% 86%, rgba(10,132,255,0.65), transparent 32%),
-    linear-gradient(145deg, #090A0C 0%, #171C27 64%, #263144 100%);
-  box-shadow: 0 28px 76px rgba(10,22,42,0.28);
-  margin-bottom: 12px;
-}
-.rewards-v12-hero::after {
-  content: "★";
-  position: absolute;
-  right: -10px;
-  bottom: -44px;
-  font-size: 168px;
-  color: rgba(255,255,255,0.07);
-}
-.rewards-v12-hero .eyebrow { margin: 0 0 8px; color: rgba(184,255,77,0.92); font-weight: 900; letter-spacing: 1px; font-size: 10px; }
-.rewards-v12-hero h2 { margin: 0; font-size: 34px; letter-spacing: -1.2px; line-height: 1; }
-.rewards-v12-hero p { margin: 8px 0 0; color: rgba(255,255,255,0.72); font-size: 13px; line-height: 1.4; }
-.reward-ring-row { display: grid; grid-template-columns: 118px 1fr; gap: 14px; align-items: center; margin-top: 18px; position: relative; z-index: 1; }
-.reward-ring {
-  width: 112px; height: 112px; border-radius: 50%;
-  display: grid; place-items: center;
-  background: conic-gradient(#B8FF4D var(--ring), rgba(255,255,255,0.14) 0);
-  box-shadow: inset 0 0 0 10px rgba(255,255,255,0.10);
-}
-.reward-ring-inner { width: 78px; height: 78px; border-radius: 50%; display:grid; place-items:center; background: rgba(9,10,12,0.92); text-align:center; }
-.reward-ring-inner strong { font-size: 24px; line-height:1; }
-.reward-ring-inner span { font-size: 9px; color: rgba(255,255,255,0.62); font-weight:800; letter-spacing:0.7px; }
-.reward-metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.reward-metric { background: rgba(255,255,255,0.12); border: 0.5px solid rgba(255,255,255,0.12); border-radius: 18px; padding: 10px; }
-.reward-metric strong { display:block; font-size: 21px; letter-spacing:-0.5px; }
-.reward-metric span { display:block; margin-top: 2px; font-size: 10px; color: rgba(255,255,255,0.62); font-weight:800; letter-spacing:0.6px; }
-.reward-reveal-card, .mission-card {
-  background: rgba(255,255,255,0.88);
-  border: 0.5px solid rgba(255,255,255,0.82);
-  border-radius: 28px;
-  box-shadow: 0 22px 60px rgba(18,24,40,0.12);
-  padding: 16px;
-  margin-bottom: 12px;
-}
-.reward-reveal-top { display:flex; align-items:center; justify-content:space-between; gap: 12px; }
-.reward-reveal-title { margin:0; font-weight:850; font-size:18px; letter-spacing:-0.35px; }
-.reward-reveal-sub { margin:4px 0 0; color: rgba(17,19,24,0.58); font-size:13px; line-height:1.35; }
-.reward-token { width:52px; height:52px; border-radius:19px; display:grid; place-items:center; background:#111318; color:white; font-size:24px; flex-shrink:0; box-shadow:0 16px 34px rgba(0,0,0,0.18); }
-.reveal-btn { margin-top:14px; width:100%; min-height:50px; border-radius:999px !important; background:#111318 !important; color:white !important; border:none !important; font-weight:850; }
-.streak-strip.v12 { gap: 6px; margin: 14px 0 0; }
-.streak-strip.v12 .streak-dot { height: 28px; border-radius: 999px; }
-.mission-row-v12 { display:flex; align-items:center; gap:12px; padding:13px 0; border-top:0.5px solid rgba(0,0,0,0.07); }
-.mission-row-v12:first-child { border-top:none; }
-.mission-icon { width:38px; height:38px; border-radius:14px; display:grid; place-items:center; background:rgba(10,132,255,0.10); color:#0A84FF; flex-shrink:0; }
-.mission-title { margin:0; font-size:14px; font-weight:750; }
-.mission-sub { margin:3px 0 0; font-size:12px; color:rgba(17,19,24,0.58); }
-.mission-row-v12 button { border-radius:999px !important; padding:8px 12px !important; font-size:12px; font-weight:800; }
-.spend-row.v12 .spend-pill { border-radius: 22px !important; padding: 12px !important; }
-
-@media (prefers-color-scheme: dark) {
-  #modal-deal .modal-header, #modal-deal .form-actions { background: rgba(28,30,36,0.86); border-color: rgba(255,255,255,0.10); }
-  .reward-reveal-card, .mission-card { background: rgba(28,30,36,0.86); border-color: rgba(255,255,255,0.10); }
-  .reward-reveal-sub, .mission-sub { color: rgba(255,255,255,0.58); }
-}
-
-@media (prefers-color-scheme: dark) {
-  html, body { background: radial-gradient(circle at 20% -10%, rgba(10,132,255,0.24), transparent 36%), linear-gradient(180deg, #090A0C 0%, #111318 100%) !important; color: #F5F7FB; }
-  .header { background: rgba(9,10,12,0.72) !important; border-bottom-color: rgba(255,255,255,0.08); }
-  .header h1 { color: #fff !important; } .header p { color: rgba(255,255,255,0.55) !important; }
-  .card, .stat-card, .rewards-hero, .modal, .claim-screen, .flip-face { background: rgba(28,30,36,0.86) !important; border-color: rgba(255,255,255,0.10) !important; }
-  .nav-bar { background: rgba(28,30,36,0.82) !important; border-color: rgba(255,255,255,0.12) !important; }
-  .nav-btn.active, .btn-primary, .use-btn, .action-mini.use-btn, .ai-orb { background: #fff !important; color: #111 !important; }
-  .stat-label, .section-title, .ai-managed-sub { color: rgba(255,255,255,0.58) !important; }
-}
-
-
-
-
-
-  /* v14 Agent capture hub */
-  .capture-hub-overlay { align-items: flex-end; padding: 16px; padding-bottom: calc(18px + var(--safe-bottom)); }
-  .capture-hub-card {
-    width: 100%; max-width: 520px; margin: 0 auto;
-    background: rgba(255,255,255,0.88);
-    border: 0.5px solid rgba(255,255,255,0.75);
-    border-radius: 32px;
-    padding: 10px 16px 18px;
-    box-shadow: 0 24px 70px rgba(0,0,0,0.24);
-    backdrop-filter: blur(28px);
-    animation: slideUp 0.22s ease-out;
-  }
-  @media (prefers-color-scheme: dark) {
-    .capture-hub-card { background: rgba(28,28,30,0.9); border-color: rgba(255,255,255,0.12); }
-  }
-  .capture-hub-grabber { width: 42px; height: 5px; border-radius: 999px; background: rgba(120,120,128,0.35); margin: 0 auto 14px; }
-  .capture-hub-head { display: flex; align-items: center; gap: 13px; margin-bottom: 16px; }
-  .agent-avatar {
-    width: 52px; height: 52px; border-radius: 17px;
-    background: radial-gradient(circle at 30% 20%, #75f0b0, #0A84FF 50%, #111318 100%);
-    color: #fff; display: flex; align-items: center; justify-content: center;
-    font-weight: 850; letter-spacing: -0.6px; box-shadow: 0 12px 28px rgba(10,132,255,0.28);
-  }
-  .capture-hub-title { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.6px; }
-  .capture-hub-sub { margin: 3px 0 0; color: var(--text-secondary); font-size: 13px; line-height: 1.35; }
-  .capture-options { display: grid; gap: 10px; }
-  .capture-option {
-    width: 100%; border: 0; border-radius: 22px; background: rgba(242,242,247,0.88);
-    padding: 14px; display: flex; align-items: center; gap: 13px; text-align: left;
-  }
-  @media (prefers-color-scheme: dark) { .capture-option { background: rgba(58,58,60,0.7); } }
-  .capture-option.primary { background: #111318; color: #fff; }
-  .capture-option span { width: 42px; height: 42px; border-radius: 15px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.72); font-size: 22px; flex-shrink: 0; }
-  .capture-option.primary span { background: rgba(255,255,255,0.16); }
-  .capture-option strong { display: block; font-size: 15px; letter-spacing: -0.2px; }
-  .capture-option small { display: block; margin-top: 2px; color: var(--text-secondary); font-size: 12px; }
-  .capture-option.primary small { color: rgba(255,255,255,0.68); }
-  .capture-hub-close { width: 100%; margin-top: 10px; border: 0; background: transparent; color: var(--text-secondary); font-weight: 650; }
-  .link-copy { margin: -4px 0 14px; color: var(--text-secondary); font-size: 14px; line-height: 1.45; }
-  .link-capture-card textarea { min-height: 120px; resize: vertical; }
-
-  /* iDeal agent scan overlay: Snap → auto-save → Wallet */
-  .scan-overlay {
-    position: fixed; inset: 0;
-    background: rgba(7, 12, 20, 0.62);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
-    display: none; align-items: center; justify-content: center;
-    z-index: 1200;
-    padding: 22px;
-  }
-  .scan-overlay.show { display: flex; animation: fadeIn 0.18s ease-out; }
-  .scan-sheet {
-    width: min(360px, 100%);
-    background: rgba(255,255,255,0.92);
-    color: #101216;
-    border-radius: 32px;
-    padding: 30px 24px 24px;
-    text-align: center;
-    box-shadow: 0 28px 80px rgba(0,0,0,0.34);
-    border: 0.5px solid rgba(255,255,255,0.6);
-  }
-  @media (prefers-color-scheme: dark) {
-    .scan-sheet { background: rgba(24,26,31,0.92); color: #f5f7fb; border-color: rgba(255,255,255,0.12); }
-  }
-  .scan-orb {
-    width: 96px; height: 96px;
-    border-radius: 30px;
-    margin: 0 auto 18px;
-    background: radial-gradient(circle at 35% 25%, #ffffff 0%, #89c8ff 16%, #0A84FF 44%, #111318 100%);
-    display: flex; align-items: center; justify-content: center;
-    position: relative; overflow: hidden;
-    box-shadow: 0 18px 38px rgba(10,132,255,0.35);
-  }
-  .scan-orb:before {
-    content: "";
-    position: absolute; inset: -40%;
-    background: linear-gradient(110deg, transparent 42%, rgba(255,255,255,0.82) 50%, transparent 58%);
-    transform: translateX(-50%);
-    animation: scanSweep 1.4s infinite;
-  }
-  .scan-overlay.success .scan-orb { background: radial-gradient(circle at 35% 25%, #ffffff 0%, #8ff7b0 18%, #30D158 52%, #0d3b1d 100%); box-shadow: 0 18px 38px rgba(48,209,88,0.35); }
-  .scan-overlay.error .scan-orb { background: radial-gradient(circle at 35% 25%, #ffffff 0%, #ffb0a7 18%, #ff453a 52%, #41100d 100%); box-shadow: 0 18px 38px rgba(255,69,58,0.28); }
-  .scan-overlay.success .scan-orb:before, .scan-overlay.error .scan-orb:before { display: none; }
-  .scan-orb span:after {
-    content: "iD";
-    position: relative; z-index: 2;
-    font-weight: 800; font-size: 25px; letter-spacing: -1px; color: white;
-  }
-  .scan-overlay.success .scan-orb span:after { content: "✓"; font-size: 40px; }
-  .scan-overlay.error .scan-orb span:after { content: "!"; font-size: 40px; }
-  @keyframes scanSweep { to { transform: translateX(65%); } }
-  .scan-title { margin: 0; font-size: 22px; font-weight: 750; letter-spacing: -0.5px; }
-  .scan-sub { margin: 8px auto 0; max-width: 280px; font-size: 14px; line-height: 1.45; color: var(--text-secondary); }
-  .scan-progress {
-    margin-top: 22px; height: 6px; border-radius: 999px;
-    background: rgba(10,132,255,0.14); overflow: hidden;
-  }
-  .scan-progress div {
-    height: 100%; width: 45%; border-radius: inherit;
-    background: #0A84FF; animation: scanBar 1.1s ease-in-out infinite alternate;
-  }
-  .scan-overlay.success .scan-progress div { width: 100%; background: #30D158; animation: none; }
-  .scan-overlay.error .scan-progress div { width: 100%; background: #ff453a; animation: none; }
-  @keyframes scanBar { from { transform: translateX(-75%); } to { transform: translateX(170%); } }
-
 </style>
 </head>
 <body>
@@ -1323,19 +812,17 @@ input, select, textarea {
 <!-- Splash screen (shown briefly on launch) -->
 <div class="splash" id="splash">
   <div class="splash-mark">
-    <span class="mono">P</span>
-    <span class="pct">%</span>
+    <img src="icon-192.png" alt="Perq">
   </div>
   <p class="splash-title">Perq</p>
-  <p class="splash-sub">Snap it. Forget it.</p>
+  <p class="splash-sub">Snap. Forget. Get reminded.</p>
 </div>
 
 <!-- iOS install instructions screen -->
 <div class="install-screen" id="install-screen">
   <div class="install-screen-content">
     <div class="install-screen-mark">
-      <span class="mono">P</span>
-      <span class="pct">%</span>
+      <img src="icon-192.png" alt="Perq">
     </div>
     <h2>Add to your home screen</h2>
     <p class="lead">For the best experience, install Perq as an app. It's faster, works offline, and feels native.</p>
@@ -1358,7 +845,7 @@ input, select, textarea {
       <div class="install-step-num">3</div>
       <div class="install-step-content">
         <p><strong>Tap "Add"</strong></p>
-        <p class="sub">The Perq icon will appear on your home screen.</p>
+        <p class="sub">The DwD icon will appear on your home screen.</p>
       </div>
     </div>
   </div>
@@ -1370,12 +857,11 @@ input, select, textarea {
 <div class="header">
   <div class="header-title">
     <div class="brand-mark">
-      <span class="mono">P</span>
-      <span class="pct">%</span>
+      <img src="icon-192.png" alt="Perq">
     </div>
     <div>
       <h1>Perq</h1>
-      <p>Your AI savings agent</p>
+      <p>Snap. Forget. Get reminded.</p>
     </div>
   </div>
   <div class="header-actions">
@@ -1396,7 +882,7 @@ input, select, textarea {
   <div class="action-bar" id="action-bar">
     <button class="action-btn primary" id="btn-snap">
       <span class="snap-icon" aria-hidden="true">📷</span>
-      <span>Snap Deal</span>
+      <span>Snap a deal</span>
     </button>
     <button class="action-btn add-pill" id="btn-add" aria-label="Add deal manually">
       <span class="plus-circle">+</span>
@@ -1412,14 +898,13 @@ input, select, textarea {
 </div>
 
 <input type="file" id="capture-input" accept="image/*" capture="environment" style="display:none;">
-<input type="file" id="import-input" accept="image/*" style="display:none;">
 
 <nav class="nav-bar">
-  <button class="nav-btn active" data-tab="dashboard"><i class="ti ti-compass"></i><span>Discover</span></button>
-  <button class="nav-btn" data-tab="deals"><i class="ti ti-wallet"></i><span>Wallet</span></button>
+  <button class="nav-btn active" data-tab="dashboard"><i class="ti ti-layout-dashboard"></i><span>Home</span></button>
+  <button class="nav-btn" data-tab="deals"><i class="ti ti-ticket"></i><span>Deals</span></button>
   <button class="nav-btn" data-tab="rewards"><i class="ti ti-confetti"></i><span>Rewards</span></button>
-  <button class="nav-btn" data-tab="suggest"><i class="ti ti-sparkles"></i><span>AI Picks</span></button>
-  <button class="nav-btn" data-tab="social"><i class="ti ti-users"></i><span>Local</span></button>
+  <button class="nav-btn" data-tab="suggest"><i class="ti ti-sparkles"></i><span>For you</span></button>
+  <button class="nav-btn" data-tab="social"><i class="ti ti-users"></i><span>Social</span></button>
 </nav>
 
 <div class="modal-overlay" id="modal-deal">
@@ -1536,15 +1021,14 @@ input, select, textarea {
       </div>
     </div>
 
-    <p class="section-title"><i class="ti ti-eye-scan"></i>Smart Capture</p>
-    <div class="ai-managed-card">
-      <div class="ai-orb"><i class="ti ti-sparkles"></i></div>
-      <div>
-        <p class="ai-managed-title">AI scan is app-managed</p>
-        <p class="ai-managed-sub">No user API key needed. The production OCR endpoint can be connected server-side when you are ready.</p>
-      </div>
+    <p class="section-title"><i class="ti ti-eye-scan"></i>Smart Capture (OCR)</p>
+    <p style="font-size: 13px; color: var(--text-secondary); margin: 0 0 12px; line-height: 1.5;">
+      Snap a coupon and let AI fill in the details. Requires an Anthropic API key.
+    </p>
+    <div class="form-row">
+      <label>Anthropic API key</label>
+      <input id="s-api-key" type="password" placeholder="sk-ant-...">
     </div>
-    <input id="s-api-key" type="hidden" value="">
 
     <p class="section-title"><i class="ti ti-database"></i>Data</p>
     <div style="display: flex; gap: 8px;">
