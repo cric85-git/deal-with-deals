@@ -1,7 +1,7 @@
-const CACHE_NAME = 'perq-v19-link-flow';
+const CACHE_NAME = 'perq-v21-logo-splash-header-fix';
 const ASSETS = [
   './', './index.html', './app.js', './manifest.json',
-  './icon-180.png', './icon-192.png', './icon-512.png', './icon-maskable-512.png',
+  './icon-180.png', './apple-touch-icon.png', './icon-192.png', './icon-512.png', './icon-maskable-512.png',
   'https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.0.0/tabler-icons.min.css'
 ];
 
