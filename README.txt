@@ -1,26 +1,29 @@
-PERQ LOGO FIX — HEADER + SPLASH + ICONS
+PERQ v22 FULL REPO FIX
 
-Upload these files to the root of your GitHub repo and replace existing files:
+Upload ALL files in this ZIP to the root of your GitHub repo and replace existing files.
 
+Files included:
 - index.html
-- manifest.json
+- app.js
 - sw.js
+- manifest.json
 - icon-180.png
 - apple-touch-icon.png
 - icon-192.png
 - icon-512.png
 - icon-maskable-512.png
 
-What this fixes:
-- Old DwD logo on launch/loading screen
-- Old DwD logo in app header
-- Old app theme color
-- iPhone home-screen icon references
-- Service worker cache version
+Fixes:
+- Splash screen no longer gets stuck
+- Splash/loading screen uses the approved Perq logo
+- Header uses the approved Perq logo
+- Old DwD/Deal with deals branding removed from UI
+- Service worker cache is reset to v22
+- PWA manifest uses the correct app icon and navy/green theme
 
-After committing:
+After upload/commit:
 1. Wait 2-3 minutes for GitHub Pages.
-2. Delete the installed Perq PWA from your iPhone.
-3. Reboot iPhone if the old splash/icon remains cached.
-4. Open https://cric85-git.github.io/deal-with-deals/ in Safari.
+2. On iPhone Safari, open the site and refresh.
+3. Delete the old installed Perq PWA.
+4. Reboot iPhone if old splash/icon remains.
 5. Add to Home Screen again.

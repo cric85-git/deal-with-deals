@@ -6,14 +6,15 @@
 <meta name="theme-color" content="#185FA5">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="DwD Deals">
+<meta name="apple-mobile-web-app-title" content="Perq">
 <meta name="mobile-web-app-capable" content="yes">
-<title>Deal with Deals</title>
+<title>Perq</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png">
+<link rel="apple-touch-startup-image" href="icon-512.png">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.0.0/tabler-icons.min.css">
 <style>
   :root {
@@ -47,7 +48,7 @@
       --bg-primary: #1f1e1c; --bg-secondary: #2a2926; --bg-tertiary: #15140f;
       --bg-info: #042C53; --bg-success: #173404; --bg-warning: #412402; --bg-danger: #501313;
       --text-primary: #f5f4ef; --text-secondary: #b4b2a9; --text-tertiary: #888780;
-      --text-info: #B5D4F4; --text-success: #C0DD97; --text-warning: #FAC775; --text-danger: #F7C1C1;
+      --text-info: #C4F02B; --text-success: #C0DD97; --text-warning: #FAC775; --text-danger: #F7C1C1;
       --border-tertiary: rgba(255,255,255,0.1); --border-secondary: rgba(255,255,255,0.18);
     }
   }
@@ -84,12 +85,12 @@
   }
   .header-title { display: flex; align-items: center; gap: 10px; min-width: 0; }
   .brand-mark {
-    width: 38px; height: 38px;
-    border-radius: 11px;
+    width: 42px; height: 42px;
+    border-radius: 12px;
     overflow: hidden;
     flex-shrink: 0;
-    box-shadow: 0 5px 14px rgba(0,0,0,0.22);
     background: #071B4D;
+    box-shadow: 0 5px 14px rgba(0,0,0,0.22);
   }
   .brand-mark img {
     width: 100%;
@@ -734,12 +735,12 @@
   }
   .splash.hide { opacity: 0; pointer-events: none; }
   .splash-mark {
-    width: 104px; height: 104px;
-    border-radius: 26px;
+    width: 148px; height: 148px;
+    border-radius: 34px;
     overflow: hidden;
-    margin-bottom: 10px;
-    box-shadow: 0 18px 50px rgba(0,0,0,0.35);
+    margin-bottom: 16px;
     background: #071B4D;
+    box-shadow: 0 20px 55px rgba(0,0,0,0.38);
   }
   .splash-mark img {
     width: 100%;
@@ -763,12 +764,12 @@
     flex: 1; padding: 24px 20px; overflow-y: auto;
   }
   .install-screen-mark {
-    width: 84px; height: 84px;
-    border-radius: 22px;
+    width: 96px; height: 96px;
+    border-radius: 24px;
     overflow: hidden;
     margin: 0 auto 20px;
-    box-shadow: 0 12px 28px rgba(0,0,0,0.18);
     background: #071B4D;
+    box-shadow: 0 12px 28px rgba(0,0,0,0.18);
   }
   .install-screen-mark img {
     width: 100%;
@@ -806,13 +807,24 @@
   }
   .install-screen-footer button { width: 100%; padding: 14px; }
 </style>
+<script>
+window.addEventListener('load', function () {
+  setTimeout(function () {
+    var splash = document.getElementById('splash');
+    if (splash) {
+      splash.classList.add('hide');
+      setTimeout(function(){ splash.style.display = 'none'; }, 500);
+    }
+  }, 1200);
+});
+</script>
 </head>
 <body>
 
 <!-- Splash screen (shown briefly on launch) -->
 <div class="splash" id="splash">
   <div class="splash-mark">
-    <img src="icon-192.png" alt="Perq">
+    <img src="icon-512.png" alt="Perq">
   </div>
   <p class="splash-title">Perq</p>
   <p class="splash-sub">Snap. Forget. Get reminded.</p>
@@ -824,7 +836,7 @@
     <div class="install-screen-mark">
       <img src="icon-192.png" alt="Perq">
     </div>
-    <h2>Add to your home screen</h2>
+    <h2>Add Perq to your home screen</h2>
     <p class="lead">For the best experience, install Perq as an app. It's faster, works offline, and feels native.</p>
 
     <div class="install-step">
@@ -845,7 +857,7 @@
       <div class="install-step-num">3</div>
       <div class="install-step-content">
         <p><strong>Tap "Add"</strong></p>
-        <p class="sub">The DwD icon will appear on your home screen.</p>
+        <p class="sub">The Perq icon will appear on your home screen.</p>
       </div>
     </div>
   </div>
@@ -1023,7 +1035,7 @@
 
     <p class="section-title"><i class="ti ti-eye-scan"></i>Smart Capture (OCR)</p>
     <p style="font-size: 13px; color: var(--text-secondary); margin: 0 0 12px; line-height: 1.5;">
-      Snap a coupon and let AI fill in the details. Requires an Anthropic API key.
+      Snap a coupon and let AI fill in the details. Works locally for now; cloud AI Vision can be connected later for stronger extraction.
     </p>
     <div class="form-row">
       <label>Anthropic API key</label>
