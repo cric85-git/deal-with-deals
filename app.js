@@ -176,7 +176,7 @@
     q.claimed = true;
     game.spins += q.reward;
     save(KEYS.quests, quests); save(KEYS.game, game);
-    showToast(`Mission complete — +${q.reward} reveal`);
+    showToast(`Quest complete — +${q.reward} spin`);
     renderAll();
   }
 
@@ -420,146 +420,28 @@
       img.src = dataUrl;
     });
   }
-  async function handleCapture(file, sourceLabel = 'Photo capture') {
+  async function handleCapture(file) {
     if (!file) return;
-    showScanOverlay('reading', 'Handing it to iDeal…', 'Your savings agent is reading the coupon and will save the deal automatically.');
+    showOcrStatus('reading', 'Reading photo…');
+    const rawDataUrl = await fileToDataUrl(file);
+    const dataUrl = await compressImage(rawDataUrl, 1200);
+    pendingImage = dataUrl;
+    openModal(null, { imageOnly: true });
+    const apiKey = load(KEYS.apiKey, '');
+    if (!apiKey) {
+      showOcrStatus('warn', 'No API key set — fill in the details manually.');
+      return;
+    }
+    showOcrStatus('reading', 'Extracting deal details with AI…');
     try {
-      const rawDataUrl = await fileToDataUrl(file);
-      const dataUrl = await compressImage(rawDataUrl, 1800);
-      pendingImage = dataUrl;
-
-      showScanOverlay('reading', 'Understanding offer…', 'Detecting merchant, offers, promo codes, expiry and restrictions.');
-      const results = await runOcr(dataUrl);
-
-      showScanOverlay('reading', 'Saving to Wallet…', 'No forms. No manual save.');
-      const saved = autoSaveScannedDeals(results, dataUrl, sourceLabel);
-      const label = saved.length === 1 ? `${saved[0].merchant} · ${saved[0].discount}` : `${saved.length} offers saved from this coupon`;
-      showScanOverlay('success', 'Saved to Deals Wallet', label);
-      setTimeout(() => {
-        hideScanOverlay();
-        dealsFilter = 'active';
-        switchTab('deals');
-        renderAll();
-      }, 1100);
+      const result = await runOcr(dataUrl, apiKey);
+      applyOcrResult(result);
+      showOcrStatus('success', 'Got it — review and save below.');
     } catch (err) {
       console.error('OCR failed:', err);
-      showScanOverlay('error', 'iDeal needs a clearer image', 'Try again with the coupon flat, brighter lighting, and the full coupon inside the frame.');
-      setTimeout(() => hideScanOverlay(), 3000);
+      showOcrStatus('error', `Couldn't read it (${err.message}). Fill in manually.`);
     }
   }
-
-  function autoSaveScannedDeals(results, imageDataUrl, sourceLabel = 'Photo capture') {
-    const arr = Array.isArray(results) ? results : [results];
-    const saved = [];
-    arr.filter(Boolean).forEach((result) => {
-      const r = result || {};
-      const merchant = (r.merchant || '').trim() || 'Scanned Deal';
-      const discount = (r.discount || '').trim() || 'Coupon offer';
-      const url = inferUrl(merchant);
-      const deal = {
-        id: uid(),
-        merchant,
-        discount,
-        value: Number(r.value) || estimateValue(discount),
-        category: normalizeCategory(r.category),
-        source: sourceLabel,
-        code: (r.code || '').trim(),
-        expiry: normalizeExpiry(r.expiry),
-        notes: (r.notes || 'Auto-created by iDeal from your coupon').trim(),
-        url,
-        image: imageDataUrl || '',
-        redeemed: false,
-        shared: false,
-        createdAt: Date.now(),
-        scanConfidence: r.confidence || 'medium',
-        rawScanText: r._rawText || ''
-      };
-      if (!isDuplicateDeal(deal)) {
-        deals.push(deal);
-        saved.push(deal);
-      }
-    });
-    if (!saved.length && arr[0]) {
-      const r = arr[0];
-      saved.push(autoSaveFallbackDeal(r, imageDataUrl, sourceLabel));
-    }
-    if (saved.length) bumpQuest('q_add');
-    save(KEYS.deals, deals);
-    checkAndSendReminders();
-    return saved;
-  }
-
-  function autoSaveFallbackDeal(r, imageDataUrl, sourceLabel) {
-    const merchant = (r.merchant || 'Scanned Deal').trim();
-    const discount = (r.discount || 'Coupon offer').trim();
-    const deal = { id: uid(), merchant, discount, value: estimateValue(discount), category: normalizeCategory(r.category), source: sourceLabel, code: (r.code || '').trim(), expiry: normalizeExpiry(r.expiry), notes: 'Auto-created by iDeal from your coupon', url: inferUrl(merchant), image: imageDataUrl || '', redeemed:false, shared:false, createdAt: Date.now(), scanConfidence: r.confidence || 'low', rawScanText: r._rawText || '' };
-    deals.push(deal);
-    return deal;
-  }
-
-  function isDuplicateDeal(candidate) {
-    const cCode = (candidate.code || '').toUpperCase();
-    return deals.some(d => {
-      const sameMerchant = (d.merchant || '').toLowerCase() === (candidate.merchant || '').toLowerCase();
-      const sameDiscount = (d.discount || '').toLowerCase() === (candidate.discount || '').toLowerCase();
-      const sameCode = cCode && (d.code || '').toUpperCase() === cCode;
-      return sameMerchant && (sameCode || sameDiscount);
-    });
-  }
-
-  function normalizeCategory(cat) {
-    const validCats = ['Groceries','Dining','Apparel','Travel','Beauty','Home','Electronics','Other'];
-    return validCats.includes(cat) ? cat : 'Other';
-  }
-
-  function normalizeExpiry(expiry) {
-    if (!expiry) return '';
-    const d = new Date(expiry);
-    if (Number.isNaN(d.getTime())) return '';
-    return d.toISOString().slice(0,10);
-  }
-
-  function estimateValue(discount) {
-    const dollarOff = String(discount || '').match(/\$\s*(\d{1,4})/);
-    const pctOff = String(discount || '').match(/(\d{1,2})\s*%/);
-    if (dollarOff) return Number(dollarOff[1]) || 0;
-    if (pctOff) return Math.max(5, Math.round((Number(pctOff[1]) || 0) * 0.75));
-    if (/BOGO/i.test(discount)) return 10;
-    if (/FREE/i.test(discount)) return 5;
-    return 0;
-  }
-
-  function ensureScanOverlay() {
-    let overlay = document.getElementById('scan-overlay');
-    if (overlay) return overlay;
-    overlay = document.createElement('div');
-    overlay.id = 'scan-overlay';
-    overlay.className = 'scan-overlay';
-    overlay.innerHTML = `
-      <div class="scan-sheet">
-        <div class="scan-orb"><span></span></div>
-        <p class="scan-title" id="scan-title">Scanning coupon…</p>
-        <p class="scan-sub" id="scan-sub">iDeal is extracting the savings for you.</p>
-        <div class="scan-progress"><div></div></div>
-      </div>`;
-    document.body.appendChild(overlay);
-    return overlay;
-  }
-
-  function showScanOverlay(kind, title, sub) {
-    const overlay = ensureScanOverlay();
-    overlay.className = 'scan-overlay show ' + (kind || 'reading');
-    const t = document.getElementById('scan-title');
-    const s = document.getElementById('scan-sub');
-    if (t) t.textContent = title || 'Scanning coupon…';
-    if (s) s.textContent = sub || '';
-  }
-
-  function hideScanOverlay() {
-    const overlay = document.getElementById('scan-overlay');
-    if (overlay) overlay.classList.remove('show');
-  }
-
   function showOcrStatus(kind, msg) {
     const el = document.getElementById('ocr-status');
     el.style.display = 'flex';
@@ -571,219 +453,50 @@
       el.innerHTML = `<i class="ti ${icon}" style="font-size:16px;"></i><span>${escapeHtml(msg)}</span>`;
     }
   }
-  async function runOcr(dataUrl) {
-    // v14: static-PWA compatible agent scan.
-    // It uses local OCR as a fallback-friendly engine, tries multiple rotations, then applies
-    // coupon-specific semantic extraction. Real production should replace this with a server-side
-    // Vision AI endpoint, but this version is much stronger for physical mailers and screenshots.
-    if (!window.Tesseract || !window.Tesseract.recognize) {
-      throw new Error('OCR engine not loaded');
-    }
-    const candidates = [];
-    const rotations = [0, 90, 270];
-    for (let i = 0; i < rotations.length; i++) {
-      const deg = rotations[i];
-      const img = deg ? await rotateImageDataUrl(dataUrl, deg) : dataUrl;
-      showScanOverlay('reading', deg ? `Checking orientation…` : 'Reading coupon…', 'iDeal is looking across the full coupon, even if the photo is sideways.');
-      const { data } = await window.Tesseract.recognize(img, 'eng', {
-        logger: (m) => {
-          if (m && m.status && typeof m.progress === 'number') {
-            const pct = Math.round(m.progress * 100);
-            if (pct > 0 && pct < 100 && i === 0) showScanOverlay('reading', `Reading coupon… ${pct}%`, 'iDeal is extracting the savings from the image.');
-          }
-        }
-      });
-      const raw = (data && data.text ? data.text : '').trim();
-      if (raw) candidates.push({ raw, score: scoreOcrText(raw), rotation: deg });
-    }
-    candidates.sort((a,b) => b.score - a.score);
-    const raw = candidates[0] && candidates[0].raw ? candidates[0].raw : '';
-    if (!raw || raw.replace(/\s+/g, '').length < 8) throw new Error('no readable text found');
-    return extractDealsFromText(raw);
-  }
-
-  function rotateImageDataUrl(dataUrl, degrees) {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const swap = Math.abs(degrees) % 180 === 90;
-        canvas.width = swap ? img.height : img.width;
-        canvas.height = swap ? img.width : img.height;
-        ctx.translate(canvas.width / 2, canvas.height / 2);
-        ctx.rotate(degrees * Math.PI / 180);
-        ctx.drawImage(img, -img.width / 2, -img.height / 2);
-        resolve(canvas.toDataURL('image/jpeg', 0.9));
-      };
-      img.onerror = () => resolve(dataUrl);
-      img.src = dataUrl;
+  async function runOcr(dataUrl, apiKey) {
+    const match = dataUrl.match(/^data:(image\/[a-z]+);base64,(.+)$/);
+    if (!match) throw new Error('Invalid image format');
+    const mediaType = match[1];
+    const b64 = match[2];
+    const prompt = `Extract coupon/deal details from this image. Return ONLY a JSON object:
+{
+  "merchant": "store/brand name",
+  "discount": "discount amount like '20% off' or '$10 off $50'",
+  "code": "promo code if visible, else null",
+  "expiry": "YYYY-MM-DD format if a date is visible, else null",
+  "category": "one of: Groceries, Dining, Apparel, Travel, Beauty, Home, Electronics, Other",
+  "value": estimated dollar value as a number,
+  "notes": "any restrictions like 'min $50', 'in-store only', else null"
+}
+Return only the JSON, no other text.`;
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 500,
+        messages: [{ role: 'user', content: [
+          { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
+          { type: 'text', text: prompt }
+        ]}]
+      })
     });
-  }
-
-  function scoreOcrText(raw) {
-    const t = String(raw || '').toUpperCase();
-    let score = Math.min(80, t.length / 8);
-    ['OFF','FREE','SAVE','COUPON','CODE','EXPIRES','VALID','MOW','TREATMENT','RATE','ORDER'].forEach(w => { if (t.includes(w)) score += 20; });
-    score -= (t.match(/[~®©]/g) || []).length * 4;
-    return score;
-  }
-
-
-  function extractDealFromText(raw) {
-    const original = String(raw || '');
-    const flat = original.replace(/[\t\n\r]+/g, ' ').replace(/\s+/g, ' ').trim();
-    const upper = flat.toUpperCase();
-
-    const urlMatch = flat.match(/https?:\/\/[^\s)>,]+/i);
-    const url = urlMatch ? urlMatch[0].replace(/[),.;]+$/,'') : '';
-
-    let merchant = '';
-    if (url) merchant = merchantFromUrl(url);
-
-    // Common merchant/logo clues from OCR or pasted copy.
-    if (!merchant) {
-      const known = [
-        ['BUDGET LAWNCARE', 'Budget Lawncare'], ['BUDGETLAWNCARE', 'Budget Lawncare'],
-        ['THE CAR WASH EXPRESS', 'The Car Wash Express'], ['CAR WASH EXPRESS', 'The Car Wash Express'],
-        ['TARGET', 'Target'], ['WALMART', 'Walmart'], ['COSTCO', 'Costco'], ['KOHLS', "Kohl's"],
-        ['MACY', "Macy's"], ['CHIPOTLE', 'Chipotle'], ['STARBUCKS', 'Starbucks'], ['BEST BUY', 'Best Buy']
-      ];
-      const hit = known.find(([needle]) => upper.includes(needle));
-      if (hit) merchant = hit[1];
+    if (!response.ok) {
+      const errText = await response.text();
+      let errMsg = `API error ${response.status}`;
+      try { const errJson = JSON.parse(errText); if (errJson.error && errJson.error.message) errMsg = errJson.error.message; } catch(e) {}
+      throw new Error(errMsg);
     }
-
-    if (!merchant) {
-      const firstUseful = flat.split(/[|•.;]/).map(x => x.trim()).find(x => x.length >= 3 && x.length <= 40 && !/coupon|discount|offer|promo|https?:/i.test(x));
-      merchant = titleCaseWords(firstUseful || 'Online Deal');
-    }
-
-    let discount = '';
-    const patterns = [
-      /FREE\s+[A-Z][A-Z\s]{1,40}/i,
-      /\d{1,2}\s*%\s*OFF[^.,;|]{0,55}/i,
-      /\$\s*\d{1,4}\s*OFF[^.,;|]{0,55}/i,
-      /BUY\s+ONE\s+GET\s+ONE[^.,;|]{0,45}/i,
-      /BOGO[^.,;|]{0,45}/i,
-      /DISCOUNT\s+COUPON/i,
-      /PROMO\s+OFFER/i
-    ];
-    for (const re of patterns) {
-      const m = flat.match(re);
-      if (m) { discount = titleCaseOffer(m[0]); break; }
-    }
-    if (!discount && url) discount = discountFromUrlOrText(url, flat, {});
-    if (!discount) discount = 'Online deal saved';
-
-    let code = '';
-    const codePatterns = [
-      /(?:CODE|PROMO\s*CODE|COUPON\s*CODE)\s*[:#-]?\s*([A-Z0-9][A-Z0-9\s-]{2,18})/i,
-      /\b(B[5S]\s*5?\s*(?:FREE|OFF))\b/i,
-      /\b([A-Z0-9]{3,10}(?:FREE|OFF|SAVE)[A-Z0-9-]{0,8})\b/i
-    ];
-    for (const re of codePatterns) {
-      const m = flat.match(re);
-      if (m && m[1]) { code = m[1].replace(/\s+/g, ' ').trim().toUpperCase().replace(/^BS\s*5?/, 'B5'); break; }
-    }
-
-    let expiry = '';
-    const expiryMatch = flat.match(/(?:EXPIRES?|EXPIRATION|VALID\s+(?:THROUGH|THRU|UNTIL|TO)|GOOD\s+(?:THROUGH|THRU|UNTIL)|OFFER\s+ENDS|VALID)\s*[:#-]?\s*(\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4}|[A-Z][a-z]{2,8}\s+\d{1,2},?\s+\d{4})/i);
-    if (expiryMatch) expiry = expiryMatch[1];
-
-    let category = 'Other';
-    if (/lawn|mow|fertiliz|home|paint|repair|wash/i.test(flat)) category = 'Home';
-    if (/restaurant|pizza|coffee|burger|food|dining|chipotle|starbucks/i.test(flat)) category = 'Dining';
-    if (/grocery|costco|target|walmart|produce/i.test(flat)) category = 'Groceries';
-    if (/beauty|salon|sephora|ulta/i.test(flat)) category = 'Beauty';
-    if (/electronics|best buy|phone|computer/i.test(flat)) category = 'Electronics';
-
-    return {
-      merchant,
-      discount,
-      value: estimateValue(discount),
-      category,
-      code,
-      expiry,
-      notes: url ? `Saved from ${url}` : 'Saved from pasted offer text',
-      confidence: url || code || /%|\$|FREE|BOGO|COUPON/i.test(discount) ? 'medium' : 'low',
-      _rawText: flat
-    };
+    const data = await response.json();
+    const text = (data.content || []).map(b => b.text || '').join('').trim();
+    const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+    try { return JSON.parse(cleaned); } catch(e) { throw new Error('AI returned non-JSON response'); }
   }
-
-  function extractDealsFromText(raw) {
-    const original = String(raw || '');
-    const text = original.replace(/[\t ]+/g, ' ').replace(/\n{2,}/g, '\n').trim();
-    const flat = text.replace(/\s+/g, ' ').trim();
-    const upper = flat.toUpperCase();
-
-    // Special handling for real-world home-service mailers like Budget Lawncare.
-    // These often contain several offers on one postcard and confuse plain OCR.
-    const looksBudget = /BUDGET\s*(?:LAWN\s*CARE|LAWNCARE)|BUDGETLAWNCARE|BUDGET\s+LAWN/i.test(upper) || /B[5S]\s*(?:FREE|OFF)|FREE\s*MOW|FERTILIZATION/i.test(upper);
-    if (looksBudget) {
-      const offers = [];
-      if (/FREE\s*MOW|B5\s*FREE/i.test(upper)) {
-        offers.push({
-          merchant: 'Budget Lawncare',
-          discount: 'Free mow after 8 consecutive mows',
-          value: 40,
-          category: 'Home',
-          code: 'B5 FREE',
-          expiry: '',
-          notes: 'New customers only · After 8 consecutive weekly maintenance mows · Auto-saved by iDeal',
-          confidence: 'high',
-          _rawText: flat
-        });
-      }
-      if (/50\s*%\s*OFF|B5\s*OFF|FERTILIZATION/i.test(upper)) {
-        offers.push({
-          merchant: 'Budget Lawncare',
-          discount: '50% off first fertilization treatment',
-          value: 50,
-          category: 'Home',
-          code: 'B5 OFF',
-          expiry: '',
-          notes: 'New customers only · Some restrictions apply · Auto-saved by iDeal',
-          confidence: 'high',
-          _rawText: flat
-        });
-      }
-      if (offers.length) return offers;
-    }
-
-    const base = extractDealFromText(raw);
-    const offers = [base];
-
-    // If one image clearly contains multiple offer blocks, split into multiple wallet cards.
-    const pctMatches = [...flat.matchAll(/\b(\d{1,2}\s*%\s*OFF[^.,;|]{0,55})/gi)].map(m => m[1].trim());
-    const freeMatches = [...flat.matchAll(/\b(FREE\s+[A-Z][A-Z\s]{2,35})/gi)].map(m => m[1].trim());
-    const dollarMatches = [...flat.matchAll(/\$\s*\d{1,4}\s*OFF[^.,;|]{0,45}/gi)].map(m => m[0].trim());
-    const allOffers = [...new Set([...pctMatches, ...freeMatches, ...dollarMatches])]
-      .filter(x => x.length >= 6 && !x.includes(base.discount));
-
-    if (allOffers.length) {
-      const merchant = base.merchant;
-      const codes = [...flat.matchAll(/\b([A-Z0-9]{1,6}\s?(?:FREE|OFF|SAVE)[A-Z0-9-]{0,8})\b/g)].map(m => m[1].replace(/\s+/g,' ').trim().toUpperCase());
-      allOffers.slice(0, 3).forEach((offer, idx) => {
-        offers.push({ ...base, discount: titleCaseOffer(offer), value: estimateValue(offer), code: codes[idx] || '', notes: 'Auto-saved by iDeal from a multi-offer coupon', confidence: 'medium' });
-      });
-    }
-    return dedupeExtractedOffers(offers);
-  }
-
-  function titleCaseOffer(s) {
-    return String(s || '').toLowerCase().replace(/\b\w/g, c => c.toUpperCase()).replace(/\bOff\b/g,'off').replace(/\bFree\b/g,'Free');
-  }
-
-  function dedupeExtractedOffers(arr) {
-    const seen = new Set();
-    return arr.filter(o => {
-      const key = `${(o.merchant||'').toLowerCase()}|${(o.discount||'').toLowerCase()}|${(o.code||'').toLowerCase()}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-  }
-
   function applyOcrResult(r) {
     if (!r) return;
     if (r.merchant) document.getElementById('f-merchant').value = r.merchant;
@@ -816,10 +529,10 @@
   const POINTS_PER_SPIN = 10;
   const POINTS_PER_PREMIUM_DEAL = 50;
   const TIERS = [
-    { name: 'Explorer',   min: 0,    color: '#0A84FF', bg: 'rgba(10,132,255,0.12)', perk: '1 free spin per day' },
-    { name: 'Insider',   min: 100,  color: '#30D158', bg: 'rgba(48,209,88,0.14)', perk: '2 free spins per day' },
-    { name: 'Saver Pro',     min: 300,  color: '#FF9F0A', bg: 'rgba(255,159,10,0.15)', perk: '3 free spins + bonus odds' },
-    { name: 'Black', min: 750,  color: '#111318', bg: 'rgba(17,19,24,0.10)', perk: 'Elite points → spins' }
+    { name: 'Bronze',   min: 0,    color: '#A07248', bg: '#F5EBDD', perk: '1 free spin per day' },
+    { name: 'Silver',   min: 100,  color: '#6B7280', bg: '#E8EAED', perk: '2 free spins per day' },
+    { name: 'Gold',     min: 300,  color: '#9A6B0F', bg: '#FAEEDA', perk: '3 free spins + bonus odds' },
+    { name: 'Platinum', min: 750,  color: '#3C3489', bg: '#EEEDFE', perk: 'Unlimited points → spins' }
   ];
   function currentTier() {
     let t = TIERS[0];
@@ -839,7 +552,7 @@
     rewards.points -= POINTS_PER_SPIN;
     game.spins += 1;
     save(KEYS.rewards, rewards); save(KEYS.game, game);
-    showToast(`Redeemed — +1 reveal (${rewards.points} pts left)`);
+    showToast(`Redeemed — +1 spin (${rewards.points} pts left)`);
     renderAll();
   }
   function redeemPointsForPremiumDeal() {
@@ -866,9 +579,9 @@
     else if (game.streak >= 3) bonus = 2;
     // Tier perk: Silver +1, Gold +2, Platinum +3
     const tier = currentTier();
-    if (tier.name === 'Insider')   bonus += 1;
-    if (tier.name === 'Saver Pro')     bonus += 2;
-    if (tier.name === 'Black') bonus += 3;
+    if (tier.name === 'Silver')   bonus += 1;
+    if (tier.name === 'Gold')     bonus += 2;
+    if (tier.name === 'Platinum') bonus += 3;
     game.spins += bonus;
     save(KEYS.game, game);
     return { bonus, streak: game.streak, tier: tier.name };
@@ -877,7 +590,7 @@
     // Manual claim button — kept for the rare case spin wasn't auto-granted
     const result = autoGrantDailySpin();
     if (!result) return;
-    showToast(`Daily reward — +${result.bonus} reveal${result.bonus===1?'':'s'} (day ${result.streak})`);
+    showToast(`Daily reward — +${result.bonus} spin${result.bonus===1?'':'s'} (day ${result.streak})`);
     renderRewards(); updateHeader();
   }
   function spinWheel() {
@@ -898,7 +611,7 @@
     updateHeader();
     const btn = document.getElementById('spin-btn');
     if (btn) btn.disabled = true;
-    setTimeout(() => awardPrize(idx), 900);
+    setTimeout(() => awardPrize(idx), 4600);
   }
   function awardPrize(idx) {
     const slice = SLICES[idx];
@@ -977,19 +690,11 @@
     const expiringWithinSetting = getDealsNeedingReminder();
 
     let html = `
-      <div class="premium-discover-hero">
-        <div class="hero-copy">
-          <p class="eyebrow">SMART SAVINGS NEAR YOU</p>
-          <h2>$${Math.round(potential)} waiting in your wallet</h2>
-          <p>${active.length} active deal${active.length===1?'':'s'} · ${soon.length} expiring soon · ${game.spins} reward reveal${game.spins===1?'':'s'} ready</p>
-        </div>
-        <button class="hero-cta" data-goto="deals">Open Deals Wallet</button>
-      </div>
       <div class="stat-grid">
-        <div class="stat-card stat-clickable" data-filter="active"><p class="stat-label">Wallet</p><p class="stat-value">${active.length}</p><p class="stat-hint">Active deals →</p></div>
-        <div class="stat-card stat-clickable" data-filter="soon"><p class="stat-label">Urgent</p><p class="stat-value" style="color: var(--text-warning);">${soon.length}</p><p class="stat-hint">Expiring soon →</p></div>
-        <div class="stat-card"><p class="stat-label">Saved</p><p class="stat-value" style="color: var(--text-success);">$${Math.round(totalSaved)}</p></div>
-        <div class="stat-card"><p class="stat-label">Available</p><p class="stat-value">$${Math.round(potential)}</p></div>
+        <div class="stat-card stat-clickable" data-filter="active"><p class="stat-label">Active deals</p><p class="stat-value">${active.length}</p><p class="stat-hint">Tap to view →</p></div>
+        <div class="stat-card stat-clickable" data-filter="soon"><p class="stat-label">Expiring ≤ 7d</p><p class="stat-value" style="color: var(--text-warning);">${soon.length}</p><p class="stat-hint">Tap to view →</p></div>
+        <div class="stat-card"><p class="stat-label">Total saved</p><p class="stat-value" style="color: var(--text-success);">$${Math.round(totalSaved)}</p></div>
+        <div class="stat-card"><p class="stat-label">Potential</p><p class="stat-value">$${Math.round(potential)}</p></div>
       </div>
     `;
 
@@ -1053,16 +758,16 @@
       html += `
         <div class="card" style="background: var(--bg-info); border-color: var(--bg-info); display: flex; justify-content: space-between; align-items: center; gap: 12px;">
           <div style="min-width:0;">
-            <p style="margin:0; font-weight:500; font-size:14px; color: var(--text-info);">${game.spins} reward reveal${game.spins===1?'':'s'} ready</p>
-            <p style="margin:2px 0 0; font-size:12px; color: var(--text-info); opacity: 0.85;">Reveal points, bonus deals, or a jackpot.</p>
+            <p style="margin:0; font-weight:500; font-size:14px; color: var(--text-info);">${game.spins} spin${game.spins===1?'':'s'} ready</p>
+            <p style="margin:2px 0 0; font-size:12px; color: var(--text-info); opacity: 0.85;">Spin to win points, bonus deals, or jackpot.</p>
           </div>
-          <button data-goto="rewards" style="white-space:nowrap; background: var(--text-info); color: var(--bg-primary); border-color: var(--text-info); font-weight: 500;"><i class="ti ti-confetti" style="font-size:14px; vertical-align:-2px; margin-right:4px;"></i>Reveal</button>
+          <button data-goto="rewards" style="white-space:nowrap; background: var(--text-info); color: var(--bg-primary); border-color: var(--text-info); font-weight: 500;"><i class="ti ti-confetti" style="font-size:14px; vertical-align:-2px; margin-right:4px;"></i>Spin now</button>
         </div>
       `;
     }
 
     if (soon.length) {
-      html += `<p class="section-title"><i class="ti ti-bell" style="color: var(--text-warning);"></i>Ending soon</p>`;
+      html += `<p class="section-title"><i class="ti ti-bell" style="color: var(--text-warning);"></i>Use these soon</p>`;
       html += soon.map(d => `
         <div class="card" style="display:flex; align-items:center; justify-content:space-between; gap: 10px;">
           <div style="min-width:0;">
@@ -1074,7 +779,7 @@
       `).join('');
     }
 
-    html += `<p class="section-title">Your savings map</p>`;
+    html += `<p class="section-title">Savings by category</p>`;
     if (catRows.length) {
       html += `<div class="card">${catRows.map(([cat, val]) => `
         <div style="margin-bottom: 12px;">
@@ -1309,7 +1014,7 @@
       <div class="card" style="background: var(--bg-info); border-color: var(--bg-info); margin-bottom: 14px;">
         <p style="margin: 0; font-size: 13px; color: var(--text-info); line-height: 1.5;">
           <i class="ti ti-sparkles" style="font-size: 14px; vertical-align: -2px; margin-right: 4px;"></i>
-          AI-picked savings based on your wallet, location patterns, and deal history — tap <strong>Claim</strong> to add one to your wallet.
+          Based on your preferences and saved deals, here are picks you might like — tap <strong>Claim</strong> to add them to your tracked deals.
         </p>
       </div>
       ${sugg.map((s, i) => `
@@ -1356,53 +1061,63 @@
   function renderRewards() {
     const root = document.getElementById('panel-rewards');
     const dailyReady = canDailySpin();
-    const recent = (game.history || []).slice(0, 5);
-    const tier = currentTier();
-    const next = nextTier();
-    const prevMin = tier.min || 0;
-    const tierProgress = next ? Math.max(5, Math.min(100, Math.round(((rewards.points - prevMin) / Math.max(1, next.min - prevMin)) * 100))) : 100;
     const streakDots = Array.from({length:7}, (_,i) => {
       const on = i < game.streak;
       return `<span class="streak-dot ${on?'streak-on':'streak-off'}">${i+1}</span>`;
     }).join('');
+    const recent = (game.history || []).slice(0, 5);
+    const tier = currentTier();
+    const next = nextTier();
 
     root.innerHTML = `
-      <div class="rewards-v12-hero">
-        <p class="eyebrow">PERQ REWARDS</p>
-        <h2>${tier.name} Saver</h2>
-        <p>${next ? `${next.min - rewards.points} points to ${next.name}` : 'Top tier unlocked'} · ${game.streak || 0}-day streak</p>
-        <div class="reward-ring-row">
-          <div class="reward-ring" style="--ring:${tierProgress}%;">
-            <div class="reward-ring-inner"><div><strong>${tierProgress}</strong><br><span>LEVEL %</span></div></div>
+      <!-- Hero card: wheel + stats + spin button + tier all in one block -->
+      <div class="rewards-hero">
+        <div class="rewards-hero-top">
+          <div class="rewards-stats-side">
+            <div class="hero-stat">
+              <p class="hero-stat-val">${rewards.points}</p>
+              <p class="hero-stat-lbl">POINTS</p>
+            </div>
+            <div class="hero-stat">
+              <p class="hero-stat-val" style="color: var(--text-warning);">${game.spins}</p>
+              <p class="hero-stat-lbl">SPINS</p>
+            </div>
+            <div class="hero-stat">
+              <p class="hero-stat-val">${game.streak}</p>
+              <p class="hero-stat-lbl">STREAK</p>
+            </div>
           </div>
-          <div class="reward-metric-grid">
-            <div class="reward-metric"><strong>${rewards.points}</strong><span>POINTS</span></div>
-            <div class="reward-metric"><strong>${game.spins}</strong><span>REVEALS</span></div>
-            <div class="reward-metric"><strong>${rewards.shared}</strong><span>SHARED</span></div>
-            <div class="reward-metric"><strong>${rewards.claimed}</strong><span>CLAIMED</span></div>
+          <div class="wheel-container compact">
+            <div class="wheel-pointer"><svg width="18" height="22" viewBox="0 0 22 28"><polygon points="11,28 0,4 22,4" fill="var(--text-primary)"/><polygon points="11,4 4,0 18,0" fill="var(--text-primary)"/></svg></div>
+            ${buildWheelSVG()}
+            <div class="wheel-hub">SPIN</div>
           </div>
         </div>
-        <div class="streak-strip v12">${streakDots}</div>
-        ${dailyReady ? `<button id="daily-btn" class="reveal-btn" style="background:white!important;color:#111!important;margin-top:16px;"><i class="ti ti-gift" style="font-size:15px;vertical-align:-2px;margin-right:6px;"></i>Claim today’s reward</button>` : ''}
-      </div>
-
-      <div class="reward-reveal-card">
-        <div class="reward-reveal-top">
-          <div>
-            <p class="reward-reveal-title">Daily Perq Drop</p>
-            <p class="reward-reveal-sub">Reveal a surprise: points, bonus deals, or a premium unlock. No spinner — just a fast reward moment.</p>
-          </div>
-          <div class="reward-token">✦</div>
-        </div>
-        <button id="spin-btn" ${game.spins<=0?'disabled':''} class="reveal-btn">
-          ${game.spins > 0 ? `Reveal reward (${game.spins})` : 'No reveals available'}
+        <button id="spin-btn" ${game.spins<=0?'disabled':''} class="btn-primary spin-cta">
+          <i class="ti ti-player-play" style="font-size:14px; vertical-align:-2px; margin-right:6px;"></i>${game.spins > 0 ? `Spin to win (${game.spins})` : 'No spins yet'}
         </button>
+        <div class="streak-strip">
+          ${streakDots}
+        </div>
+        <div class="tier-strip" style="background: ${tier.bg};">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap: 8px;">
+            <p style="margin:0; font-size:11px; font-weight:600; color:${tier.color}; text-transform:uppercase; letter-spacing:0.4px;">${tier.name} · ${tier.perk}</p>
+            ${next ? `<p style="margin:0; font-size:10px; color: var(--text-secondary); white-space: nowrap;">${next.min - rewards.points} pts to ${next.name}</p>` : ''}
+          </div>
+          ${next ? `<div class="progress-bar" style="margin-top:4px;"><div class="progress-fill" style="width:${Math.min(100, Math.round((rewards.points / next.min) * 100))}%;"></div></div>` : ''}
+        </div>
+        ${dailyReady ? `
+          <div style="text-align: center; margin-top: 8px;">
+            <button id="daily-btn" style="font-size: 11px; padding: 4px 10px;"><i class="ti ti-gift" style="font-size:11px; vertical-align:-2px; margin-right:3px;"></i>Claim today's free spin</button>
+          </div>
+        ` : ''}
       </div>
 
-      <div class="spend-row v12">
+      <!-- Spend points: compact horizontal pills -->
+      <div class="spend-row">
         <button id="redeem-spin-btn" ${rewards.points < POINTS_PER_SPIN ? 'disabled' : ''} class="spend-pill ${rewards.points >= POINTS_PER_SPIN ? 'spend-active' : ''}">
           <span class="spend-pill-icon">⚡</span>
-          <span class="spend-pill-label">Buy reveal</span>
+          <span class="spend-pill-label">Buy spin</span>
           <span class="spend-pill-cost">${POINTS_PER_SPIN} pts</span>
         </button>
         <button id="redeem-deal-btn" ${rewards.points < POINTS_PER_PREMIUM_DEAL ? 'disabled' : ''} class="spend-pill ${rewards.points >= POINTS_PER_PREMIUM_DEAL ? 'spend-active' : ''}">
@@ -1412,26 +1127,27 @@
         </button>
       </div>
 
-      <p class="section-title"><i class="ti ti-target"></i>Today’s missions</p>
-      <div class="mission-card">
+      <!-- Below the fold: Daily quests + recent wins -->
+      <p class="section-title"><i class="ti ti-target"></i>Daily quests</p>
+      <div class="card" style="padding: 2px 14px;">
         ${quests.items.map(q => `
-          <div class="mission-row-v12">
-            <div class="mission-icon"><i class="ti ${q.id === 'q_add' ? 'ti-camera-plus' : q.id === 'q_share' ? 'ti-share' : 'ti-check'}"></i></div>
-            <div style="flex:1;min-width:0;">
-              <p class="mission-title">${escapeHtml(q.label)}</p>
-              <p class="mission-sub">${q.progress}/${q.target} completed · +${q.reward} reveal</p>
-              <div class="progress-bar" style="margin-top:7px;"><div class="progress-fill" style="width:${Math.round((q.progress/q.target)*100)}%;"></div></div>
+          <div class="quest-row">
+            <div style="flex:1; min-width:0;">
+              <p style="margin:0; font-size:13px;">${escapeHtml(q.label)}</p>
+              <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
+                <div class="progress-bar" style="flex:1;"><div class="progress-fill" style="width:${Math.round((q.progress/q.target)*100)}%;"></div></div>
+                <span style="font-size:10px; color: var(--text-secondary);">${q.progress}/${q.target}</span>
+              </div>
             </div>
-            <button data-claim-quest="${q.id}" ${(q.progress<q.target||q.claimed)?'disabled':''}>${q.claimed ? 'Done' : 'Claim'}</button>
+            <button data-claim-quest="${q.id}" ${(q.progress<q.target||q.claimed)?'disabled':''} style="font-size:12px; padding: 6px 10px;">${q.claimed ? 'Claimed' : `+${q.reward}`}</button>
           </div>
         `).join('')}
       </div>
-
       ${recent.length ? `
-        <p class="section-title">Recent reward moments</p>
-        <div class="mission-card">
+        <p class="section-title">Recent wins</p>
+        <div class="card" style="padding: 2px 14px;">
           ${recent.map((h,i) => `
-            <div style="padding: 10px 0; ${i>0?'border-top: 0.5px solid rgba(0,0,0,0.07);':''} display:flex; justify-content:space-between; font-size:13px; gap: 8px;">
+            <div style="padding: 8px 0; ${i>0?'border-top: 0.5px solid var(--border-tertiary);':''} display:flex; justify-content:space-between; font-size:12px; gap: 8px;">
               <span>${escapeHtml(h.label)}</span>
               <span style="color: var(--text-secondary); font-size:11px; white-space:nowrap;">${new Date(h.ts).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</span>
             </div>
@@ -1464,7 +1180,7 @@
         <div class="stat-card compact"><p class="stat-label">Shared</p><p class="stat-value">${rewards.shared}</p></div>
         <div class="stat-card compact"><p class="stat-label">Claimed</p><p class="stat-value">${rewards.claimed}</p></div>
       </div>
-      <p class="section-title">Shared from your wallet</p>
+      <p class="section-title">Your shared deals</p>
       ${myShared.length ? myShared.map(d => `
         <div class="card" style="display:flex; justify-content:space-between; align-items:center; gap: 10px;">
           <div style="min-width:0;">
@@ -1474,7 +1190,7 @@
           <span class="pill" style="background: var(--bg-success); color: var(--text-success);">Shared</span>
         </div>
       `).join('') : `<div class="empty" style="padding: 20px;"><i class="ti ti-share"></i>No shared deals yet.</div>`}
-      <p class="section-title">Trending nearby</p>
+      <p class="section-title">Trending in community</p>
       ${community.map(c => `
         <div class="card" style="display:flex; justify-content:space-between; align-items:center; gap: 10px;">
           <div style="min-width:0;">
@@ -1695,319 +1411,9 @@
     renderAll();
   }
 
-
-
-  // ---------- Agent capture hub: Snap, Import, Paste Link ----------
-  function ensureCaptureHub() {
-    let overlay = document.getElementById('capture-hub');
-    if (overlay) return overlay;
-    overlay = document.createElement('div');
-    overlay.id = 'capture-hub';
-    overlay.className = 'modal-overlay center capture-hub-overlay';
-    overlay.innerHTML = `
-      <div class="capture-hub-card">
-        <div class="capture-hub-grabber"></div>
-        <div class="capture-hub-head">
-          <div class="agent-avatar">iD</div>
-          <div>
-            <p class="capture-hub-title">Hand it to iDeal</p>
-            <p class="capture-hub-sub">Snap, import, or paste a deal. Tap Save and Perq will add it to Wallet.</p>
-          </div>
-        </div>
-        <div class="capture-options">
-          <button id="hub-snap" class="capture-option primary"><span>📷</span><div><strong>Snap Deal</strong><small>For mailers, receipts, postcards</small></div></button>
-          <button id="hub-upload" class="capture-option"><span>🖼️</span><div><strong>Import screenshot/image</strong><small>For email, web, texts, Photos</small></div></button>
-          <button id="hub-link" class="capture-option"><span>🔗</span><div><strong>Paste coupon link</strong><small>Save online deals or pages</small></div></button>
-        </div>
-        <button id="hub-close" class="capture-hub-close">Cancel</button>
-      </div>`;
-    document.body.appendChild(overlay);
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeCaptureHub(); });
-    overlay.querySelector('#hub-close').addEventListener('click', closeCaptureHub);
-    overlay.querySelector('#hub-snap').addEventListener('click', () => { closeCaptureHub(); document.getElementById('capture-input').click(); });
-    overlay.querySelector('#hub-upload').addEventListener('click', () => { closeCaptureHub(); document.getElementById('import-input').click(); });
-    overlay.querySelector('#hub-link').addEventListener('click', () => { closeCaptureHub(); openLinkCapture(); });
-    return overlay;
-  }
-
-  function openCaptureHub() {
-    ensureCaptureHub().classList.add('active');
-  }
-  function closeCaptureHub() {
-    const overlay = document.getElementById('capture-hub');
-    if (overlay) overlay.classList.remove('active');
-  }
-
-  let linkSaveInProgress = false;
-
-  function ensureLinkCapture() {
-    let overlay = document.getElementById('link-capture');
-    if (overlay) return overlay;
-    overlay = document.createElement('div');
-    overlay.id = 'link-capture';
-    overlay.className = 'modal-overlay center';
-    overlay.innerHTML = `
-      <div class="modal center-modal link-capture-card">
-        <div class="modal-header">
-          <p class="modal-title">Save online deal</p>
-          <button type="button" class="icon-btn" id="link-close" aria-label="Close" style="color: var(--text-secondary);"><i class="ti ti-x" style="color: var(--text-secondary);"></i></button>
-        </div>
-        <p class="link-copy">Paste a coupon page, promo link, or offer text. Nothing is saved until you tap the button below.</p>
-        <div class="form-row"><label>Link or offer text</label><textarea id="link-text" rows="5" placeholder="Paste URL, email coupon text, or online offer here"></textarea></div>
-        <button type="button" id="link-save" class="btn-primary" style="width:100%; padding: 14px; border-radius: 999px; pointer-events:auto; touch-action:manipulation;">Save to Deals Wallet</button>
-      </div>`;
-    document.body.appendChild(overlay);
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeLinkCapture(); });
-    overlay.querySelector('#link-close').addEventListener('click', closeLinkCapture);
-    const btn = overlay.querySelector('#link-save');
-    const txt = overlay.querySelector('#link-text');
-
-    // Save must be explicitly user-triggered. Do not attach paste/input/touchend handlers.
-    // iOS can fire touchend during text editing, so click-only avoids accidental auto-save.
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      saveLinkCapture();
-    });
-    txt.addEventListener('paste', (e) => e.stopPropagation());
-    txt.addEventListener('input', () => {
-      if (btn && !linkSaveInProgress) {
-        btn.disabled = false;
-        btn.textContent = 'Save to Deals Wallet';
-      }
-    });
-    return overlay;
-  }
-
-  function openLinkCapture(prefill = '') {
-    const overlay = ensureLinkCapture();
-    const input = overlay.querySelector('#link-text');
-    const btn = overlay.querySelector('#link-save');
-    input.value = prefill || '';
-    linkSaveInProgress = false;
-    if (btn) { btn.disabled = false; btn.textContent = 'Save to Deals Wallet'; }
-    overlay.classList.add('active');
-    // Do not autofocus on mobile; it can cause accidental keyboard/touch interactions.
-  }
-  function closeLinkCapture() {
-    const overlay = document.getElementById('link-capture');
-    const btn = document.getElementById('link-save');
-    if (overlay) overlay.classList.remove('active');
-    if (btn) { btn.disabled = false; btn.textContent = 'Save to Deals Wallet'; }
-    linkSaveInProgress = false;
-  }
-  function titleCaseWords(str) {
-    return String(str || '').replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim().replace(/\b\w/g, c => c.toUpperCase());
-  }
-  function merchantFromUrl(url) {
-    try {
-      const host = new URL(url).hostname.replace(/^www\./,'');
-      const base = host.split('.')[0];
-      const known = {
-        'thecarwashexpress': 'The Car Wash Express',
-        'carwashexpress': 'The Car Wash Express',
-        'budgetlawncare': 'Budget Lawncare',
-        'carspa': 'Car Spa',
-        'target': 'Target',
-        'walmart': 'Walmart',
-        'costco': 'Costco',
-        'kohls': "Kohl's",
-        'macys': "Macy's"
-      };
-      return known[base.toLowerCase()] || titleCaseWords(base.replace(/express$/i, ' express'));
-    } catch(e) { return ''; }
-  }
-  function discountFromUrlOrText(url, text, result) {
-    if (result.discount && result.discount !== 'Coupon offer') return result.discount;
-    const lower = `${url} ${text}`.toLowerCase();
-    if (lower.includes('discount-coupon')) return 'Discount Coupon';
-    if (lower.includes('coupon')) return 'Coupon Offer';
-    if (lower.includes('promo')) return 'Promo Offer';
-    return 'Online deal saved';
-  }
-
-  function extractDealsFromLinkOrText(input) {
-    const text = String(input || '').trim();
-    const urlMatch = text.match(/https?:\/\/[^\s]+/i);
-    const url = urlMatch ? urlMatch[0].replace(/[),.;]+$/,'') : '';
-    const lower = `${url} ${text}`.toLowerCase();
-
-    // Static-PWA known page extraction. In production, the backend agent will fetch the URL,
-    // parse DOM/images, and use Vision AI. For now, this prevents URL-only saves from becoming one generic card.
-    if (/carspa\.net\/coupons/.test(lower)) {
-      // Known coupon-page extraction for static PWA mode. A browser-only PWA cannot reliably
-      // scrape every coupon page because many sites block cross-origin fetches, so URL-only
-      // parsing uses a verified recipe for high-traffic/known merchants and the test suite
-      // protects this behavior.
-      const expiry = '2026-05-10';
-      return [
-        {
-          merchant: 'Car Spa',
-          discount: 'Free $30 Wash',
-          value: 30,
-          category: 'Other',
-          code: '',
-          expiry,
-          notes: 'Valid thru May 10, 2026 · Limit one coupon per vehicle · Present at time of service · Auto-saved by iDeal from Car Spa coupons page',
-          url,
-          confidence: 'high',
-          _rawText: text
-        },
-        {
-          merchant: 'Car Spa',
-          discount: '5% to 10% off multiple washes online',
-          value: 10,
-          category: 'Other',
-          code: 'WASHDISC',
-          expiry: '',
-          notes: 'Get 5% off when buying 2 or 3 washes online; 10% off when buying 4 or more · Promo code WASHDISC · Auto-saved by iDeal',
-          url,
-          confidence: 'high',
-          _rawText: text
-        },
-        {
-          merchant: 'Car Spa',
-          discount: 'Military and veterans: 10% off car washes and detail packages',
-          value: 10,
-          category: 'Other',
-          code: '',
-          expiry: '',
-          notes: 'Military and veterans discount · Military ID required · No coupon code needed · Auto-saved by iDeal',
-          url,
-          confidence: 'high',
-          _rawText: text
-        },
-        {
-          merchant: 'Car Spa',
-          discount: '20% off detail service or oil change',
-          value: 20,
-          category: 'Other',
-          code: '',
-          expiry: '',
-          notes: 'Unlimited Car Wash Club member perk · Auto-saved by iDeal',
-          url,
-          confidence: 'medium',
-          _rawText: text
-        }
-      ];
-    }
-
-    const extracted = extractDealsFromText(text);
-    const arr = Array.isArray(extracted) ? extracted : [extracted];
-    return arr.map((result) => {
-      const merchant = result.merchant && result.merchant !== 'Scanned Deal' ? result.merchant : (url ? merchantFromUrl(url) : 'Online Deal');
-      const discount = discountFromUrlOrText(url, text, result);
-      return {
-        merchant: merchant || 'Online Deal',
-        discount,
-        value: result.value || estimateValue(discount),
-        category: normalizeCategory(result.category || 'Other'),
-        source: 'Online / email import',
-        code: result.code || '',
-        expiry: normalizeExpiry(result.expiry),
-        notes: result.notes || 'Saved by Perq from pasted link/text',
-        url,
-        image: '',
-        scanConfidence: url ? 'medium' : (result.confidence || 'low'),
-        rawScanText: text
-      };
-    });
-  }
-
-  function saveLinkCapture() {
-    if (linkSaveInProgress) return;
-    const input = document.getElementById('link-text');
-    const btn = document.getElementById('link-save');
-    const text = (input && input.value || '').trim();
-    if (!text) { showToast('Paste a link or offer first'); return; }
-
-    linkSaveInProgress = true;
-    if (btn) { btn.disabled = true; btn.textContent = 'Scanning deal…'; }
-    showScanOverlay('reading', 'Scanning online deal…', 'Perq is extracting the merchant, offer, promo code and reminder details.');
-
-    const resetLinkSaveIfStuck = setTimeout(() => {
-      if (linkSaveInProgress) {
-        linkSaveInProgress = false;
-        if (btn) { btn.disabled = false; btn.textContent = 'Save to Deals Wallet'; }
-        hideScanOverlay();
-        showToast('Save took too long — tap Save again');
-      }
-    }, 5000);
-
-    // Keep the flow deterministic and static-hosting friendly. A real backend can later fetch the
-    // page and run Vision/LLM extraction; this local path never hangs if the page blocks scraping.
-    setTimeout(() => {
-      try {
-        const extractedDeals = extractDealsFromLinkOrText(text);
-        const saved = [];
-        extractedDeals.forEach((item) => {
-          const deal = {
-            id: uid(),
-            merchant: item.merchant || 'Online Deal',
-            discount: item.discount || 'Online deal saved',
-            value: item.value || estimateValue(item.discount),
-            category: normalizeCategory(item.category || 'Other'),
-            source: item.source || 'Online / email import',
-            code: item.code || '',
-            expiry: normalizeExpiry(item.expiry),
-            notes: item.notes || 'Saved by Perq from pasted link/text',
-            url: item.url || '',
-            image: item.image || '',
-            redeemed:false,
-            shared:false,
-            createdAt: Date.now(),
-            scanConfidence: item.scanConfidence || item.confidence || 'medium',
-            rawScanText: item.rawScanText || item._rawText || text
-          };
-          if (!isDuplicateDeal(deal)) {
-            deals.push(deal);
-            saved.push(deal);
-          }
-        });
-        if (saved.length) {
-          bumpQuest('q_add');
-          save(KEYS.deals, deals);
-          const first = saved[0];
-          const msg = saved.length === 1 ? `${first.merchant} · ${first.discount}` : `${saved.length} offers saved from ${first.merchant}`;
-          showScanOverlay('success', 'Saved to Deals Wallet', msg);
-          showToast(saved.length === 1 ? `${first.merchant} saved` : `${saved.length} deals saved to Wallet`);
-        } else {
-          showScanOverlay('success', 'Already in Wallet', 'No new offers were added.');
-          showToast('Those deals are already in your Wallet');
-        }
-        clearTimeout(resetLinkSaveIfStuck);
-        setTimeout(() => {
-          hideScanOverlay();
-          closeLinkCapture();
-          dealsFilter = 'active';
-          switchTab('deals');
-          renderAll();
-        }, 850);
-      } catch (err) {
-        clearTimeout(resetLinkSaveIfStuck);
-        console.error('Link save failed:', err);
-        showScanOverlay('error', 'Could not save this deal', 'Try pasting the offer text or a clearer coupon link.');
-        showToast('Could not save this deal');
-        setTimeout(() => hideScanOverlay(), 1600);
-        if (btn) { btn.disabled = false; btn.textContent = 'Save to Deals Wallet'; }
-        linkSaveInProgress = false;
-      }
-    }, 120);
-  }
-
-  function handleSharedLaunch() {
-    try {
-      const params = new URLSearchParams(location.search);
-      const sharedText = params.get('text') || params.get('url') || params.get('title');
-      if (sharedText) {
-        setTimeout(() => openLinkCapture(sharedText), 900);
-        history.replaceState(null, '', location.pathname);
-      }
-    } catch(e) {}
-  }
-
   // ---------- Settings ----------
   function openSettings() {
+    document.getElementById('s-api-key').value = load(KEYS.apiKey, '');
     document.getElementById('s-reminders-on').checked = !!settings.remindersOn;
     document.getElementById('s-reminder-days').value = String(settings.reminderDays);
     document.getElementById('s-nearby-on').checked = !!settings.nearbyOn;
@@ -2017,6 +1423,8 @@
   }
   function closeSettings() { document.getElementById('modal-settings').classList.remove('active'); }
   function saveSettings() {
+    const key = document.getElementById('s-api-key').value.trim();
+    save(KEYS.apiKey, key);
     settings = {
       remindersOn: document.getElementById('s-reminders-on').checked,
       reminderDays: Number(document.getElementById('s-reminder-days').value) || 3,
@@ -2025,7 +1433,7 @@
     };
     save(KEYS.settings, settings);
     closeSettings();
-    showToast('Preferences saved');
+    showToast('Settings saved');
     // Trigger checks based on new settings
     checkAndSendReminders();
     if (settings.nearbyOn) findNearbyDeals();
@@ -2086,20 +1494,15 @@
     const dailyResult = autoGrantDailySpin();
     if (dailyResult) {
       setTimeout(() => {
-        showToast(`🎉 +${dailyResult.bonus} daily reveal${dailyResult.bonus===1?'':'s'} (day ${dailyResult.streak} streak)`);
+        showToast(`🎉 +${dailyResult.bonus} daily spin${dailyResult.bonus===1?'':'s'} (day ${dailyResult.streak} streak)`);
       }, 1400);
     }
 
     document.getElementById('btn-add').addEventListener('click', () => openModal(null));
-    document.getElementById('btn-snap').addEventListener('click', openCaptureHub);
+    document.getElementById('btn-snap').addEventListener('click', () => document.getElementById('capture-input').click());
     document.getElementById('capture-input').addEventListener('change', (e) => {
       const f = e.target.files && e.target.files[0];
-      if (f) handleCapture(f, 'Photo capture');
-      e.target.value = '';
-    });
-    document.getElementById('import-input').addEventListener('change', (e) => {
-      const f = e.target.files && e.target.files[0];
-      if (f) handleCapture(f, 'Image import');
+      if (f) handleCapture(f);
       e.target.value = '';
     });
     document.getElementById('modal-close').addEventListener('click', closeModal);
@@ -2135,13 +1538,11 @@
       const params = new URLSearchParams(location.search);
       const action = params.get('action');
       if (action === 'snap') {
-        setTimeout(() => openCaptureHub(), 1000);
+        setTimeout(() => document.getElementById('capture-input').click(), 1000);
       } else if (action === 'add') {
         setTimeout(() => openModal(null), 1000);
       }
     } catch(e) {}
-
-    handleSharedLaunch();
 
     // Run reminder check on load and every time the app comes back to foreground
     checkAndSendReminders();
@@ -2149,7 +1550,7 @@
       if (document.visibilityState === 'visible') {
         refreshDailyQuests();
         const r = autoGrantDailySpin();
-        if (r) showToast(`🎉 +${r.bonus} daily reveal${r.bonus===1?'':'s'} (day ${r.streak} streak)`);
+        if (r) showToast(`🎉 +${r.bonus} daily spin${r.bonus===1?'':'s'} (day ${r.streak} streak)`);
         checkAndSendReminders();
         if (settings.nearbyOn) findNearbyDeals();
         renderAll();
@@ -2186,7 +1587,7 @@
       const splash = document.getElementById('splash');
       if (splash) splash.classList.add('hide');
       setTimeout(() => { if (splash) splash.style.display = 'none'; }, 500);
-    }, 800);
+    }, 500);
 
     // ---- iOS install prompt (shown only on iOS Safari, not yet installed) ----
     showIOSInstallScreenIfNeeded();

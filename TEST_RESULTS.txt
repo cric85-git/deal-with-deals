@@ -1,0 +1,18 @@
+PERQ v22 TEST RESULTS: 16 passed / 0 failed
+
+PASS - index.html exists
+PASS - app.js exists
+PASS - service worker exists
+PASS - manifest valid JSON
+PASS - no old DwD text in index
+PASS - no old Deal with deals text in index
+PASS - splash uses approved icon
+PASS - header uses approved icon
+PASS - inline splash failsafe exists
+PASS - theme color is Perq navy
+PASS - icon-180.png is 180x180
+PASS - apple-touch-icon.png is 180x180
+PASS - icon-192.png is 192x192
+PASS - icon-512.png is 512x512
+PASS - icon-maskable-512.png is 512x512
+PASS - app.js JavaScript syntax
