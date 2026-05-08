@@ -1,4 +1,4 @@
-const CACHE_NAME = 'perq-v22-full-repo-fix';
+const CACHE_NAME = 'perq-v23-clean-logo-fix';
 const ASSETS = [
   './',
   './index.html',
@@ -27,12 +27,9 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const req = event.request;
   if (req.mode === 'navigate' || req.destination === 'document') {
-    event.respondWith(
-      fetch(req).catch(() => caches.match('./index.html'))
-    );
+    event.respondWith(fetch(req).catch(() => caches.match('./index.html')));
     return;
   }
-
   event.respondWith(
     caches.match(req).then(cached => cached || fetch(req).then(res => {
       const copy = res.clone();
