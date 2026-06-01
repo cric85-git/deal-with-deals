@@ -12,8 +12,6 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="apple-touch-icon" sizes="192x192" href="icon-192.png">
-<link rel="apple-touch-icon" sizes="512x512" href="icon-512.png">
 <link rel="apple-touch-startup-image" href="icon-512.png">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.0.0/tabler-icons.min.css">
 <style>
@@ -132,7 +130,7 @@
 
   /* Action bar — labeled, prominent */
   .action-bar {
-    display: grid; grid-template-columns: 2fr 1fr;
+    display: grid; grid-template-columns: 2fr 1fr 1fr;
     gap: 8px; margin-bottom: 12px;
   }
   .action-bar.hidden { display: none; }
@@ -806,17 +804,72 @@
     border-top: 0.5px solid var(--border-tertiary);
   }
   .install-screen-footer button { width: 100%; padding: 14px; }
+
+  .profile-screen {
+    position: fixed; inset: 0;
+    z-index: 1100;
+    display: none;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    padding: calc(20px + var(--safe-top)) 18px calc(20px + var(--safe-bottom));
+    overflow-y: auto;
+  }
+  .profile-screen.show { display: block; }
+  .profile-shell { max-width: 560px; margin: 0 auto; }
+  .profile-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
+  .profile-brand img { width: 52px; height: 52px; border-radius: 12px; display: block; }
+  .profile-brand h2 { margin: 0; font-size: 24px; line-height: 1.1; letter-spacing: 0; }
+  .profile-brand p { margin: 3px 0 0; color: var(--text-secondary); font-size: 13px; }
+  .preference-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .preference-pill input { position: absolute; opacity: 0; pointer-events: none; }
+  .preference-pill span {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 40px; padding: 8px 10px;
+    border: 0.5px solid var(--border-secondary);
+    border-radius: var(--radius-md);
+    background: var(--bg-primary);
+    font-size: 13px; font-weight: 500;
+  }
+  .preference-pill input:checked + span {
+    background: var(--bg-info);
+    border-color: var(--text-info);
+    color: var(--text-info);
+  }
+  .module-note {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.45;
+    margin: 8px 0 0;
+  }
 </style>
 <script>
-window.addEventListener('load', function () {
-  setTimeout(function () {
+(function () {
+  var hidden = false;
+  function hideSplash() {
+    if (hidden) return;
     var splash = document.getElementById('splash');
     if (splash) {
+      hidden = true;
       splash.classList.add('hide');
       setTimeout(function(){ splash.style.display = 'none'; }, 500);
     }
-  }, 1200);
-});
+  }
+  window.PerqSplash = { hide: hideSplash };
+  document.addEventListener('DOMContentLoaded', function () {
+    setTimeout(hideSplash, 900);
+  });
+  window.addEventListener('load', function () {
+    setTimeout(hideSplash, 300);
+  });
+  window.addEventListener('pageshow', function () {
+    setTimeout(hideSplash, 1200);
+  });
+  setTimeout(hideSplash, 2500);
+})();
 </script>
 </head>
 <body>
@@ -824,17 +877,67 @@ window.addEventListener('load', function () {
 <!-- Splash screen (shown briefly on launch) -->
 <div class="splash" id="splash">
   <div class="splash-mark">
-    <img src="icon-512.png" alt="Perq">
+    <img src="icon-512.png" alt="Perq" width="148" height="148" decoding="sync" fetchpriority="high">
   </div>
   <p class="splash-title">Perq</p>
   <p class="splash-sub">Snap. Forget. Get reminded.</p>
+</div>
+
+<div class="profile-screen" id="profile-screen" aria-hidden="true">
+  <div class="profile-shell">
+    <div class="profile-brand">
+      <img src="icon-192.png" alt="Perq" width="52" height="52">
+      <div>
+        <h2>Set up Perq</h2>
+        <p>Your reminders, beacons, and deal picks start here.</p>
+      </div>
+    </div>
+
+    <div class="form-row"><label>Name</label><input id="profile-name" type="text" autocomplete="name" placeholder="Your name"></div>
+    <div class="form-row"><label>Email</label><input id="profile-email" type="email" autocomplete="email" placeholder="you@example.com"></div>
+    <div class="form-row"><label>Phone <span style="color: var(--text-secondary); font-weight:400;">optional</span></label><input id="profile-phone" type="tel" autocomplete="tel" placeholder="(555) 555-5555"></div>
+
+    <p class="section-title"><i class="ti ti-tags"></i>Deal preferences</p>
+    <div class="preference-grid">
+      <label class="preference-pill"><input data-pref type="checkbox" value="Groceries"><span>Groceries</span></label>
+      <label class="preference-pill"><input data-pref type="checkbox" value="Dining"><span>Dining</span></label>
+      <label class="preference-pill"><input data-pref type="checkbox" value="Apparel"><span>Apparel</span></label>
+      <label class="preference-pill"><input data-pref type="checkbox" value="Travel"><span>Travel</span></label>
+      <label class="preference-pill"><input data-pref type="checkbox" value="Beauty"><span>Beauty</span></label>
+      <label class="preference-pill"><input data-pref type="checkbox" value="Home"><span>Home</span></label>
+      <label class="preference-pill"><input data-pref type="checkbox" value="Electronics"><span>Electronics</span></label>
+      <label class="preference-pill"><input data-pref type="checkbox" value="Other"><span>Other</span></label>
+    </div>
+
+    <p class="section-title"><i class="ti ti-mail"></i>Email deals</p>
+    <div class="card" style="padding: 4px 14px; margin-bottom: 14px;">
+      <div class="toggle-row">
+        <div class="label-stack">
+          <p class="lbl">Connect email later</p>
+          <p class="sub">Use OAuth to save merchant emails directly into Perq.</p>
+        </div>
+        <label class="switch"><input type="checkbox" id="profile-connect-email"><span class="slider"></span></label>
+      </div>
+      <div class="form-row" style="margin: 8px 0 12px;">
+        <label>Email provider</label>
+        <select id="profile-email-provider">
+          <option value="Gmail">Gmail</option>
+          <option value="Outlook">Outlook</option>
+          <option value="Other IMAP">Other IMAP</option>
+        </select>
+      </div>
+      <p class="module-note">Static GitHub Pages stores this request; the OAuth inbox worker is designed in the repo docs.</p>
+    </div>
+
+    <button id="profile-save" class="btn-primary" style="width:100%; padding:14px;">Start saving deals</button>
+  </div>
 </div>
 
 <!-- iOS install instructions screen -->
 <div class="install-screen" id="install-screen">
   <div class="install-screen-content">
     <div class="install-screen-mark">
-      <img src="icon-192.png" alt="Perq">
+      <img src="icon-192.png" alt="Perq" width="96" height="96">
     </div>
     <h2>Add Perq to your home screen</h2>
     <p class="lead">For the best experience, install Perq as an app. It's faster, works offline, and feels native.</p>
@@ -869,7 +972,7 @@ window.addEventListener('load', function () {
 <div class="header">
   <div class="header-title">
     <div class="brand-mark">
-      <img src="icon-192.png" alt="Perq">
+      <img src="icon-192.png" alt="Perq" width="42" height="42">
     </div>
     <div>
       <h1>Perq</h1>
@@ -899,6 +1002,10 @@ window.addEventListener('load', function () {
     <button class="action-btn add-pill" id="btn-add" aria-label="Add deal manually">
       <span class="plus-circle">+</span>
       <span>Deal</span>
+    </button>
+    <button class="action-btn secondary" id="btn-import" aria-label="Import deal text or link">
+      <i class="ti ti-inbox"></i>
+      <span>Import</span>
     </button>
   </div>
 
@@ -948,8 +1055,10 @@ window.addEventListener('load', function () {
     </div>
     <div class="form-grid">
       <div class="form-row"><label>Code</label><input id="f-code" type="text" placeholder="SAVE20"></div>
-      <div class="form-row"><label>Expires</label><input id="f-expiry" type="date"></div>
+      <div class="form-row"><label>Barcode</label><input id="f-barcode" type="text" inputmode="numeric" placeholder="012345678905"></div>
     </div>
+    <div class="form-row"><label>Expires</label><input id="f-expiry" type="date"></div>
+    <div class="form-row"><label>Business address</label><input id="f-address" type="text" placeholder="123 Main St, Plano, TX"></div>
     <div class="form-row"><label>Notes</label><input id="f-notes" type="text" placeholder="In-store only, min $50"></div>
     <div class="form-row"><label>Online URL</label><input id="f-url" type="url" placeholder="https://target.com"></div>
     <div class="form-actions">
@@ -978,6 +1087,23 @@ window.addEventListener('load', function () {
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-import">
+  <div class="modal">
+    <div class="modal-header">
+      <p class="modal-title">Import a deal</p>
+      <button class="icon-btn" id="import-close" aria-label="Close" style="color: var(--text-secondary);"><i class="ti ti-x" style="color: var(--text-secondary);"></i></button>
+    </div>
+    <div class="form-row">
+      <label>Email, browser text, or link</label>
+      <textarea id="import-text" rows="7" placeholder="Paste a merchant email snippet, browser share text, coupon page URL, or offer details"></textarea>
+    </div>
+    <div class="form-actions">
+      <button id="import-cancel">Cancel</button>
+      <button id="import-save" class="btn-primary">Extract deal</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay center" id="modal-settings">
   <div class="modal center-modal">
     <div class="modal-header">
@@ -985,7 +1111,15 @@ window.addEventListener('load', function () {
       <button class="icon-btn" id="settings-close" aria-label="Close" style="color: var(--text-secondary);"><i class="ti ti-x" style="color: var(--text-secondary);"></i></button>
     </div>
 
-    <p class="section-title" style="margin-top:0;"><i class="ti ti-bell"></i>Expiry reminders</p>
+    <p class="section-title" style="margin-top:0;"><i class="ti ti-user"></i>Profile</p>
+    <div class="card" style="padding: 12px 14px; margin-bottom: 12px;">
+      <p id="profile-summary-name" style="margin:0; font-size:15px; font-weight:600;">Not set</p>
+      <p id="profile-summary-email" style="margin:3px 0 0; font-size:12px; color: var(--text-secondary);">Add an email in profile setup</p>
+      <p id="profile-summary-preferences" style="margin:8px 0 0; font-size:12px; color: var(--text-secondary);">No deal preferences selected</p>
+      <button id="profile-edit" style="width:100%; margin-top:12px;">Edit profile</button>
+    </div>
+
+    <p class="section-title"><i class="ti ti-bell"></i>Expiry reminders</p>
     <div class="card" style="padding: 4px 14px; margin-bottom: 12px;">
       <div class="toggle-row">
         <div class="label-stack">
@@ -1013,17 +1147,17 @@ window.addEventListener('load', function () {
       </div>
     </div>
 
-    <p class="section-title"><i class="ti ti-map-pin"></i>Nearby deals</p>
+    <p class="section-title"><i class="ti ti-radar"></i>Beacon alerts</p>
     <div class="card" style="padding: 4px 14px; margin-bottom: 12px;">
       <div class="toggle-row">
         <div class="label-stack">
-          <p class="lbl">Show deals near me</p>
-          <p class="sub">When you open the app, find active deals nearby</p>
+          <p class="lbl">Notify me near a saved deal</p>
+          <p class="sub">Checks unexpired deals inside your chosen radius when Perq is open or wakes.</p>
         </div>
         <label class="switch"><input type="checkbox" id="s-nearby-on"><span class="slider"></span></label>
       </div>
       <div class="form-row" style="margin: 8px 0 12px;">
-        <label>Search radius</label>
+        <label>Beacon radius</label>
         <select id="s-nearby-radius">
           <option value="2">2 miles</option>
           <option value="5" selected>5 miles</option>
@@ -1031,6 +1165,21 @@ window.addEventListener('load', function () {
           <option value="25">25 miles</option>
         </select>
       </div>
+    </div>
+
+    <p class="section-title"><i class="ti ti-mail"></i>Email connection</p>
+    <div class="card" style="padding: 12px 14px; margin-bottom: 12px;">
+      <p id="email-connect-status" style="margin:0 0 10px; font-size:13px; color: var(--text-secondary);">Not connected</p>
+      <div class="form-row">
+        <label>Email provider</label>
+        <select id="email-provider">
+          <option value="Gmail">Gmail</option>
+          <option value="Outlook">Outlook</option>
+          <option value="Other IMAP">Other IMAP</option>
+        </select>
+      </div>
+      <button id="email-connect-btn" style="width:100%; margin-top:8px;">Request email connect</button>
+      <p class="module-note">The static app can save your request; OAuth inbox sync runs through the designed email module.</p>
     </div>
 
     <p class="section-title"><i class="ti ti-eye-scan"></i>Smart Capture (OCR)</p>
