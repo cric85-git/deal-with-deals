@@ -3,6 +3,10 @@
   "version": "19.0.0",
   "private": true,
   "scripts": {
-    "test": "node tests/perq-agent.test.js"
+    "test": "node tests/perq-agent.test.js",
+    "test:smoke": "playwright test tests/perq-smoke.spec.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0"
   }
 }
