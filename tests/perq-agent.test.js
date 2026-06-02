@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 const core = require('./perq-agent-core');
 const root = path.join(__dirname, '..');
 const results = [];
@@ -10,7 +11,7 @@ function readRootFile(file){return fs.readFileSync(path.join(root,file),'utf8')}
 function walkFiles(dir){
   const entries = fs.readdirSync(dir,{withFileTypes:true});
   return entries.flatMap(entry=>{
-    if (entry.name === '.git' || entry.name === 'node_modules') return [];
+    if (entry.name === '.git' || entry.name === 'node_modules' || entry.name === 'package-lock.json') return [];
     const full = path.join(dir, entry.name);
     return entry.isDirectory() ? walkFiles(full) : [full];
   });
@@ -127,6 +128,45 @@ test('Beacon alerts are configurable and notify nearby unexpired deals', ()=>{
   assert(app.includes('notifyNearbyDeals'));
   assert(app.includes('perq-beacon-'));
   assert(app.includes('getUnexpiredDeals'));
+});
+
+test('Capacitor config packages Perq for native iOS and Android', ()=>{
+  const config=JSON.parse(readRootFile('capacitor.config.json'));
+  const pkg=JSON.parse(readRootFile('package.json'));
+  assert.strictEqual(config.appName, 'Perq');
+  assert.strictEqual(config.appId, 'com.perq.app');
+  assert.strictEqual(config.webDir, 'dist');
+  ['@capacitor/core','@capacitor/ios','@capacitor/android','@capacitor/camera','@capacitor/geolocation','@capacitor/local-notifications','@capacitor/push-notifications','@capacitor/share','@capacitor/splash-screen'].forEach(dep=>{
+    assert(pkg.dependencies[dep], `${dep} dependency missing`);
+  });
+  ['build:native','cap:sync','cap:open:ios','cap:open:android'].forEach(script=>{
+    assert(pkg.scripts[script], `${script} script missing`);
+  });
+});
+
+test('Native build keeps root Pages static and injects Capacitor only into dist', ()=>{
+  execFileSync('node', ['scripts/build-native.js'], { cwd: root, stdio: 'pipe' });
+  const rootHtml=readRootFile('index.html');
+  const distHtml=fs.readFileSync(path.join(root,'dist','index.html'),'utf8');
+  assert(!rootHtml.includes('src="capacitor.js"'), 'root GitHub Pages HTML should not request capacitor.js');
+  assert(distHtml.includes('src="capacitor.js"'), 'native dist HTML should load Capacitor bridge');
+  ['icon-192.png','icon-512.png','apple-touch-icon.png','app.js','manifest.json','sw.js'].forEach(file=>{
+    assert(fs.existsSync(path.join(root,'dist',file)), `${file} missing from native dist`);
+  });
+});
+
+test('Native projects carry Perq package names and required permissions', ()=>{
+  const iosPlist=readRootFile('ios/App/App/Info.plist');
+  const androidManifest=readRootFile('android/app/src/main/AndroidManifest.xml');
+  const androidStrings=readRootFile('android/app/src/main/res/values/strings.xml');
+  assert(iosPlist.includes('<string>Perq</string>'), 'iOS display name missing');
+  ['NSCameraUsageDescription','NSPhotoLibraryUsageDescription','NSLocationWhenInUseUsageDescription'].forEach(key=>{
+    assert(iosPlist.includes(key), `${key} missing`);
+  });
+  assert(androidStrings.includes('<string name="app_name">Perq</string>'), 'Android app name missing');
+  ['android.permission.CAMERA','android.permission.ACCESS_COARSE_LOCATION','android.permission.ACCESS_FINE_LOCATION','android.permission.POST_NOTIFICATIONS'].forEach(permission=>{
+    assert(androidManifest.includes(permission), `${permission} missing`);
+  });
 });
 
 test('Legacy brand terms are absent from app-facing files', ()=>{

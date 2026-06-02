@@ -1,0 +1,35 @@
+{
+  "appId": "com.perq.app",
+  "appName": "Perq",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": true,
+      "backgroundColor": "#F7FBFF",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": false,
+      "splashFullScreen": false,
+      "splashImmersive": false
+    },
+    "Camera": {
+      "permissions": [
+        "camera",
+        "photos"
+      ]
+    },
+    "Geolocation": {
+      "permissions": [
+        "location"
+      ]
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_perq",
+      "iconColor": "#1B6C8C",
+      "sound": "default"
+    }
+  }
+}
