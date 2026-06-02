@@ -3,6 +3,30 @@
   "version": "19.0.0",
   "private": true,
   "scripts": {
-    "test": "node tests/perq-agent.test.js"
+    "build:native": "node scripts/build-native.js",
+    "cap:add:ios": "npm run build:native && npx cap add ios",
+    "cap:add:android": "npm run build:native && npx cap add android",
+    "cap:sync": "npm run build:native && npx cap sync",
+    "cap:open:ios": "npm run cap:sync && npx cap open ios",
+    "cap:open:android": "npm run cap:sync && npx cap open android",
+    "test": "node tests/perq-agent.test.js",
+    "test:smoke": "playwright test tests/perq-smoke.spec.js"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.4.0",
+    "@playwright/test": "^1.60.0"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.4.0",
+    "@capacitor/app": "^8.1.0",
+    "@capacitor/camera": "^8.2.0",
+    "@capacitor/core": "^8.4.0",
+    "@capacitor/geolocation": "^8.2.0",
+    "@capacitor/ios": "^8.4.0",
+    "@capacitor/local-notifications": "^8.2.0",
+    "@capacitor/preferences": "^8.0.1",
+    "@capacitor/push-notifications": "^8.1.1",
+    "@capacitor/share": "^8.0.1",
+    "@capacitor/splash-screen": "^8.0.1"
   }
 }

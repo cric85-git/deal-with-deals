@@ -1,12 +1,14 @@
 (function(){
   'use strict';
 
-  const KEYS = {
-    deals: 'dwd:deals', rewards: 'dwd:rewards', game: 'dwd:game',
-    quests: 'dwd:quests', seeded: 'dwd:seeded', installDismissed: 'dwd:installDismissed',
-    apiKey: 'dwd:apiKey', settings: 'dwd:settings', notified: 'dwd:notified',
-    geocache: 'dwd:geocache', userLoc: 'dwd:userLoc'
-  };
+  const STORAGE_PREFIX = 'perq:';
+  const STORAGE_KEY_NAMES = [
+    'deals', 'rewards', 'game', 'quests', 'seeded', 'installDismissed',
+    'apiKey', 'settings', 'notified', 'geocache', 'userLoc', 'profile',
+    'emailConnection', 'beaconNotified'
+  ];
+  const LEGACY_STORAGE_PREFIX = String.fromCharCode(100, 119, 100, 58);
+  const KEYS = Object.fromEntries(STORAGE_KEY_NAMES.map(name => [name, STORAGE_PREFIX + name]));
 
   const DEFAULT_SETTINGS = {
     remindersOn: true, reminderDays: 3,
@@ -18,6 +20,8 @@
   let game = { spins: 0, lastDailyClaim: null, streak: 0, totalSpins: 0, history: [] };
   let quests = { date: null, items: [] };
   let settings = { ...DEFAULT_SETTINGS };
+  let profile = null;
+  let emailConnection = { requested: false, provider: '', status: 'not_connected' };
   let userLoc = null;
   let nearbyResults = [];
   let nearbyLoading = false;
@@ -29,6 +33,56 @@
   let spinning = false;
   let wheelRotation = 0;
   let deferredInstallPrompt = null;
+  let beaconWatchId = null;
+
+  function nativePlugin(name) {
+    const cap = window.Capacitor;
+    return cap && cap.Plugins && cap.Plugins[name] ? cap.Plugins[name] : null;
+  }
+  function isNativeApp() {
+    const cap = window.Capacitor;
+    if (!cap) return false;
+    if (typeof cap.isNativePlatform === 'function') return cap.isNativePlatform();
+    return typeof cap.getPlatform === 'function' && cap.getPlatform() !== 'web';
+  }
+  function notificationId(seed) {
+    const text = String(seed || 'perq-notification');
+    let hash = 0;
+    for (let i = 0; i < text.length; i++) hash = ((hash << 5) - hash + text.charCodeAt(i)) | 0;
+    return Math.abs(hash) || 1;
+  }
+  async function requestNativeNotifications() {
+    const LocalNotifications = nativePlugin('LocalNotifications');
+    if (!LocalNotifications) return false;
+    try {
+      const current = await LocalNotifications.checkPermissions();
+      if (current.display === 'granted') return true;
+      const requested = await LocalNotifications.requestPermissions();
+      return requested.display === 'granted';
+    } catch(e) {
+      return false;
+    }
+  }
+  async function sendNativeNotification(title, body, tag) {
+    const LocalNotifications = nativePlugin('LocalNotifications');
+    if (!LocalNotifications) return false;
+    const granted = await requestNativeNotifications();
+    if (!granted) return false;
+    try {
+      await LocalNotifications.schedule({
+        notifications: [{
+          id: notificationId(tag || title),
+          title,
+          body,
+          smallIcon: 'ic_stat_perq',
+          iconColor: '#1B6C8C'
+        }]
+      });
+      return true;
+    } catch(e) {
+      return false;
+    }
+  }
 
   const SLICES = [
     { id:'pts10',type:'points',value:10,label:'+10 pts',color:'#B5D4F4',text:'#0C447C',icon:'ti-coin' },
@@ -54,6 +108,8 @@
     { merchant:'Panera', discount:'Free pastry', category:'Dining', value:5 }
   ];
 
+  const DEAL_CATEGORIES = ['Groceries','Dining','Apparel','Travel','Beauty','Home','Electronics','Other'];
+
   const MERCHANT_URLS = {
     'target':'https://www.target.com','walmart':'https://www.walmart.com','amazon':'https://www.amazon.com',
     'best buy':'https://www.bestbuy.com','costco':'https://www.costco.com',
@@ -69,6 +125,25 @@
     "trader joe's":'https://www.traderjoes.com','amc':'https://www.amctheatres.com',
     'amc theatres':'https://www.amctheatres.com'
   };
+
+  function storageKeyVariants(name) {
+    return [STORAGE_PREFIX + name, LEGACY_STORAGE_PREFIX + name];
+  }
+
+  function migrateLegacyStorage() {
+    try {
+      STORAGE_KEY_NAMES.forEach(name => {
+        const currentKey = STORAGE_PREFIX + name;
+        const legacyKey = LEGACY_STORAGE_PREFIX + name;
+        const legacyValue = localStorage.getItem(legacyKey);
+        if (legacyValue === null) return;
+        if (localStorage.getItem(currentKey) === null) {
+          localStorage.setItem(currentKey, legacyValue);
+        }
+        localStorage.removeItem(legacyKey);
+      });
+    } catch(e) {}
+  }
 
   function load(key, fallback) {
     try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
@@ -124,6 +199,157 @@
     return '';
   }
 
+  function titleCaseWords(str) {
+    return String(str || '').replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim().replace(/\b\w/g, c => c.toUpperCase());
+  }
+  function titleCaseOffer(str) {
+    return String(str || '').toLowerCase().replace(/\b\w/g, c => c.toUpperCase()).replace(/\bOff\b/g, 'off').replace(/\bFree\b/g, 'Free');
+  }
+  function merchantFromUrl(url) {
+    try {
+      const host = new URL(url).hostname.replace(/^www\./, '');
+      const base = host.split('.')[0];
+      const known = { target:'Target', walmart:'Walmart', costco:'Costco', kohls:"Kohl's", macys:"Macy's", carspa:'Car Spa', budgetlawncare:'Budget Lawncare' };
+      return known[base.toLowerCase()] || titleCaseWords(base);
+    } catch(e) { return ''; }
+  }
+  function normalizeExpiry(exp) {
+    if (!exp) return '';
+    const d = new Date(String(exp).trim());
+    return isNaN(d) ? '' : d.toISOString().slice(0,10);
+  }
+  function estimateValue(discount) {
+    const text = String(discount || '');
+    let m = text.match(/\$\s*(\d+)/);
+    if (m) return Number(m[1]);
+    m = text.match(/(\d{1,2})\s*%/);
+    if (m) return Number(m[1]);
+    if (/free/i.test(text)) return 30;
+    return 10;
+  }
+  function categoryFromText(text) {
+    if (/grocery|market|produce|food|costco|target|walmart|whole foods/i.test(text)) return 'Groceries';
+    if (/restaurant|coffee|pizza|burger|dining|panera|chipotle|olive/i.test(text)) return 'Dining';
+    if (/clothes|apparel|shoes|navy|gap|macy|kohls|nordstrom/i.test(text)) return 'Apparel';
+    if (/hotel|flight|travel|marriott/i.test(text)) return 'Travel';
+    if (/beauty|makeup|sephora|ulta|skin/i.test(text)) return 'Beauty';
+    if (/home|paint|lawn|mow|repair|depot|lowe|furniture/i.test(text)) return 'Home';
+    if (/tech|electronics|phone|computer|best buy|apple/i.test(text)) return 'Electronics';
+    return 'Other';
+  }
+  function extractAddress(text) {
+    const m = String(text || '').match(/\b\d{2,6}\s+[A-Za-z0-9 .'-]+(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Drive|Dr|Lane|Ln|Way|Court|Ct)\b(?:[^,.\n]*,?\s*[A-Za-z .'-]+,?\s*[A-Z]{2}\s*\d{5})?/i);
+    return m ? m[0].trim() : '';
+  }
+  function extractDealFromText(raw, source = 'Online / email import') {
+    const text = String(raw || '').replace(/[\t\n\r]+/g, ' ').replace(/\s+/g, ' ').trim();
+    const urlMatch = text.match(/https?:\/\/[^\s)>,]+/i);
+    const url = urlMatch ? urlMatch[0].replace(/[),.;]+$/, '') : '';
+    const merchant = merchantFromUrl(url) || titleCaseWords((text.split(/[|•.;]/).map(x => x.trim()).find(x => x.length >= 3 && x.length <= 42 && !/coupon|discount|offer|promo|https?:/i.test(x))) || 'Online Deal');
+    const discountMatch = text.match(/(?:\d{1,2}\s*%\s*(?:to\s*\d{1,2}\s*%\s*)?off[^.,;|]{0,80}|\$\s*\d{1,4}\s*off[^.,;|]{0,60}|buy\s+one\s+get\s+one[^.,;|]{0,60}|bogo[^.,;|]{0,45}|free\s+[A-Z0-9$][^.,;|]{1,45})/i);
+    const discount = discountMatch ? titleCaseOffer(discountMatch[0]) : 'Online deal saved';
+    const codeMatch = text.match(/(?:BARCODE|CODE|PROMO\s*CODE|COUPON\s*CODE)\s*[:#-]?\s*([A-Z0-9][A-Z0-9\s-]{2,24})/i);
+    const barcodeMatch = text.match(/(?:BARCODE|UPC|SKU)\s*[:#-]?\s*([0-9][0-9\s-]{7,24})/i);
+    const expiryMatch = text.match(/(?:EXPIRES?|EXPIRATION|VALID\s+(?:BY|THROUGH|THRU|UNTIL|TO)|GOOD\s+(?:THROUGH|THRU|UNTIL)|OFFER\s+ENDS|VALID)\s*[:#-]?\s*(\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4}|[A-Z][a-z]{2,8}\s+\d{1,2},?\s+\d{4})/i);
+    const address = extractAddress(text);
+    return {
+      merchant,
+      discount,
+      value: estimateValue(discount),
+      category: categoryFromText(`${merchant} ${discount} ${text}`),
+      source,
+      code: codeMatch && !/BARCODE|UPC|SKU/i.test(codeMatch[0]) ? codeMatch[1].replace(/\s+/g, ' ').trim().toUpperCase() : '',
+      barcode: barcodeMatch ? barcodeMatch[1].replace(/\D/g, '') : '',
+      expiry: normalizeExpiry(expiryMatch && expiryMatch[1]),
+      notes: address ? 'Address captured from source' : 'Saved from shared text or link',
+      url,
+      address,
+      rawScanText: text,
+      scanConfidence: url || discountMatch || codeMatch ? 'medium' : 'low'
+    };
+  }
+  function validProfile(p) {
+    return !!(p && p.name && p.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email));
+  }
+  function selectedProfileCategories(root = document) {
+    return Array.from(root.querySelectorAll('[data-pref]:checked')).map(el => el.value);
+  }
+  function showProfileScreen() {
+    const screen = document.getElementById('profile-screen');
+    if (!screen) return;
+    screen.classList.add('show');
+    screen.setAttribute('aria-hidden', 'false');
+    const first = document.getElementById('profile-name');
+    if (first) setTimeout(() => first.focus(), 120);
+  }
+  function hideProfileScreen() {
+    const screen = document.getElementById('profile-screen');
+    if (!screen) return;
+    screen.classList.remove('show');
+    screen.setAttribute('aria-hidden', 'true');
+  }
+  function renderProfileSummary() {
+    const nameEl = document.getElementById('profile-summary-name');
+    const emailEl = document.getElementById('profile-summary-email');
+    const prefEl = document.getElementById('profile-summary-preferences');
+    const emailStatusEl = document.getElementById('email-connect-status');
+    if (nameEl) nameEl.textContent = profile && profile.name ? profile.name : 'Not set';
+    if (emailEl) emailEl.textContent = profile && profile.email ? profile.email : 'Add an email in profile setup';
+    if (prefEl) prefEl.textContent = profile && profile.preferences && profile.preferences.length ? profile.preferences.join(', ') : 'No deal preferences selected';
+    if (emailStatusEl) {
+      const provider = emailConnection.provider ? ` · ${emailConnection.provider}` : '';
+      emailStatusEl.textContent = emailConnection.requested ? `Requested${provider}` : 'Not connected';
+    }
+  }
+  function saveProfileFromScreen() {
+    const name = getField('profile-name').trim();
+    const email = getField('profile-email').trim();
+    const phone = getField('profile-phone').trim();
+    const preferences = selectedProfileCategories(document.getElementById('profile-screen'));
+    const wantsEmail = !!document.getElementById('profile-connect-email').checked;
+    const provider = getField('profile-email-provider');
+    const candidate = { name, email, phone, preferences, createdAt: Date.now() };
+    if (!validProfile(candidate)) {
+      showToast('Name and email are required');
+      return;
+    }
+    profile = candidate;
+    emailConnection = wantsEmail
+      ? { requested: true, provider, status: 'oauth_required', requestedAt: Date.now() }
+      : { requested: false, provider: '', status: 'not_connected' };
+    save(KEYS.profile, profile);
+    save(KEYS.emailConnection, emailConnection);
+    hideProfileScreen();
+    renderProfileSummary();
+    showToast(wantsEmail ? 'Profile saved. Email connect is ready for OAuth setup.' : 'Profile saved');
+    renderAll();
+  }
+  function saveEmailConnectIntent() {
+    const provider = getField('email-provider');
+    emailConnection = { requested: true, provider, status: 'oauth_required', requestedAt: Date.now() };
+    save(KEYS.emailConnection, emailConnection);
+    renderProfileSummary();
+    showToast('Email connect request saved');
+  }
+  function hydrateProfileScreen() {
+    if (profile) {
+      setField('profile-name', profile.name || '');
+      setField('profile-email', profile.email || '');
+      setField('profile-phone', profile.phone || '');
+      document.querySelectorAll('#profile-screen [data-pref]').forEach(el => {
+        el.checked = !!(profile.preferences || []).includes(el.value);
+      });
+    }
+    document.getElementById('profile-connect-email').checked = !!emailConnection.requested;
+    if (emailConnection.provider) setField('profile-email-provider', emailConnection.provider);
+  }
+  function parseIncomingShare(params) {
+    const parts = [params.get('title'), params.get('text'), params.get('url')].filter(Boolean);
+    if (!parts.length) return null;
+    const sourceText = parts.join(' ');
+    return extractDealFromText(sourceText, 'Browser / email share');
+  }
+
   function seedDeals() {
     const t = new Date(); const iso = (n)=>{ const d=new Date(t); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); };
     return [
@@ -138,6 +364,7 @@
   function topCategories() {
     const c = {};
     deals.forEach(d => { c[d.category] = (c[d.category]||0) + 1; });
+    (profile && profile.preferences || []).forEach(cat => { c[cat] = (c[cat]||0) + 2; });
     return Object.entries(c).sort((a,b)=>b[1]-a[1]).map(x=>x[0]);
   }
   function pickPersonalizedBonus() {
@@ -190,6 +417,9 @@
       return du !== null && du >= 0 && du <= threshold;
     });
   }
+  function getUnexpiredDeals() {
+    return deals.filter(d => !d.redeemed && statusOf(d) !== 'expired');
+  }
 
   function checkAndSendReminders() {
     if (!settings.remindersOn) return;
@@ -207,26 +437,111 @@
     const newOnes = due.filter(d => !notified.ids.includes(d.id));
     if (!newOnes.length) return;
 
-    // Try push notification (best effort)
-    if ('Notification' in window && Notification.permission === 'granted') {
-      newOnes.forEach(d => {
-        const du = daysUntil(d.expiry);
-        const title = du === 0 ? `${d.merchant} expires TODAY` : `${d.merchant} expires in ${du} day${du === 1 ? '' : 's'}`;
-        const body = `${d.discount}${d.code ? ` — code ${d.code}` : ''}. Tap to use it.`;
-        try {
-          new Notification(title, {
-            body, icon: 'icon-192.png', badge: 'icon-192.png',
-            tag: 'dwd-' + d.id, requireInteraction: false
-          });
-        } catch(e) { /* iOS PWA quirks */ }
+    newOnes.forEach(d => {
+      const du = daysUntil(d.expiry);
+      const title = du === 0 ? `${d.merchant} expires TODAY` : `${d.merchant} expires in ${du} day${du === 1 ? '' : 's'}`;
+      const body = `${d.discount}${d.code ? ` — code ${d.code}` : ''}. Tap to use it.`;
+      const tag = 'perq-' + d.id;
+      sendNativeNotification(title, body, tag).then(sent => {
+        if (sent) return;
+        if ('Notification' in window && Notification.permission === 'granted') {
+          try {
+            new Notification(title, {
+              body, icon: 'icon-192.png', badge: 'icon-192.png',
+              tag, requireInteraction: false
+            });
+          } catch(e) { /* iOS PWA quirks */ }
+        }
       });
-    }
+    });
 
     notified.ids = [...notified.ids, ...newOnes.map(d => d.id)];
     save(KEYS.notified, notified);
   }
 
+  function notifyNearbyDeals(results) {
+    if (!settings.nearbyOn || !results.length) return;
+    const today = todayStr();
+    const notified = load(KEYS.beaconNotified, {});
+    if (notified.date !== today) {
+      notified.date = today;
+      notified.ids = [];
+    }
+    const fresh = results.filter(r => !notified.ids.includes(r.deal.id));
+    if (!fresh.length) return;
+    const first = fresh[0];
+    const title = `${first.deal.merchant} deal nearby`;
+    const body = `${first.deal.discount} is ${first.distance.toFixed(1)} mi away${first.deal.expiry ? ` · expires ${fmtDate(first.deal.expiry)}` : ''}`;
+    sendNativeNotification(title, body, 'perq-beacon-' + first.deal.id).then(sent => {
+      if (sent) return;
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+          new Notification(title, {
+            body,
+            icon: 'icon-192.png',
+            badge: 'icon-192.png',
+            tag: 'perq-beacon-' + first.deal.id,
+            requireInteraction: false
+          });
+        } catch(e) {
+          showToast(`${title}: ${first.deal.discount}`);
+        }
+      } else {
+        showToast(`${title}: ${first.deal.discount}`);
+      }
+    });
+    notified.ids = [...notified.ids, ...fresh.map(r => r.deal.id)];
+    save(KEYS.beaconNotified, notified);
+  }
+
+  function startBeaconWatch() {
+    if (!settings.nearbyOn || beaconWatchId !== null) return;
+    const NativeGeolocation = nativePlugin('Geolocation');
+    if (NativeGeolocation && NativeGeolocation.watchPosition) {
+      beaconWatchId = { native: true, id: 'starting' };
+      NativeGeolocation.watchPosition(
+        { enableHighAccuracy: false, maximumAge: 5 * 60 * 1000, timeout: 12000 },
+        (pos) => {
+          if (pos && pos.coords) {
+            findNearbyDeals(false, { lat: pos.coords.latitude, lon: pos.coords.longitude });
+          }
+        }
+      ).then(id => {
+        beaconWatchId = { native: true, id };
+      }).catch(() => {
+        beaconWatchId = null;
+      });
+      return;
+    }
+    if (!('geolocation' in navigator)) return;
+    try {
+      beaconWatchId = navigator.geolocation.watchPosition(
+        pos => findNearbyDeals(false, { lat: pos.coords.latitude, lon: pos.coords.longitude }),
+        () => {},
+        { enableHighAccuracy: false, maximumAge: 5 * 60 * 1000, timeout: 12000 }
+      );
+    } catch(e) {}
+  }
+  function stopBeaconWatch() {
+    if (beaconWatchId === null) return;
+    const NativeGeolocation = nativePlugin('Geolocation');
+    if (beaconWatchId && beaconWatchId.native && NativeGeolocation && NativeGeolocation.clearWatch) {
+      if (beaconWatchId.id !== 'starting') {
+        NativeGeolocation.clearWatch({ id: beaconWatchId.id }).catch(() => {});
+      }
+    } else if ('geolocation' in navigator) {
+      try { navigator.geolocation.clearWatch(beaconWatchId); } catch(e) {}
+    }
+    beaconWatchId = null;
+  }
+
   async function requestNotificationPermission() {
+    if (nativePlugin('LocalNotifications')) {
+      const granted = await requestNativeNotifications();
+      showToast(granted ? 'Notifications enabled' : 'Notifications declined');
+      updateNotifButton();
+      return;
+    }
     if (!('Notification' in window)) {
       showToast('This browser does not support notifications');
       return;
@@ -247,7 +562,7 @@
         showToast('Notifications enabled');
         // Fire a test
         try {
-          new Notification('Deal with deals', {
+          new Notification('Perq', {
             body: "You'll get reminders when deals are about to expire.",
             icon: 'icon-192.png'
           });
@@ -264,6 +579,11 @@
   function updateNotifButton() {
     const btn = document.getElementById('s-notif-permission');
     if (!btn) return;
+    if (nativePlugin('LocalNotifications')) {
+      btn.textContent = 'Enable';
+      btn.disabled = false;
+      return;
+    }
     if (!('Notification' in window)) {
       btn.textContent = 'Not supported';
       btn.disabled = true;
@@ -295,13 +615,24 @@
 
   function getUserLocation(forceRefresh = false) {
     return new Promise((resolve, reject) => {
-      if (!navigator.geolocation) { reject(new Error('Geolocation not supported')); return; }
       const cached = load(KEYS.userLoc, null);
       // Use cache if less than 10 minutes old
       if (!forceRefresh && cached && (Date.now() - cached.ts < 10 * 60 * 1000)) {
         resolve({ lat: cached.lat, lon: cached.lon });
         return;
       }
+      const NativeGeolocation = nativePlugin('Geolocation');
+      if (NativeGeolocation && NativeGeolocation.getCurrentPosition) {
+        NativeGeolocation.getCurrentPosition({ enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 })
+          .then(pos => {
+            const loc = { lat: pos.coords.latitude, lon: pos.coords.longitude, ts: Date.now() };
+            save(KEYS.userLoc, loc);
+            resolve({ lat: loc.lat, lon: loc.lon });
+          })
+          .catch(reject);
+        return;
+      }
+      if (!navigator.geolocation) { reject(new Error('Geolocation not supported')); return; }
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const loc = { lat: pos.coords.latitude, lon: pos.coords.longitude, ts: Date.now() };
@@ -314,10 +645,11 @@
     });
   }
 
-  async function geocodeMerchantNear(merchant, lat, lon) {
-    if (!merchant) return null;
+  async function geocodeMerchantNear(merchant, lat, lon, address = '') {
+    if (!merchant && !address) return null;
+    const query = address || merchant;
     const cache = load(KEYS.geocache, {});
-    const key = `${merchant.toLowerCase()}|${lat.toFixed(2)}|${lon.toFixed(2)}`;
+    const key = `${query.toLowerCase()}|${lat.toFixed(2)}|${lon.toFixed(2)}`;
     if (cache[key] && (Date.now() - cache[key].ts < 7 * 24 * 60 * 60 * 1000)) {
       return cache[key].result;
     }
@@ -325,7 +657,7 @@
       // Nominatim search with viewbox biased around user
       const delta = 0.5; // ~30 miles
       const viewbox = `${lon-delta},${lat-delta},${lon+delta},${lat+delta}`;
-      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(merchant)}&format=json&limit=5&viewbox=${viewbox}&bounded=1&addressdetails=1`;
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&viewbox=${viewbox}&bounded=1&addressdetails=1`;
       const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
       if (!resp.ok) return null;
       const data = await resp.json();
@@ -354,14 +686,14 @@
     }
   }
 
-  async function findNearbyDeals(forceRefresh = false) {
+  async function findNearbyDeals(forceRefresh = false, locOverride = null) {
     if (!settings.nearbyOn) return [];
     nearbyLoading = true;
     renderDashboard();
     try {
-      const loc = await getUserLocation(forceRefresh);
+      const loc = locOverride || await getUserLocation(forceRefresh);
       userLoc = loc;
-      const active = deals.filter(d => !d.redeemed && statusOf(d) !== 'expired');
+      const active = getUnexpiredDeals();
       const radius = Number(settings.nearbyRadius) || 5;
       const results = [];
       // Geocode in parallel but cap concurrency at 3 (be polite to Nominatim)
@@ -369,7 +701,10 @@
       const geoMap = {};
       for (let i = 0; i < merchants.length; i += 3) {
         const batch = merchants.slice(i, i + 3);
-        const batchResults = await Promise.all(batch.map(m => geocodeMerchantNear(m, loc.lat, loc.lon)));
+        const batchResults = await Promise.all(batch.map(m => {
+          const sample = active.find(d => d.merchant === m && d.address) || active.find(d => d.merchant === m);
+          return geocodeMerchantNear(m, loc.lat, loc.lon, sample && sample.address);
+        }));
         batch.forEach((m, idx) => { geoMap[m] = batchResults[idx]; });
         // Tiny delay between batches to respect Nominatim's 1 req/sec rule
         if (i + 3 < merchants.length) await new Promise(r => setTimeout(r, 1100));
@@ -382,6 +717,7 @@
       }
       results.sort((a, b) => a.distance - b.distance);
       nearbyResults = results;
+      notifyNearbyDeals(results);
     } catch(e) {
       console.warn('Nearby check failed:', e);
       nearbyResults = [];
@@ -419,6 +755,38 @@
       img.onerror = () => resolve(dataUrl);
       img.src = dataUrl;
     });
+  }
+  function dataUrlToFile(dataUrl, fileName = 'perq-coupon.jpg') {
+    const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+    if (!match) throw new Error('Invalid image data');
+    const bytes = atob(match[2]);
+    const buffer = new Uint8Array(bytes.length);
+    for (let i = 0; i < bytes.length; i++) buffer[i] = bytes.charCodeAt(i);
+    return new File([buffer], fileName, { type: match[1] });
+  }
+  async function captureDealPhotoNative() {
+    const Camera = nativePlugin('Camera');
+    if (!Camera || !Camera.getPhoto) return false;
+    try {
+      const photo = await Camera.getPhoto({
+        quality: 85,
+        allowEditing: false,
+        resultType: 'dataUrl',
+        source: 'PROMPT',
+        direction: 'REAR',
+        promptLabelHeader: 'Deal image',
+        promptLabelPicture: 'Take photo',
+        promptLabelPhoto: 'Upload image'
+      });
+      const dataUrl = photo.dataUrl || (photo.base64String ? `data:image/${photo.format || 'jpeg'};base64,${photo.base64String}` : '');
+      if (!dataUrl) return false;
+      await handleCapture(dataUrlToFile(dataUrl));
+      return true;
+    } catch(e) {
+      const msg = String(e && (e.message || e)).toLowerCase();
+      if (msg.includes('cancel')) return true;
+      return false;
+    }
   }
   async function handleCapture(file) {
     if (!file) return;
@@ -463,9 +831,13 @@
   "merchant": "store/brand name",
   "discount": "discount amount like '20% off' or '$10 off $50'",
   "code": "promo code if visible, else null",
+  "barcode": "barcode number or scannable numeric value if visible, else null",
   "expiry": "YYYY-MM-DD format if a date is visible, else null",
+  "validBy": "original visible expiry wording such as valid by/valid thru if present, else null",
   "category": "one of: Groceries, Dining, Apparel, Travel, Beauty, Home, Electronics, Other",
   "value": estimated dollar value as a number,
+  "url": "deal link if visible, else null",
+  "address": "business address if visible, else null",
   "notes": "any restrictions like 'min $50', 'in-store only', else null"
 }
 Return only the JSON, no other text.`;
@@ -503,14 +875,18 @@ Return only the JSON, no other text.`;
     if (r.discount) document.getElementById('f-discount').value = r.discount;
     if (r.value != null) document.getElementById('f-value').value = r.value;
     if (r.code) document.getElementById('f-code').value = r.code;
+    if (r.barcode) document.getElementById('f-barcode').value = r.barcode;
     if (r.expiry) document.getElementById('f-expiry').value = r.expiry;
-    if (r.notes) document.getElementById('f-notes').value = r.notes;
+    if (r.address) document.getElementById('f-address').value = r.address;
+    const notes = [r.notes, r.validBy ? `Original date label: ${r.validBy}` : ''].filter(Boolean).join(' · ');
+    if (notes) document.getElementById('f-notes').value = notes;
     if (r.category) {
       const validCats = ['Groceries','Dining','Apparel','Travel','Beauty','Home','Electronics','Other'];
       if (validCats.includes(r.category)) document.getElementById('f-category').value = r.category;
     }
     document.getElementById('f-source').value = 'Photo capture';
-    if (r.merchant) {
+    if (r.url) document.getElementById('f-url').value = r.url;
+    if (r.merchant && !r.url) {
       const url = inferUrl(r.merchant);
       if (url) document.getElementById('f-url').value = url;
     }
@@ -715,10 +1091,10 @@ Return only the JSON, no other text.`;
       `;
     }
 
-    // Nearby banner
+    // Beacon banner
     if (settings.nearbyOn) {
       if (nearbyLoading) {
-        html += `<div class="nearby-banner"><span class="spinner"></span><span>Checking deals near you…</span></div>`;
+        html += `<div class="nearby-banner"><span class="spinner"></span><span>Checking saved deals inside your beacon radius…</span></div>`;
       } else if (nearbyResults.length) {
         const top = nearbyResults[0];
         const more = nearbyResults.length > 1 ? ` · ${nearbyResults.length - 1} more nearby` : '';
@@ -736,7 +1112,7 @@ Return only the JSON, no other text.`;
         html += `
           <div class="card" style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
             <div style="min-width:0;">
-              <p style="margin:0; font-size:13px; color: var(--text-secondary);"><i class="ti ti-map-pin-off" style="font-size:14px; vertical-align:-2px; margin-right:4px;"></i>No deals within ${settings.nearbyRadius} mi</p>
+              <p style="margin:0; font-size:13px; color: var(--text-secondary);"><i class="ti ti-map-pin-off" style="font-size:14px; vertical-align:-2px; margin-right:4px;"></i>No unexpired deals within ${settings.nearbyRadius} mi</p>
             </div>
             <button id="nearby-refresh-btn" style="font-size:12px;"><i class="ti ti-refresh" style="font-size:13px; vertical-align:-2px;"></i> Refresh</button>
           </div>
@@ -745,8 +1121,8 @@ Return only the JSON, no other text.`;
         html += `
           <div class="card" style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
             <div style="min-width:0;">
-              <p style="margin:0; font-size:13px;"><i class="ti ti-map-pin" style="font-size:14px; vertical-align:-2px; margin-right:4px;"></i>Find deals near you</p>
-              <p style="margin:2px 0 0; font-size:12px; color: var(--text-secondary);">We'll only check when you tap</p>
+              <p style="margin:0; font-size:13px;"><i class="ti ti-radar" style="font-size:14px; vertical-align:-2px; margin-right:4px;"></i>Beacon alerts are ready</p>
+              <p style="margin:2px 0 0; font-size:12px; color: var(--text-secondary);">Tap to check unexpired deals near you.</p>
             </div>
             <button id="nearby-refresh-btn" class="use-btn" style="font-size:12px;"><i class="ti ti-radar"></i>What's near?</button>
           </div>
@@ -873,7 +1249,8 @@ Return only the JSON, no other text.`;
                       <span class="pill" style="background:${p.bg}; color:${p.fg};">${p.label}</span>
                     </div>
                     <p style="margin:2px 0; font-size:14px;">${escapeHtml(d.discount)}${d.value ? ` <span style="color: var(--text-secondary); font-size:12px;">· ~$${Math.round(d.value)}</span>` : ''}</p>
-                    <p style="margin:0; font-size:12px; color: var(--text-secondary);">${subtext}${d.code ? ` · <code>${escapeHtml(d.code)}</code>` : ''}</p>
+                    <p style="margin:0; font-size:12px; color: var(--text-secondary);">${subtext}${d.code ? ` · <code>${escapeHtml(d.code)}</code>` : ''}${d.barcode ? ` · barcode ${escapeHtml(d.barcode)}` : ''}</p>
+                    ${d.address ? `<p style="margin:4px 0 0; font-size:12px; color: var(--text-secondary);"><i class="ti ti-map-pin" style="font-size:12px; vertical-align:-1px;"></i> ${escapeHtml(d.address)}</p>` : ''}
                     ${d.notes ? `<p style="margin:4px 0 0; font-size:12px; color: var(--text-secondary);">${escapeHtml(d.notes)}</p>` : ''}
                   </div>
                   <div class="deal-actions-grid">
@@ -955,7 +1332,7 @@ Return only the JSON, no other text.`;
       // Default fallback location if user denies geolocation (Plano TX, since user mentioned)
       const lat = loc ? loc.lat : 33.0198;
       const lon = loc ? loc.lon : -96.6989;
-      geo = await geocodeMerchantNear(d.merchant, lat, lon);
+      geo = await geocodeMerchantNear(d.merchant, lat, lon, d.address);
     } catch(e) {}
 
     card[cacheKey] = { loc, geo };
@@ -1252,10 +1629,11 @@ Return only the JSON, no other text.`;
           <p class="cashier-merchant">${escapeHtml(d.merchant)}</p>
           <p class="cashier-discount">${escapeHtml(d.discount)}</p>
           ${d.code ? `<p style="font-family: ui-monospace, monospace; font-size: 14px; letter-spacing: 1px; margin: 8px 0 0; opacity: 0.95;">Code: ${escapeHtml(d.code)}</p>` : ''}
-          <p class="cashier-meta">${expiryText}${d.notes ? ' · ' + escapeHtml(d.notes) : ''}</p>
+          ${d.barcode ? `<p style="font-family: ui-monospace, monospace; font-size: 13px; letter-spacing: 1px; margin: 6px 0 0; opacity: 0.9;">Barcode: ${escapeHtml(d.barcode)}</p>` : ''}
+          <p class="cashier-meta">${expiryText}${d.address ? ' · ' + escapeHtml(d.address) : ''}${d.notes ? ' · ' + escapeHtml(d.notes) : ''}</p>
         </div>
-        ${d.code ? `<div class="claim-barcode-wrap">${buildBarcodeSvg(d.code)}</div>` : ''}
-        <p class="claim-meta">Show this screen to the cashier${d.code ? '. They can key in or scan the code above.' : '.'}</p>
+        ${(d.barcode || d.code) ? `<div class="claim-barcode-wrap">${buildBarcodeSvg(d.barcode || d.code)}</div>` : ''}
+        <p class="claim-meta">Show this screen to the cashier${(d.barcode || d.code) ? '. They can key in or scan the code above.' : '.'}</p>
       `;
     } else if (claimMode === 'code') {
       if (!d.code) {
@@ -1310,6 +1688,26 @@ Return only the JSON, no other text.`;
   function closeClaim() { document.getElementById('modal-claim').classList.remove('active'); claimingDeal = null; }
   function claimRedeem() { if (!claimingDeal) return; markRedeemed(claimingDeal.id); closeClaim(); }
 
+  function openImportModal() {
+    setField('import-text', '');
+    document.getElementById('modal-import').classList.add('active');
+    setTimeout(() => document.getElementById('import-text').focus(), 80);
+  }
+  function closeImportModal() {
+    document.getElementById('modal-import').classList.remove('active');
+  }
+  function importDealFromText() {
+    const text = getField('import-text').trim();
+    if (!text) {
+      showToast('Paste deal text or a link first');
+      return;
+    }
+    const deal = extractDealFromText(text, 'Browser / email import');
+    closeImportModal();
+    openModalPrefilled(deal);
+    showToast('Deal details extracted. Review and save.');
+  }
+
   // ---------- Actions ----------
   function markRedeemed(id) {
     const d = deals.find(x=>x.id===id); if (!d) return;
@@ -1320,8 +1718,26 @@ Return only the JSON, no other text.`;
     showToast(`Redeemed — saved $${Math.round(Number(d.value)||0)}`);
     renderAll();
   }
-  function shareDeal(id) {
+  async function shareDeal(id) {
     const d = deals.find(x=>x.id===id); if (!d) return;
+    const text = `${d.merchant}: ${d.discount}${d.code ? ` code ${d.code}` : ''}${d.expiry ? ` expires ${fmtDate(d.expiry)}` : ''}${d.url ? ` ${d.url}` : ''}`;
+    const NativeShare = nativePlugin('Share');
+    if (NativeShare && NativeShare.share) {
+      try {
+        await NativeShare.share({ title: `Perq deal: ${d.merchant}`, text, url: d.url || location.href, dialogTitle: 'Share deal' });
+      } catch(e) {
+        return;
+      }
+    } else if (navigator.share) {
+      try {
+        await navigator.share({ title: `Perq deal: ${d.merchant}`, text, url: d.url || location.href });
+      } catch(e) {
+        return;
+      }
+    } else {
+      try { await navigator.clipboard.writeText(text); }
+      catch(e) {}
+    }
     d.shared = true;
     rewards.shared += 1; rewards.points += 10;
     bumpQuest('q_share');
@@ -1347,15 +1763,16 @@ Return only the JSON, no other text.`;
       const d = deals.find(x=>x.id===id);
       setField('f-merchant', d.merchant); setField('f-discount', d.discount); setField('f-value', d.value);
       setField('f-category', d.category); setField('f-source', d.source); setField('f-code', d.code);
-      setField('f-expiry', d.expiry); setField('f-notes', d.notes); setField('f-url', d.url);
+      setField('f-barcode', d.barcode); setField('f-expiry', d.expiry); setField('f-address', d.address);
+      setField('f-notes', d.notes); setField('f-url', d.url);
     } else if (!opts.imageOnly) {
-      ['f-merchant','f-discount','f-value','f-code','f-expiry','f-notes','f-url'].forEach(k=>setField(k,''));
+      ['f-merchant','f-discount','f-value','f-code','f-barcode','f-expiry','f-address','f-notes','f-url'].forEach(k=>setField(k,''));
       setField('f-category','Groceries'); setField('f-source','Email');
       document.getElementById('capture-preview').style.display = 'none';
       document.getElementById('ocr-status').style.display = 'none';
       pendingImage = null;
     } else {
-      ['f-merchant','f-discount','f-value','f-code','f-expiry','f-notes','f-url'].forEach(k=>setField(k,''));
+      ['f-merchant','f-discount','f-value','f-code','f-barcode','f-expiry','f-address','f-notes','f-url'].forEach(k=>setField(k,''));
       setField('f-category','Groceries'); setField('f-source','Photo capture');
     }
     if (pendingImage) {
@@ -1374,7 +1791,8 @@ Return only the JSON, no other text.`;
     setField('f-merchant', data.merchant||''); setField('f-discount', data.discount||'');
     setField('f-value', data.value||''); setField('f-category', data.category||'Groceries');
     setField('f-source', data.source||'App / digital'); setField('f-code', data.code||'');
-    setField('f-expiry', data.expiry||''); setField('f-notes', data.notes||'');
+    setField('f-barcode', data.barcode||''); setField('f-expiry', data.expiry||'');
+    setField('f-address', data.address||''); setField('f-notes', data.notes||'');
     setField('f-url', data.url||inferUrl(data.merchant));
     document.getElementById('capture-preview').style.display = 'none';
     document.getElementById('ocr-status').style.display = 'none';
@@ -1393,6 +1811,7 @@ Return only the JSON, no other text.`;
       value: Number(getField('f-value')) || 0,
       category: getField('f-category'), source: getField('f-source'),
       code: getField('f-code').trim(), expiry: getField('f-expiry'),
+      barcode: getField('f-barcode').trim(), address: getField('f-address').trim(),
       notes: getField('f-notes').trim(), url
     };
     if (editingId) {
@@ -1418,6 +1837,8 @@ Return only the JSON, no other text.`;
     document.getElementById('s-reminder-days').value = String(settings.reminderDays);
     document.getElementById('s-nearby-on').checked = !!settings.nearbyOn;
     document.getElementById('s-nearby-radius').value = String(settings.nearbyRadius);
+    if (emailConnection.provider) setField('email-provider', emailConnection.provider);
+    renderProfileSummary();
     updateNotifButton();
     document.getElementById('modal-settings').classList.add('active');
   }
@@ -1436,22 +1857,33 @@ Return only the JSON, no other text.`;
     showToast('Settings saved');
     // Trigger checks based on new settings
     checkAndSendReminders();
-    if (settings.nearbyOn) findNearbyDeals();
-    else { nearbyResults = []; renderDashboard(); }
+    if (settings.nearbyOn) {
+      startBeaconWatch();
+      findNearbyDeals();
+    } else {
+      stopBeaconWatch();
+      nearbyResults = [];
+      renderDashboard();
+    }
     renderAll();
   }
   function exportData() {
-    const blob = new Blob([JSON.stringify({ deals, rewards, game, quests, settings }, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify({ profile, emailConnection, deals, rewards, game, quests, settings }, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `dwd-backup-${todayStr()}.json`;
+    a.download = `perq-backup-${todayStr()}.json`;
     a.click();
     URL.revokeObjectURL(a.href);
     showToast('Backup downloaded');
   }
   function resetData() {
     if (!confirm('Delete all deals, rewards, and history? This cannot be undone.')) return;
-    Object.values(KEYS).forEach(k => { if (k !== 'dwd:apiKey' && k !== 'dwd:installDismissed') localStorage.removeItem(k); });
+    const keepKeys = new Set(storageKeyVariants('apiKey').concat(storageKeyVariants('installDismissed')));
+    STORAGE_KEY_NAMES.forEach(name => {
+      storageKeyVariants(name).forEach(key => {
+        if (!keepKeys.has(key)) localStorage.removeItem(key);
+      });
+    });
     showToast('All data reset — reloading');
     setTimeout(() => location.reload(), 800);
   }
@@ -1475,14 +1907,29 @@ Return only the JSON, no other text.`;
     updateHeader();
   }
 
+  function hideSplash() {
+    if (window.PerqSplash && typeof window.PerqSplash.hide === 'function') {
+      window.PerqSplash.hide();
+      return;
+    }
+    const splash = document.getElementById('splash');
+    if (!splash) return;
+    splash.classList.add('hide');
+    setTimeout(() => { splash.style.display = 'none'; }, 500);
+  }
+
   function init() {
+    migrateLegacyStorage();
     deals = load(KEYS.deals, []);
     rewards = load(KEYS.rewards, { points: 0, shared: 0, claimed: 0 });
     game = Object.assign({ spins: 0, lastDailyClaim: null, streak: 0, totalSpins: 0, history: [] }, load(KEYS.game, {}));
     quests = load(KEYS.quests, { date: null, items: [] });
     settings = Object.assign({ ...DEFAULT_SETTINGS }, load(KEYS.settings, {}));
+    profile = load(KEYS.profile, null);
+    emailConnection = Object.assign({ requested: false, provider: '', status: 'not_connected' }, load(KEYS.emailConnection, {}));
 
-    if (!load(KEYS.seeded, false) && deals.length === 0) {
+    const params = new URLSearchParams(location.search);
+    if (params.get('demo') === '1' && !load(KEYS.seeded, false) && deals.length === 0) {
       deals = seedDeals();
       rewards = { points: 120, shared: 2, claimed: 1 };
       save(KEYS.deals, deals); save(KEYS.rewards, rewards);
@@ -1499,7 +1946,11 @@ Return only the JSON, no other text.`;
     }
 
     document.getElementById('btn-add').addEventListener('click', () => openModal(null));
-    document.getElementById('btn-snap').addEventListener('click', () => document.getElementById('capture-input').click());
+    document.getElementById('btn-snap').addEventListener('click', async () => {
+      const handledNative = await captureDealPhotoNative();
+      if (!handledNative) document.getElementById('capture-input').click();
+    });
+    document.getElementById('btn-import').addEventListener('click', openImportModal);
     document.getElementById('capture-input').addEventListener('change', (e) => {
       const f = e.target.files && e.target.files[0];
       if (f) handleCapture(f);
@@ -1511,6 +1962,9 @@ Return only the JSON, no other text.`;
     document.getElementById('prize-close').addEventListener('click', () => document.getElementById('modal-prize').classList.remove('active'));
     document.getElementById('claim-close').addEventListener('click', closeClaim);
     document.getElementById('claim-redeem').addEventListener('click', claimRedeem);
+    document.getElementById('import-close').addEventListener('click', closeImportModal);
+    document.getElementById('import-cancel').addEventListener('click', closeImportModal);
+    document.getElementById('import-save').addEventListener('click', importDealFromText);
     document.querySelectorAll('.claim-mode-btn').forEach(b => {
       b.addEventListener('click', () => {
         claimMode = b.getAttribute('data-mode');
@@ -1524,20 +1978,29 @@ Return only the JSON, no other text.`;
     document.getElementById('s-notif-permission').addEventListener('click', requestNotificationPermission);
     document.getElementById('export-data').addEventListener('click', exportData);
     document.getElementById('reset-data').addEventListener('click', resetData);
+    document.getElementById('profile-save').addEventListener('click', saveProfileFromScreen);
+    document.getElementById('profile-edit').addEventListener('click', () => { hydrateProfileScreen(); showProfileScreen(); });
+    document.getElementById('email-connect-btn').addEventListener('click', saveEmailConnectIntent);
     document.querySelectorAll('.nav-btn').forEach(b => b.addEventListener('click', () => switchTab(b.getAttribute('data-tab'))));
 
     document.getElementById('modal-deal').addEventListener('click', (e) => { if (e.target.id === 'modal-deal') closeModal(); });
     document.getElementById('modal-prize').addEventListener('click', (e) => { if (e.target.id === 'modal-prize') document.getElementById('modal-prize').classList.remove('active'); });
     document.getElementById('modal-settings').addEventListener('click', (e) => { if (e.target.id === 'modal-settings') closeSettings(); });
     document.getElementById('modal-claim').addEventListener('click', (e) => { if (e.target.id === 'modal-claim') closeClaim(); });
+    document.getElementById('modal-import').addEventListener('click', (e) => { if (e.target.id === 'modal-import') closeImportModal(); });
 
     renderAll();
+    hydrateProfileScreen();
+    renderProfileSummary();
+    if (!validProfile(profile)) showProfileScreen();
 
     // Handle deep links from manifest shortcuts
     try {
-      const params = new URLSearchParams(location.search);
       const action = params.get('action');
-      if (action === 'snap') {
+      const sharedPayload = parseIncomingShare(params);
+      if (sharedPayload) {
+        setTimeout(() => openModalPrefilled(sharedPayload), 900);
+      } else if (action === 'snap') {
         setTimeout(() => document.getElementById('capture-input').click(), 1000);
       } else if (action === 'add') {
         setTimeout(() => openModal(null), 1000);
@@ -1552,7 +2015,10 @@ Return only the JSON, no other text.`;
         const r = autoGrantDailySpin();
         if (r) showToast(`🎉 +${r.bonus} daily spin${r.bonus===1?'':'s'} (day ${r.streak} streak)`);
         checkAndSendReminders();
-        if (settings.nearbyOn) findNearbyDeals();
+        if (settings.nearbyOn) {
+          startBeaconWatch();
+          findNearbyDeals();
+        }
         renderAll();
       }
     });
@@ -1560,6 +2026,7 @@ Return only the JSON, no other text.`;
     // Initial nearby check if enabled
     if (settings.nearbyOn) {
       // Defer slightly so the UI renders first
+      startBeaconWatch();
       setTimeout(() => findNearbyDeals(), 500);
     }
 
@@ -1583,11 +2050,7 @@ Return only the JSON, no other text.`;
     });
 
     // ---- Splash screen handling ----
-    setTimeout(() => {
-      const splash = document.getElementById('splash');
-      if (splash) splash.classList.add('hide');
-      setTimeout(() => { if (splash) splash.style.display = 'none'; }, 500);
-    }, 500);
+    setTimeout(hideSplash, 500);
 
     // ---- iOS install prompt (shown only on iOS Safari, not yet installed) ----
     showIOSInstallScreenIfNeeded();

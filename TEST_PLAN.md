@@ -1,9 +1,12 @@
-# Deal with Deals — Manual Test Plan
+# Perq Manual Test Plan
 
 ## Install and launch
 
 - Open in mobile Safari and Chrome
 - Confirm splash screen appears
+- Clear site data and confirm profile setup appears before first use
+- Enter name, email, optional phone, and deal preferences
+- Choose whether to request email connection
 - Confirm iOS install guide appears only on iOS Safari when not installed
 - Confirm Android install prompt appears when supported
 - Confirm app launches standalone after install
@@ -17,6 +20,9 @@
 - Add deal without expiry date
 - Add deal with code
 - Add deal without code
+- Add deal with barcode
+- Add deal with business address
+- Paste an email or browser link into Import and confirm fields are extracted
 
 ## Photo/OCR
 
@@ -24,7 +30,15 @@
 - Select/take a photo
 - Confirm preview appears
 - Confirm no-key fallback works
-- Confirm OCR success fills fields when API key is configured
+- Confirm OCR success fills merchant, expiry/valid-by, discount, barcode, link, and address when visible
+
+## Native packaging
+- Run `npm run build:native`
+- Confirm `dist/index.html` includes `capacitor.js` and root `index.html` does not
+- Run `npm run cap:sync`
+- Confirm iOS and Android projects keep app name `Perq`
+- Confirm iOS includes camera/photo/location permission descriptions
+- Confirm Android includes camera, location, media image, and notification permissions
 - Confirm OCR failure still allows manual save
 
 ## Claim flow
@@ -56,12 +70,22 @@
 
 ## Nearby deals
 
-- Enable nearby setting
+- Enable beacon alerts
 - Allow location permission
-- Confirm nearby banner or empty state
+- Set beacon radius
+- Confirm a notification or in-app alert appears when an unexpired saved deal is inside radius
+- Confirm alerts do not repeat for the same deal on the same day
 - Flip a deal card
 - Confirm map preview and directions link
 - Deny location permission and confirm graceful fallback
+
+## Email and discovery
+
+- Request email connection from profile setup
+- Request email connection from Settings
+- Confirm email status is saved locally
+- Review docs/email-ingestion-module.md for OAuth inbox implementation
+- Review docs/discovery-and-beacon-module.md for crawler and always-on beacon implementation
 
 ## Offline
 

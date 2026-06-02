@@ -1,14 +1,12 @@
-const CACHE_NAME = 'perq-v23-clean-logo-fix';
+const CACHE_NAME = 'perq-v25-profile-beacon';
 const ASSETS = [
   './',
   './index.html',
   './app.js',
   './manifest.json',
-  './icon-180.png',
   './apple-touch-icon.png',
   './icon-192.png',
-  './icon-512.png',
-  './icon-maskable-512.png'
+  './icon-512.png'
 ];
 
 self.addEventListener('install', event => {
