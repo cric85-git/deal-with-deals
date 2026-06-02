@@ -35,6 +35,55 @@
   let deferredInstallPrompt = null;
   let beaconWatchId = null;
 
+  function nativePlugin(name) {
+    const cap = window.Capacitor;
+    return cap && cap.Plugins && cap.Plugins[name] ? cap.Plugins[name] : null;
+  }
+  function isNativeApp() {
+    const cap = window.Capacitor;
+    if (!cap) return false;
+    if (typeof cap.isNativePlatform === 'function') return cap.isNativePlatform();
+    return typeof cap.getPlatform === 'function' && cap.getPlatform() !== 'web';
+  }
+  function notificationId(seed) {
+    const text = String(seed || 'perq-notification');
+    let hash = 0;
+    for (let i = 0; i < text.length; i++) hash = ((hash << 5) - hash + text.charCodeAt(i)) | 0;
+    return Math.abs(hash) || 1;
+  }
+  async function requestNativeNotifications() {
+    const LocalNotifications = nativePlugin('LocalNotifications');
+    if (!LocalNotifications) return false;
+    try {
+      const current = await LocalNotifications.checkPermissions();
+      if (current.display === 'granted') return true;
+      const requested = await LocalNotifications.requestPermissions();
+      return requested.display === 'granted';
+    } catch(e) {
+      return false;
+    }
+  }
+  async function sendNativeNotification(title, body, tag) {
+    const LocalNotifications = nativePlugin('LocalNotifications');
+    if (!LocalNotifications) return false;
+    const granted = await requestNativeNotifications();
+    if (!granted) return false;
+    try {
+      await LocalNotifications.schedule({
+        notifications: [{
+          id: notificationId(tag || title),
+          title,
+          body,
+          smallIcon: 'ic_stat_perq',
+          iconColor: '#1B6C8C'
+        }]
+      });
+      return true;
+    } catch(e) {
+      return false;
+    }
+  }
+
   const SLICES = [
     { id:'pts10',type:'points',value:10,label:'+10 pts',color:'#B5D4F4',text:'#0C447C',icon:'ti-coin' },
     { id:'deal',type:'deal',value:null,label:'Bonus deal',color:'#9FE1CB',text:'#085041',icon:'ti-ticket' },
@@ -388,20 +437,23 @@
     const newOnes = due.filter(d => !notified.ids.includes(d.id));
     if (!newOnes.length) return;
 
-    // Try push notification (best effort)
-    if ('Notification' in window && Notification.permission === 'granted') {
-      newOnes.forEach(d => {
-        const du = daysUntil(d.expiry);
-        const title = du === 0 ? `${d.merchant} expires TODAY` : `${d.merchant} expires in ${du} day${du === 1 ? '' : 's'}`;
-        const body = `${d.discount}${d.code ? ` — code ${d.code}` : ''}. Tap to use it.`;
-        try {
-          new Notification(title, {
-            body, icon: 'icon-192.png', badge: 'icon-192.png',
-            tag: 'perq-' + d.id, requireInteraction: false
-          });
-        } catch(e) { /* iOS PWA quirks */ }
+    newOnes.forEach(d => {
+      const du = daysUntil(d.expiry);
+      const title = du === 0 ? `${d.merchant} expires TODAY` : `${d.merchant} expires in ${du} day${du === 1 ? '' : 's'}`;
+      const body = `${d.discount}${d.code ? ` — code ${d.code}` : ''}. Tap to use it.`;
+      const tag = 'perq-' + d.id;
+      sendNativeNotification(title, body, tag).then(sent => {
+        if (sent) return;
+        if ('Notification' in window && Notification.permission === 'granted') {
+          try {
+            new Notification(title, {
+              body, icon: 'icon-192.png', badge: 'icon-192.png',
+              tag, requireInteraction: false
+            });
+          } catch(e) { /* iOS PWA quirks */ }
+        }
       });
-    }
+    });
 
     notified.ids = [...notified.ids, ...newOnes.map(d => d.id)];
     save(KEYS.notified, notified);
@@ -420,27 +472,48 @@
     const first = fresh[0];
     const title = `${first.deal.merchant} deal nearby`;
     const body = `${first.deal.discount} is ${first.distance.toFixed(1)} mi away${first.deal.expiry ? ` · expires ${fmtDate(first.deal.expiry)}` : ''}`;
-    if ('Notification' in window && Notification.permission === 'granted') {
-      try {
-        new Notification(title, {
-          body,
-          icon: 'icon-192.png',
-          badge: 'icon-192.png',
-          tag: 'perq-beacon-' + first.deal.id,
-          requireInteraction: false
-        });
-      } catch(e) {
+    sendNativeNotification(title, body, 'perq-beacon-' + first.deal.id).then(sent => {
+      if (sent) return;
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+          new Notification(title, {
+            body,
+            icon: 'icon-192.png',
+            badge: 'icon-192.png',
+            tag: 'perq-beacon-' + first.deal.id,
+            requireInteraction: false
+          });
+        } catch(e) {
+          showToast(`${title}: ${first.deal.discount}`);
+        }
+      } else {
         showToast(`${title}: ${first.deal.discount}`);
       }
-    } else {
-      showToast(`${title}: ${first.deal.discount}`);
-    }
+    });
     notified.ids = [...notified.ids, ...fresh.map(r => r.deal.id)];
     save(KEYS.beaconNotified, notified);
   }
 
   function startBeaconWatch() {
-    if (!settings.nearbyOn || !('geolocation' in navigator) || beaconWatchId !== null) return;
+    if (!settings.nearbyOn || beaconWatchId !== null) return;
+    const NativeGeolocation = nativePlugin('Geolocation');
+    if (NativeGeolocation && NativeGeolocation.watchPosition) {
+      beaconWatchId = { native: true, id: 'starting' };
+      NativeGeolocation.watchPosition(
+        { enableHighAccuracy: false, maximumAge: 5 * 60 * 1000, timeout: 12000 },
+        (pos) => {
+          if (pos && pos.coords) {
+            findNearbyDeals(false, { lat: pos.coords.latitude, lon: pos.coords.longitude });
+          }
+        }
+      ).then(id => {
+        beaconWatchId = { native: true, id };
+      }).catch(() => {
+        beaconWatchId = null;
+      });
+      return;
+    }
+    if (!('geolocation' in navigator)) return;
     try {
       beaconWatchId = navigator.geolocation.watchPosition(
         pos => findNearbyDeals(false, { lat: pos.coords.latitude, lon: pos.coords.longitude }),
@@ -450,12 +523,25 @@
     } catch(e) {}
   }
   function stopBeaconWatch() {
-    if (beaconWatchId === null || !('geolocation' in navigator)) return;
-    try { navigator.geolocation.clearWatch(beaconWatchId); } catch(e) {}
+    if (beaconWatchId === null) return;
+    const NativeGeolocation = nativePlugin('Geolocation');
+    if (beaconWatchId && beaconWatchId.native && NativeGeolocation && NativeGeolocation.clearWatch) {
+      if (beaconWatchId.id !== 'starting') {
+        NativeGeolocation.clearWatch({ id: beaconWatchId.id }).catch(() => {});
+      }
+    } else if ('geolocation' in navigator) {
+      try { navigator.geolocation.clearWatch(beaconWatchId); } catch(e) {}
+    }
     beaconWatchId = null;
   }
 
   async function requestNotificationPermission() {
+    if (nativePlugin('LocalNotifications')) {
+      const granted = await requestNativeNotifications();
+      showToast(granted ? 'Notifications enabled' : 'Notifications declined');
+      updateNotifButton();
+      return;
+    }
     if (!('Notification' in window)) {
       showToast('This browser does not support notifications');
       return;
@@ -493,6 +579,11 @@
   function updateNotifButton() {
     const btn = document.getElementById('s-notif-permission');
     if (!btn) return;
+    if (nativePlugin('LocalNotifications')) {
+      btn.textContent = 'Enable';
+      btn.disabled = false;
+      return;
+    }
     if (!('Notification' in window)) {
       btn.textContent = 'Not supported';
       btn.disabled = true;
@@ -524,13 +615,24 @@
 
   function getUserLocation(forceRefresh = false) {
     return new Promise((resolve, reject) => {
-      if (!navigator.geolocation) { reject(new Error('Geolocation not supported')); return; }
       const cached = load(KEYS.userLoc, null);
       // Use cache if less than 10 minutes old
       if (!forceRefresh && cached && (Date.now() - cached.ts < 10 * 60 * 1000)) {
         resolve({ lat: cached.lat, lon: cached.lon });
         return;
       }
+      const NativeGeolocation = nativePlugin('Geolocation');
+      if (NativeGeolocation && NativeGeolocation.getCurrentPosition) {
+        NativeGeolocation.getCurrentPosition({ enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 })
+          .then(pos => {
+            const loc = { lat: pos.coords.latitude, lon: pos.coords.longitude, ts: Date.now() };
+            save(KEYS.userLoc, loc);
+            resolve({ lat: loc.lat, lon: loc.lon });
+          })
+          .catch(reject);
+        return;
+      }
+      if (!navigator.geolocation) { reject(new Error('Geolocation not supported')); return; }
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const loc = { lat: pos.coords.latitude, lon: pos.coords.longitude, ts: Date.now() };
@@ -653,6 +755,38 @@
       img.onerror = () => resolve(dataUrl);
       img.src = dataUrl;
     });
+  }
+  function dataUrlToFile(dataUrl, fileName = 'perq-coupon.jpg') {
+    const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+    if (!match) throw new Error('Invalid image data');
+    const bytes = atob(match[2]);
+    const buffer = new Uint8Array(bytes.length);
+    for (let i = 0; i < bytes.length; i++) buffer[i] = bytes.charCodeAt(i);
+    return new File([buffer], fileName, { type: match[1] });
+  }
+  async function captureDealPhotoNative() {
+    const Camera = nativePlugin('Camera');
+    if (!Camera || !Camera.getPhoto) return false;
+    try {
+      const photo = await Camera.getPhoto({
+        quality: 85,
+        allowEditing: false,
+        resultType: 'dataUrl',
+        source: 'PROMPT',
+        direction: 'REAR',
+        promptLabelHeader: 'Deal image',
+        promptLabelPicture: 'Take photo',
+        promptLabelPhoto: 'Upload image'
+      });
+      const dataUrl = photo.dataUrl || (photo.base64String ? `data:image/${photo.format || 'jpeg'};base64,${photo.base64String}` : '');
+      if (!dataUrl) return false;
+      await handleCapture(dataUrlToFile(dataUrl));
+      return true;
+    } catch(e) {
+      const msg = String(e && (e.message || e)).toLowerCase();
+      if (msg.includes('cancel')) return true;
+      return false;
+    }
   }
   async function handleCapture(file) {
     if (!file) return;
@@ -1587,7 +1721,14 @@ Return only the JSON, no other text.`;
   async function shareDeal(id) {
     const d = deals.find(x=>x.id===id); if (!d) return;
     const text = `${d.merchant}: ${d.discount}${d.code ? ` code ${d.code}` : ''}${d.expiry ? ` expires ${fmtDate(d.expiry)}` : ''}${d.url ? ` ${d.url}` : ''}`;
-    if (navigator.share) {
+    const NativeShare = nativePlugin('Share');
+    if (NativeShare && NativeShare.share) {
+      try {
+        await NativeShare.share({ title: `Perq deal: ${d.merchant}`, text, url: d.url || location.href, dialogTitle: 'Share deal' });
+      } catch(e) {
+        return;
+      }
+    } else if (navigator.share) {
       try {
         await navigator.share({ title: `Perq deal: ${d.merchant}`, text, url: d.url || location.href });
       } catch(e) {
@@ -1805,7 +1946,10 @@ Return only the JSON, no other text.`;
     }
 
     document.getElementById('btn-add').addEventListener('click', () => openModal(null));
-    document.getElementById('btn-snap').addEventListener('click', () => document.getElementById('capture-input').click());
+    document.getElementById('btn-snap').addEventListener('click', async () => {
+      const handledNative = await captureDealPhotoNative();
+      if (!handledNative) document.getElementById('capture-input').click();
+    });
     document.getElementById('btn-import').addEventListener('click', openImportModal);
     document.getElementById('capture-input').addEventListener('change', (e) => {
       const f = e.target.files && e.target.files[0];

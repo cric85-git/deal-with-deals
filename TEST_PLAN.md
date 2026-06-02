@@ -31,6 +31,14 @@
 - Confirm preview appears
 - Confirm no-key fallback works
 - Confirm OCR success fills merchant, expiry/valid-by, discount, barcode, link, and address when visible
+
+## Native packaging
+- Run `npm run build:native`
+- Confirm `dist/index.html` includes `capacitor.js` and root `index.html` does not
+- Run `npm run cap:sync`
+- Confirm iOS and Android projects keep app name `Perq`
+- Confirm iOS includes camera/photo/location permission descriptions
+- Confirm Android includes camera, location, media image, and notification permissions
 - Confirm OCR failure still allows manual save
 
 ## Claim flow

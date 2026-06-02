@@ -1,9 +1,9 @@
 # Perq Automated Test Results
 
-Executed: 2026-06-01T17:45:19.673Z
+Executed: 2026-06-02T18:40:33.342Z
 
-Total: 15
-Passed: 15
+Total: 18
+Passed: 18
 Failed: 0
 
 | Test | Status | Error |
@@ -20,6 +20,9 @@ Failed: 0
 | First-run profile captures identity, preferences, and email connect intent | PASS |  |
 | Deal capture stores mandatory payload fields | PASS |  |
 | Beacon alerts are configurable and notify nearby unexpired deals | PASS |  |
+| Capacitor config packages Perq for native iOS and Android | PASS |  |
+| Native build keeps root Pages static and injects Capacitor only into dist | PASS |  |
+| Native projects carry Perq package names and required permissions | PASS |  |
 | Legacy brand terms are absent from app-facing files | PASS |  |
 | Stale generated logo assets are not referenced | PASS |  |
 | Photo capture entry is click-driven | PASS |  |
