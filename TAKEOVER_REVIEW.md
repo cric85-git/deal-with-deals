@@ -1,4 +1,4 @@
-# Deal with Deals — Technical Takeover Review
+# Perq Technical Takeover Review
 
 ## Executive summary
 

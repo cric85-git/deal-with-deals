@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Perq</string>
+    <string name="title_activity_main">Perq</string>
+    <string name="package_name">com.perq.app</string>
+    <string name="custom_url_scheme">com.perq.app</string>
+</resources>
