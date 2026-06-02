@@ -4,7 +4,7 @@
   const STORAGE_PREFIX = 'perq:';
   const STORAGE_KEY_NAMES = [
     'deals', 'rewards', 'game', 'quests', 'seeded', 'installDismissed',
-    'apiKey', 'settings', 'notified', 'geocache', 'userLoc', 'profile',
+    'settings', 'notified', 'geocache', 'userLoc', 'profile',
     'emailConnection', 'beaconNotified'
   ];
   const LEGACY_STORAGE_PREFIX = String.fromCharCode(100, 119, 100, 58);
@@ -34,6 +34,11 @@
   let wheelRotation = 0;
   let deferredInstallPrompt = null;
   let beaconWatchId = null;
+
+  const AI_CAPTURE_FIELDS = [
+    'merchant', 'discount', 'code', 'barcode', 'expiry', 'validBy',
+    'category', 'value', 'url', 'address', 'notes'
+  ];
 
   function nativePlugin(name) {
     const cap = window.Capacitor;
@@ -143,6 +148,26 @@
         localStorage.removeItem(legacyKey);
       });
     } catch(e) {}
+  }
+
+  function cleanupLegacyBrowserSecrets() {
+    try {
+      storageKeyVariants('apiKey').forEach(key => localStorage.removeItem(key));
+    } catch(e) {}
+  }
+
+  function getAiCaptureEndpoint() {
+    const meta = document.querySelector('meta[name="perq-ai-endpoint"]');
+    const fromMeta = meta ? meta.getAttribute('content') : '';
+    return String(window.PERQ_AI_ENDPOINT || fromMeta || '').trim();
+  }
+
+  function renderAiCaptureStatus() {
+    const el = document.getElementById('ai-capture-status');
+    if (!el) return;
+    el.textContent = getAiCaptureEndpoint()
+      ? 'Perq AI service connected'
+      : 'Perq AI service not connected';
   }
 
   function load(key, fallback) {
@@ -795,14 +820,14 @@
     const dataUrl = await compressImage(rawDataUrl, 1200);
     pendingImage = dataUrl;
     openModal(null, { imageOnly: true });
-    const apiKey = load(KEYS.apiKey, '');
-    if (!apiKey) {
-      showOcrStatus('warn', 'No API key set — fill in the details manually.');
+    const endpoint = getAiCaptureEndpoint();
+    if (!endpoint) {
+      showOcrStatus('warn', 'Image captured. AI extraction needs the Perq AI service; review manually for now.');
       return;
     }
     showOcrStatus('reading', 'Extracting deal details with AI…');
     try {
-      const result = await runOcr(dataUrl, apiKey);
+      const result = await runOcr(dataUrl, endpoint);
       applyOcrResult(result);
       showOcrStatus('success', 'Got it — review and save below.');
     } catch (err) {
@@ -821,53 +846,34 @@
       el.innerHTML = `<i class="ti ${icon}" style="font-size:16px;"></i><span>${escapeHtml(msg)}</span>`;
     }
   }
-  async function runOcr(dataUrl, apiKey) {
+  async function runOcr(dataUrl, endpoint) {
     const match = dataUrl.match(/^data:(image\/[a-z]+);base64,(.+)$/);
     if (!match) throw new Error('Invalid image format');
     const mediaType = match[1];
     const b64 = match[2];
-    const prompt = `Extract coupon/deal details from this image. Return ONLY a JSON object:
-{
-  "merchant": "store/brand name",
-  "discount": "discount amount like '20% off' or '$10 off $50'",
-  "code": "promo code if visible, else null",
-  "barcode": "barcode number or scannable numeric value if visible, else null",
-  "expiry": "YYYY-MM-DD format if a date is visible, else null",
-  "validBy": "original visible expiry wording such as valid by/valid thru if present, else null",
-  "category": "one of: Groceries, Dining, Apparel, Travel, Beauty, Home, Electronics, Other",
-  "value": estimated dollar value as a number,
-  "url": "deal link if visible, else null",
-  "address": "business address if visible, else null",
-  "notes": "any restrictions like 'min $50', 'in-store only', else null"
-}
-Return only the JSON, no other text.`;
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const sameOrigin = endpoint.startsWith('/') || endpoint.startsWith(location.origin);
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
+        'Content-Type': 'application/json'
       },
+      credentials: sameOrigin ? 'same-origin' : 'omit',
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
-        max_tokens: 500,
-        messages: [{ role: 'user', content: [
-          { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
-          { type: 'text', text: prompt }
-        ]}]
+        image: { mimeType: mediaType, data: b64 },
+        requestedFields: AI_CAPTURE_FIELDS,
+        source: 'perq-camera-capture'
       })
     });
     if (!response.ok) {
       const errText = await response.text();
-      let errMsg = `API error ${response.status}`;
+      let errMsg = `AI service error ${response.status}`;
       try { const errJson = JSON.parse(errText); if (errJson.error && errJson.error.message) errMsg = errJson.error.message; } catch(e) {}
       throw new Error(errMsg);
     }
     const data = await response.json();
-    const text = (data.content || []).map(b => b.text || '').join('').trim();
-    const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
-    try { return JSON.parse(cleaned); } catch(e) { throw new Error('AI returned non-JSON response'); }
+    const result = data.deal || data.result || data;
+    if (!result || typeof result !== 'object') throw new Error('AI service returned an invalid payload');
+    return result;
   }
   function applyOcrResult(r) {
     if (!r) return;
@@ -919,6 +925,103 @@ Return only the JSON, no other text.`;
     const cur = currentTier();
     const idx = TIERS.indexOf(cur);
     return idx < TIERS.length - 1 ? TIERS[idx + 1] : null;
+  }
+  function pct(current, target) {
+    if (!target) return 0;
+    return Math.max(0, Math.min(100, Math.round((current / target) * 100)));
+  }
+  function timeToMidnightLabel() {
+    const now = new Date();
+    const end = new Date(now);
+    end.setHours(24, 0, 0, 0);
+    const minutes = Math.max(1, Math.round((end - now) / 60000));
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    if (h <= 0) return `${m}m`;
+    return `${h}h ${m}m`;
+  }
+  function questStats() {
+    const items = quests.items || [];
+    const total = items.length || 1;
+    const done = items.filter(q => q.claimed).length;
+    const ready = items.filter(q => !q.claimed && q.progress >= q.target).length;
+    const progress = items.reduce((sum, q) => sum + Math.min(q.progress, q.target), 0);
+    const target = items.reduce((sum, q) => sum + q.target, 0) || total;
+    return { total, done, ready, progress, target, pct: pct(progress, target) };
+  }
+  function nextStreakTarget() {
+    if (game.streak < 3) return { day: 3, label: 'Day 3 boost', detail: '2 daily spins' };
+    if (game.streak < 7) return { day: 7, label: 'Day 7 bonus', detail: '3 daily spins' };
+    return { day: 7, label: 'Weekly streak maxed', detail: 'Keep it alive' };
+  }
+  function streakMilestones() {
+    const target = nextStreakTarget();
+    return [
+      { day: 1, label: 'Check in', detail: '+1 spin', state: game.streak >= 1 ? 'done' : 'next' },
+      { day: 3, label: 'Boost', detail: '2 daily spins', state: game.streak >= 3 ? 'done' : (target.day === 3 ? 'next' : '') },
+      { day: 7, label: 'Bonus', detail: '3 daily spins', state: game.streak >= 7 ? 'done' : (target.day === 7 ? 'next' : '') }
+    ];
+  }
+  function tierProgressInfo() {
+    const tier = currentTier();
+    const next = nextTier();
+    if (!next) return { tier, next: null, pct: 100, label: 'Top tier' };
+    const earnedWithinTier = Math.max(0, rewards.points - tier.min);
+    const tierSpan = Math.max(1, next.min - tier.min);
+    return { tier, next, pct: pct(earnedWithinTier, tierSpan), label: `${next.min - rewards.points} pts to ${next.name}` };
+  }
+  function personalizedRewardPicks() {
+    return suggestions().slice(0, 3);
+  }
+  function rewardPulseRows() {
+    const active = deals.filter(d => !d.redeemed && statusOf(d) !== 'expired').length;
+    const expiring = deals.filter(d => !d.redeemed && statusOf(d) === 'soon').length;
+    const rows = (game.history || []).slice(0, 4).map(h => ({
+      label: h.label,
+      meta: new Date(h.ts).toLocaleString(undefined, { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' })
+    }));
+    if (rows.length) return rows;
+    return [
+      { label: `${active} active deal${active === 1 ? '' : 's'} in your wallet`, meta: 'Wallet' },
+      { label: `${expiring} expiring soon`, meta: 'Reminder' },
+      { label: `${rewards.shared || 0} shared and ${rewards.claimed || 0} redeemed`, meta: 'Momentum' }
+    ];
+  }
+  function nextRewardAction(dailyReady) {
+    const readyQuest = (quests.items || []).find(q => !q.claimed && q.progress >= q.target);
+    const nextQuest = (quests.items || []).find(q => !q.claimed && q.progress < q.target);
+    if (dailyReady) return { title: 'Daily spin ready', detail: 'Claim today to keep your streak warm.', icon: 'ti-gift', label: 'Claim', action: 'claim-daily' };
+    if (game.spins > 0) return { title: 'Spin ready', detail: 'Use a spin for points or a bonus deal.', icon: 'ti-player-play', label: 'Spin', action: 'spin' };
+    if (readyQuest) return { title: 'Quest reward ready', detail: readyQuest.label, icon: 'ti-rosette-discount-check', label: `+${readyQuest.reward} spin`, action: `claim-quest:${readyQuest.id}` };
+    if (nextQuest && nextQuest.id === 'q_add') return { title: 'Next quest', detail: 'Add a new deal to earn a spin.', icon: 'ti-camera-plus', label: 'Add deal', action: 'add-deal' };
+    if (nextQuest && nextQuest.id === 'q_share') return { title: 'Next quest', detail: 'Share a deal to earn a spin.', icon: 'ti-share', label: 'Share', action: 'share-deal' };
+    if (nextQuest && nextQuest.id === 'q_redeem') return { title: 'Next quest', detail: 'Redeem a saved deal to earn a spin.', icon: 'ti-ticket', label: 'Use deal', action: 'redeem-deal' };
+    return { title: 'Pick a bonus', detail: 'Track a personalized deal and keep earning.', icon: 'ti-sparkles', label: 'See picks', action: 'suggest' };
+  }
+  function runRewardAction(action) {
+    if (action === 'claim-daily') return claimDailySpin();
+    if (action === 'spin') return spinWheel();
+    if (action === 'add-deal') return openModal(null);
+    if (action === 'share-deal') return switchTab('social');
+    if (action === 'redeem-deal') return switchTab('deals');
+    if (action === 'suggest') return switchTab('suggest');
+    if (action && action.startsWith('claim-quest:')) return claimQuest(action.split(':')[1]);
+  }
+  function addRewardPick(index) {
+    const pick = personalizedRewardPicks()[index];
+    if (!pick) return;
+    const t = new Date();
+    t.setDate(t.getDate() + 14);
+    openModalPrefilled({
+      merchant: pick.merchant,
+      discount: pick.discount,
+      category: pick.category,
+      source: 'Rewards pick',
+      value: pick.value || 10,
+      expiry: t.toISOString().slice(0, 10),
+      notes: pick.reason || 'Personalized reward pick',
+      url: inferUrl(pick.merchant)
+    });
   }
   function redeemPointsForSpin() {
     if (rewards.points < POINTS_PER_SPIN) {
@@ -1438,30 +1541,65 @@ Return only the JSON, no other text.`;
   function renderRewards() {
     const root = document.getElementById('panel-rewards');
     const dailyReady = canDailySpin();
+    const action = nextRewardAction(dailyReady);
+    const questSummary = questStats();
+    const tierInfo = tierProgressInfo();
+    const streakTarget = nextStreakTarget();
+    const streakPath = streakMilestones();
+    const rewardPicks = personalizedRewardPicks();
+    const pulseRows = rewardPulseRows();
     const streakDots = Array.from({length:7}, (_,i) => {
       const on = i < game.streak;
       return `<span class="streak-dot ${on?'streak-on':'streak-off'}">${i+1}</span>`;
     }).join('');
-    const recent = (game.history || []).slice(0, 5);
-    const tier = currentTier();
-    const next = nextTier();
+    const streakProgress = pct(Math.min(game.streak, streakTarget.day), streakTarget.day);
+    const expiringSoon = deals.filter(d => !d.redeemed && statusOf(d) === 'soon').length;
 
     root.innerHTML = `
-      <!-- Hero card: wheel + stats + spin button + tier all in one block -->
+      <div class="reward-command">
+        <div class="reward-command-top">
+          <div style="min-width:0;">
+            <h2>${escapeHtml(action.title)}</h2>
+            <p class="reward-command-sub">${escapeHtml(action.detail)} Boost resets in ${timeToMidnightLabel()}.</p>
+          </div>
+          <button class="reward-action-pill" data-reward-action="${escapeHtml(action.action)}">
+            <i class="ti ${escapeHtml(action.icon)}"></i>${escapeHtml(action.label)}
+          </button>
+        </div>
+        <div class="reward-command-grid">
+          <div class="reward-command-metric">
+            <p class="reward-command-value">${questSummary.done}/${questSummary.total}</p>
+            <p class="reward-command-label">Quests</p>
+          </div>
+          <div class="reward-command-metric">
+            <p class="reward-command-value">${game.streak}/7</p>
+            <p class="reward-command-label">Streak</p>
+          </div>
+          <div class="reward-command-metric">
+            <p class="reward-command-value">${expiringSoon}</p>
+            <p class="reward-command-label">Expiring</p>
+          </div>
+        </div>
+      </div>
+
       <div class="rewards-hero">
-        <div class="rewards-hero-top">
-          <div class="rewards-stats-side">
-            <div class="hero-stat">
-              <p class="hero-stat-val">${rewards.points}</p>
-              <p class="hero-stat-lbl">POINTS</p>
-            </div>
-            <div class="hero-stat">
-              <p class="hero-stat-val" style="color: var(--text-warning);">${game.spins}</p>
-              <p class="hero-stat-lbl">SPINS</p>
-            </div>
-            <div class="hero-stat">
-              <p class="hero-stat-val">${game.streak}</p>
-              <p class="hero-stat-lbl">STREAK</p>
+        <div class="reward-main-grid">
+          <div class="reward-hero-copy">
+            <h3>Reward wheel</h3>
+            <p>${game.spins > 0 ? 'Spin for points, bonus deals, or another chance.' : 'Finish a quest or trade points to unlock your next spin.'}</p>
+            <div class="reward-tile-row">
+              <div class="reward-tile">
+                <p class="reward-tile-value">${rewards.points}</p>
+                <p class="reward-tile-label">Points</p>
+              </div>
+              <div class="reward-tile">
+                <p class="reward-tile-value" style="color: var(--text-warning);">${game.spins}</p>
+                <p class="reward-tile-label">Spins</p>
+              </div>
+              <div class="reward-tile">
+                <p class="reward-tile-value">${escapeHtml(tierInfo.tier.name)}</p>
+                <p class="reward-tile-label">Tier</p>
+              </div>
             </div>
           </div>
           <div class="wheel-container compact">
@@ -1476,39 +1614,70 @@ Return only the JSON, no other text.`;
         <div class="streak-strip">
           ${streakDots}
         </div>
-        <div class="tier-strip" style="background: ${tier.bg};">
-          <div style="display:flex; justify-content:space-between; align-items:center; gap: 8px;">
-            <p style="margin:0; font-size:11px; font-weight:600; color:${tier.color}; text-transform:uppercase; letter-spacing:0.4px;">${tier.name} · ${tier.perk}</p>
-            ${next ? `<p style="margin:0; font-size:10px; color: var(--text-secondary); white-space: nowrap;">${next.min - rewards.points} pts to ${next.name}</p>` : ''}
-          </div>
-          ${next ? `<div class="progress-bar" style="margin-top:4px;"><div class="progress-fill" style="width:${Math.min(100, Math.round((rewards.points / next.min) * 100))}%;"></div></div>` : ''}
+        <div class="reward-path">
+          ${streakPath.map(item => `
+            <div class="reward-path-step ${item.state}">
+              <p class="reward-path-day">Day ${item.day}</p>
+              <p class="reward-path-name">${escapeHtml(item.label)}</p>
+              <p class="reward-path-prize">${escapeHtml(item.detail)}</p>
+            </div>
+          `).join('')}
         </div>
-        ${dailyReady ? `
-          <div style="text-align: center; margin-top: 8px;">
-            <button id="daily-btn" style="font-size: 11px; padding: 4px 10px;"><i class="ti ti-gift" style="font-size:11px; vertical-align:-2px; margin-right:3px;"></i>Claim today's free spin</button>
+        <div class="tier-strip" style="background: ${tierInfo.tier.bg};">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap: 8px;">
+            <p style="margin:0; font-size:11px; font-weight:600; color:${tierInfo.tier.color}; text-transform:uppercase; letter-spacing:0.4px;">${escapeHtml(tierInfo.tier.name)} · ${escapeHtml(tierInfo.tier.perk)}</p>
+            <p style="margin:0; font-size:10px; color: var(--text-secondary); white-space: nowrap;">${escapeHtml(tierInfo.label)}</p>
           </div>
-        ` : ''}
+          <div class="progress-bar" style="margin-top:4px;"><div class="progress-fill" style="width:${tierInfo.pct}%;"></div></div>
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px;">
+          <div>
+            <p style="margin:0 0 4px; font-size:10px; color: var(--text-secondary); font-weight:700; text-transform:uppercase; letter-spacing:0.4px;">Next streak</p>
+            <div class="progress-bar"><div class="progress-fill" style="width:${streakProgress}%;"></div></div>
+          </div>
+          <div>
+            <p style="margin:0 0 4px; font-size:10px; color: var(--text-secondary); font-weight:700; text-transform:uppercase; letter-spacing:0.4px;">Today quests</p>
+            <div class="progress-bar"><div class="progress-fill" style="width:${questSummary.pct}%;"></div></div>
+          </div>
+        </div>
       </div>
 
-      <!-- Spend points: compact horizontal pills -->
       <div class="spend-row">
         <button id="redeem-spin-btn" ${rewards.points < POINTS_PER_SPIN ? 'disabled' : ''} class="spend-pill ${rewards.points >= POINTS_PER_SPIN ? 'spend-active' : ''}">
-          <span class="spend-pill-icon">⚡</span>
+          <i class="ti ti-bolt spend-pill-icon"></i>
           <span class="spend-pill-label">Buy spin</span>
           <span class="spend-pill-cost">${POINTS_PER_SPIN} pts</span>
         </button>
         <button id="redeem-deal-btn" ${rewards.points < POINTS_PER_PREMIUM_DEAL ? 'disabled' : ''} class="spend-pill ${rewards.points >= POINTS_PER_PREMIUM_DEAL ? 'spend-active' : ''}">
-          <span class="spend-pill-icon">🎁</span>
+          <i class="ti ti-gift spend-pill-icon"></i>
           <span class="spend-pill-label">Premium deal</span>
           <span class="spend-pill-cost">${POINTS_PER_PREMIUM_DEAL} pts</span>
         </button>
       </div>
 
-      <!-- Below the fold: Daily quests + recent wins -->
-      <p class="section-title"><i class="ti ti-target"></i>Daily quests</p>
-      <div class="card" style="padding: 2px 14px;">
+      <p class="section-title"><i class="ti ti-sparkles"></i>Bonus picks</p>
+      <div class="reward-picks">
+        ${rewardPicks.map((pick, i) => `
+          <div class="reward-pick">
+            <span class="reward-pick-badge"><i class="ti ti-category"></i>${escapeHtml(pick.category)}</span>
+            <p class="reward-pick-title">${escapeHtml(pick.merchant)} — ${escapeHtml(pick.discount)}</p>
+            <p class="reward-pick-meta">${escapeHtml(pick.reason || 'Personalized pick')} · ~$${Math.round(pick.value || 10)} value</p>
+            <button data-reward-pick="${i}"><i class="ti ti-plus" style="font-size:13px; vertical-align:-2px; margin-right:4px;"></i>Track deal</button>
+          </div>
+        `).join('')}
+      </div>
+
+      <div class="quest-board">
+        <div class="quest-board-head">
+          <p class="quest-board-title"><i class="ti ti-target" style="font-size:14px; vertical-align:-2px; margin-right:4px;"></i>Daily quests</p>
+          <p class="quest-board-score">${questSummary.ready} ready · ${questSummary.done}/${questSummary.total} claimed</p>
+        </div>
+        <div class="progress-bar" style="margin-bottom: 4px;"><div class="progress-fill" style="width:${questSummary.pct}%;"></div></div>
         ${quests.items.map(q => `
-          <div class="quest-row">
+          <div class="quest-row reward-quest-row">
+            <div class="quest-status-dot ${q.claimed ? 'done' : (q.progress >= q.target ? 'ready' : '')}">
+              <i class="ti ${q.claimed ? 'ti-check' : (q.progress >= q.target ? 'ti-gift' : 'ti-circle')}" style="font-size:13px;"></i>
+            </div>
             <div style="flex:1; min-width:0;">
               <p style="margin:0; font-size:13px;">${escapeHtml(q.label)}</p>
               <div style="display:flex; align-items:center; gap:8px; margin-top:4px;">
@@ -1520,22 +1689,22 @@ Return only the JSON, no other text.`;
           </div>
         `).join('')}
       </div>
-      ${recent.length ? `
-        <p class="section-title">Recent wins</p>
-        <div class="card" style="padding: 2px 14px;">
-          ${recent.map((h,i) => `
-            <div style="padding: 8px 0; ${i>0?'border-top: 0.5px solid var(--border-tertiary);':''} display:flex; justify-content:space-between; font-size:12px; gap: 8px;">
-              <span>${escapeHtml(h.label)}</span>
-              <span style="color: var(--text-secondary); font-size:11px; white-space:nowrap;">${new Date(h.ts).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</span>
-            </div>
-          `).join('')}
-        </div>
-      ` : ''}
+
+      <p class="section-title"><i class="ti ti-activity"></i>Your reward pulse</p>
+      <div class="reward-feed">
+        ${pulseRows.map(row => `
+          <div class="reward-feed-row">
+            <span>${escapeHtml(row.label)}</span>
+            <span class="reward-feed-time">${escapeHtml(row.meta)}</span>
+          </div>
+        `).join('')}
+      </div>
     `;
     document.getElementById('spin-btn').addEventListener('click', spinWheel);
-    const dailyBtn = document.getElementById('daily-btn');
-    if (dailyBtn) dailyBtn.addEventListener('click', claimDailySpin);
+    const rewardAction = root.querySelector('[data-reward-action]');
+    if (rewardAction) rewardAction.addEventListener('click', () => runRewardAction(rewardAction.getAttribute('data-reward-action')));
     root.querySelectorAll('[data-claim-quest]').forEach(b => b.addEventListener('click', () => claimQuest(b.getAttribute('data-claim-quest'))));
+    root.querySelectorAll('[data-reward-pick]').forEach(b => b.addEventListener('click', () => addRewardPick(Number(b.getAttribute('data-reward-pick')))));
     const redeemSpinBtn = document.getElementById('redeem-spin-btn');
     if (redeemSpinBtn) redeemSpinBtn.addEventListener('click', redeemPointsForSpin);
     const redeemDealBtn = document.getElementById('redeem-deal-btn');
@@ -1832,20 +2001,18 @@ Return only the JSON, no other text.`;
 
   // ---------- Settings ----------
   function openSettings() {
-    document.getElementById('s-api-key').value = load(KEYS.apiKey, '');
     document.getElementById('s-reminders-on').checked = !!settings.remindersOn;
     document.getElementById('s-reminder-days').value = String(settings.reminderDays);
     document.getElementById('s-nearby-on').checked = !!settings.nearbyOn;
     document.getElementById('s-nearby-radius').value = String(settings.nearbyRadius);
     if (emailConnection.provider) setField('email-provider', emailConnection.provider);
     renderProfileSummary();
+    renderAiCaptureStatus();
     updateNotifButton();
     document.getElementById('modal-settings').classList.add('active');
   }
   function closeSettings() { document.getElementById('modal-settings').classList.remove('active'); }
   function saveSettings() {
-    const key = document.getElementById('s-api-key').value.trim();
-    save(KEYS.apiKey, key);
     settings = {
       remindersOn: document.getElementById('s-reminders-on').checked,
       reminderDays: Number(document.getElementById('s-reminder-days').value) || 3,
@@ -1878,7 +2045,7 @@ Return only the JSON, no other text.`;
   }
   function resetData() {
     if (!confirm('Delete all deals, rewards, and history? This cannot be undone.')) return;
-    const keepKeys = new Set(storageKeyVariants('apiKey').concat(storageKeyVariants('installDismissed')));
+    const keepKeys = new Set(storageKeyVariants('installDismissed'));
     STORAGE_KEY_NAMES.forEach(name => {
       storageKeyVariants(name).forEach(key => {
         if (!keepKeys.has(key)) localStorage.removeItem(key);
@@ -1920,6 +2087,7 @@ Return only the JSON, no other text.`;
 
   function init() {
     migrateLegacyStorage();
+    cleanupLegacyBrowserSecrets();
     deals = load(KEYS.deals, []);
     rewards = load(KEYS.rewards, { points: 0, shared: 0, claimed: 0 });
     game = Object.assign({ spins: 0, lastDailyClaim: null, streak: 0, totalSpins: 0, history: [] }, load(KEYS.game, {}));
@@ -1992,7 +2160,8 @@ Return only the JSON, no other text.`;
     renderAll();
     hydrateProfileScreen();
     renderProfileSummary();
-    if (!validProfile(profile)) showProfileScreen();
+    const installWillShow = shouldShowMobileInstallScreen();
+    if (!validProfile(profile) && !installWillShow) showProfileScreen();
 
     // Handle deep links from manifest shortcuts
     try {
@@ -2033,17 +2202,13 @@ Return only the JSON, no other text.`;
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       deferredInstallPrompt = e;
+      updateInstallAction();
       if (!load(KEYS.installDismissed, false)) {
         document.getElementById('install-banner').classList.add('show');
       }
     });
-    document.getElementById('install-btn').addEventListener('click', async () => {
-      if (!deferredInstallPrompt) return;
-      deferredInstallPrompt.prompt();
-      const { outcome } = await deferredInstallPrompt.userChoice;
-      if (outcome === 'accepted') document.getElementById('install-banner').classList.remove('show');
-      deferredInstallPrompt = null;
-    });
+    document.getElementById('install-btn').addEventListener('click', promptInstall);
+    document.getElementById('install-screen-action').addEventListener('click', promptInstall);
     document.getElementById('install-dismiss').addEventListener('click', () => {
       document.getElementById('install-banner').classList.remove('show');
       save(KEYS.installDismissed, true);
@@ -2052,28 +2217,98 @@ Return only the JSON, no other text.`;
     // ---- Splash screen handling ----
     setTimeout(hideSplash, 500);
 
-    // ---- iOS install prompt (shown only on iOS Safari, not yet installed) ----
-    showIOSInstallScreenIfNeeded();
+    // ---- Mobile install guidance (shown in mobile browsers, not installed) ----
+    showMobileInstallScreenIfNeeded();
   }
 
   function isIOS() {
     return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
   }
+  function isAndroid() {
+    return /Android/i.test(navigator.userAgent);
+  }
+  function isMobileBrowser() {
+    return isIOS() || isAndroid() || /Mobile|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  }
   function isInStandaloneMode() {
     return ('standalone' in navigator) && navigator.standalone === true
       || window.matchMedia('(display-mode: standalone)').matches;
   }
-  function showIOSInstallScreenIfNeeded() {
-    const dismissed = load(KEYS.installDismissed, false);
+  function setText(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+  }
+  function configureInstallScreenCopy() {
+    if (isIOS()) {
+      setText('install-title', 'Add Perq to your home screen');
+      setText('install-lead', "Save Perq as a web app so it opens full screen, stays handy, and works offline.");
+      setText('install-step-1-title', 'Tap the Share button');
+      setText('install-step-1-sub', "It's the square with an arrow at the bottom of Safari.");
+      setText('install-step-2-title', 'Tap Add to Home Screen');
+      setText('install-step-2-sub', 'Scroll the share sheet if you do not see it right away.');
+      setText('install-step-3-title', 'Tap Add');
+      setText('install-step-3-sub', 'The Perq icon will appear on your home screen.');
+      return;
+    }
+    if (isAndroid()) {
+      setText('install-title', 'Install Perq');
+      setText('install-lead', 'Save Perq as a web app so it opens like a native app and stays available offline.');
+      setText('install-step-1-title', 'Tap Install now');
+      setText('install-step-1-sub', 'If the button is not shown, open the Chrome menu.');
+      setText('install-step-2-title', 'Choose Install app');
+      setText('install-step-2-sub', 'Some browsers call this Add to Home screen.');
+      setText('install-step-3-title', 'Confirm Install');
+      setText('install-step-3-sub', 'The Perq icon will appear on your home screen.');
+      return;
+    }
+    setText('install-title', 'Save Perq as an app');
+    setText('install-lead', 'Install Perq from your mobile browser for a faster app-style experience.');
+    setText('install-step-1-title', 'Open the browser menu');
+    setText('install-step-1-sub', 'Look for the menu or share button in your browser.');
+    setText('install-step-2-title', 'Choose Install app');
+    setText('install-step-2-sub', 'Some browsers call this Add to Home screen.');
+    setText('install-step-3-title', 'Confirm');
+    setText('install-step-3-sub', 'The Perq icon will appear on your home screen.');
+  }
+  function updateInstallAction() {
+    const action = document.getElementById('install-screen-action');
+    if (!action) return;
+    action.style.display = deferredInstallPrompt ? 'block' : 'none';
+  }
+  function shouldShowMobileInstallScreen() {
+    return isMobileBrowser() && !isInStandaloneMode() && !load(KEYS.installDismissed, false);
+  }
+  function continueAfterInstallScreen() {
+    if (!validProfile(profile)) showProfileScreen();
+  }
+  async function promptInstall() {
+    if (!deferredInstallPrompt) return;
+    const screen = document.getElementById('install-screen');
+    const fromInstallScreen = screen && screen.classList.contains('show');
+    deferredInstallPrompt.prompt();
+    const { outcome } = await deferredInstallPrompt.userChoice;
+    if (outcome === 'accepted') {
+      document.getElementById('install-banner').classList.remove('show');
+      save(KEYS.installDismissed, true);
+    }
+    if (screen) screen.classList.remove('show');
+    deferredInstallPrompt = null;
+    updateInstallAction();
+    if (fromInstallScreen) continueAfterInstallScreen();
+  }
+  function showMobileInstallScreenIfNeeded() {
     const screen = document.getElementById('install-screen');
     if (!screen) return;
-    if (isIOS() && !isInStandaloneMode() && !dismissed) {
+    configureInstallScreenCopy();
+    updateInstallAction();
+    if (shouldShowMobileInstallScreen()) {
       // Show after splash settles
       setTimeout(() => screen.classList.add('show'), 1200);
     }
     document.getElementById('install-skip').addEventListener('click', () => {
       screen.classList.remove('show');
       save(KEYS.installDismissed, true);
+      continueAfterInstallScreen();
     });
   }
 

@@ -1,9 +1,9 @@
 # Perq Automated Test Results
 
-Executed: 2026-06-02T18:40:33.342Z
+Executed: 2026-06-02T21:49:57.803Z
 
-Total: 18
-Passed: 18
+Total: 21
+Passed: 21
 Failed: 0
 
 | Test | Status | Error |
@@ -19,6 +19,9 @@ Failed: 0
 | Service worker bumps cache and purges older caches | PASS |  |
 | First-run profile captures identity, preferences, and email connect intent | PASS |  |
 | Deal capture stores mandatory payload fields | PASS |  |
+| Smart Capture uses a Perq AI service instead of browser provider tokens | PASS |  |
+| Mobile browsers get install instructions for saving Perq as an app | PASS |  |
+| Rewards tab has adaptive gamification without fake social proof | PASS |  |
 | Beacon alerts are configurable and notify nearby unexpired deals | PASS |  |
 | Capacitor config packages Perq for native iOS and Android | PASS |  |
 | Native build keeps root Pages static and injects Capacitor only into dist | PASS |  |

@@ -4,7 +4,7 @@
 
 The app is already a strong prototype and is deployable as a static PWA. It validates the core product loop: capture a coupon, save it, get reminded, use it, earn rewards, and repeat.
 
-The biggest gap is not UI completeness; it is production hardening. The app currently relies on browser localStorage, a browser-stored Anthropic API key, best-effort web notifications, and third-party free geocoding. That is fine for personal MVP testing, but not for a public app.
+The biggest gap is not UI completeness; it is production hardening. The app still relies on browser localStorage, best-effort web notifications, and third-party free geocoding. Smart Capture is now shaped for a Perq-owned AI service, but that backend must be deployed before image extraction can work in production without exposing provider credentials to the browser.
 
 ## What is already solid
 
@@ -22,12 +22,12 @@ The biggest gap is not UI completeness; it is production hardening. The app curr
 
 ## Highest-priority fixes before public beta
 
-### 1. Move OCR off the client
+### 1. Deploy the AI capture service
 
-Current behavior stores the Anthropic key in localStorage and sends it directly from the browser. Replace this with a backend proxy:
+The client now sends compressed coupon images to a configured Perq AI endpoint. Build and deploy that endpoint so provider credentials stay on the server:
 
-- Client uploads compressed image to `/api/ocr`
-- Server owns Anthropic API key
+- Client uploads compressed image to `/api/deals/extract`
+- Server owns AI provider credentials
 - Server validates request size/type
 - Server returns normalized JSON
 

@@ -85,7 +85,7 @@ test('Splash has a fail-safe hide path', ()=>{
 
 test('Service worker bumps cache and purges older caches', ()=>{
   const sw=readRootFile('sw.js');
-  assert(sw.includes("const CACHE_NAME = 'perq-v25-profile-beacon';"));
+  assert(sw.includes("const CACHE_NAME = 'perq-v26-ai-capture-install';"));
   assert(/caches\.keys\(\)[\s\S]*caches\.delete\(key\)/.test(sw), 'activate handler must delete stale caches');
   assert(sw.includes("'./icon-192.png'"));
   assert(sw.includes("'./icon-512.png'"));
@@ -112,10 +112,67 @@ test('Deal capture stores mandatory payload fields', ()=>{
   ['f-merchant','f-discount','f-expiry','f-code','f-barcode','f-url','f-address','f-notes'].forEach(id=>{
     assert(html.includes(`id="${id}"`), `${id} field missing`);
   });
-  assert(app.includes('"barcode": "barcode number or scannable numeric value if visible, else null"'));
-  assert(app.includes('"address": "business address if visible, else null"'));
+  assert(app.includes('AI_CAPTURE_FIELDS'));
+  assert(app.includes("'barcode'"));
+  assert(app.includes("'address'"));
+  assert(app.includes('getAiCaptureEndpoint'));
+  assert(app.includes('image: { mimeType: mediaType, data: b64 }'));
   assert(app.includes('extractDealFromText'));
   assert(app.includes('parseIncomingShare'));
+});
+
+test('Smart Capture uses a Perq AI service instead of browser provider tokens', ()=>{
+  const html=readRootFile('index.html');
+  const app=readRootFile('app.js');
+  const doc=readRootFile('docs/ai-capture-service.md');
+  assert(html.includes('name="perq-ai-endpoint"'));
+  assert(html.includes('id="ai-capture-status"'));
+  assert(app.includes('Perq AI service'));
+  assert(doc.includes('POST /api/deals/extract'));
+  assert(!html.includes(['s','-api','-key'].join('')), 'browser API token field must not be rendered');
+  const blocked = [
+    ['Anth','ropic'].join(''),
+    ['sk','-ant'].join(''),
+    ['api','.anthropic','.com'].join(''),
+    ['x-api','-key'].join(''),
+    ['dangerous','-direct'].join('')
+  ];
+  assert(!blocked.some(term => new RegExp(term, 'i').test(html + app)), 'direct provider token flow must not be in client');
+});
+
+test('Mobile browsers get install instructions for saving Perq as an app', ()=>{
+  const html=readRootFile('index.html');
+  const app=readRootFile('app.js');
+  ['install-title','install-step-1-title','install-step-2-title','install-step-3-title','install-screen-action'].forEach(id=>{
+    assert(html.includes(`id="${id}"`), `${id} missing`);
+  });
+  assert(app.includes('showMobileInstallScreenIfNeeded'));
+  assert(app.includes('isAndroid'));
+  assert(app.includes('isMobileBrowser'));
+  assert(app.includes('configureInstallScreenCopy'));
+  assert(app.includes('Choose Install app'));
+  assert(!app.includes(['show','IOS','Install','Screen','If','Needed'].join('')));
+});
+
+test('Rewards tab has adaptive gamification without fake social proof', ()=>{
+  const html=readRootFile('index.html');
+  const app=readRootFile('app.js');
+  ['reward-command','reward-path-step','reward-picks','quest-board','reward-feed'].forEach(cls=>{
+    assert(html.includes(`.${cls}`), `${cls} styling missing`);
+    assert(app.includes(cls), `${cls} render missing`);
+  });
+  ['nextRewardAction','personalizedRewardPicks','timeToMidnightLabel','rewardPulseRows','data-reward-pick'].forEach(token=>{
+    assert(app.includes(token), `${token} missing`);
+  });
+  assert(app.includes('Boost resets in'), 'daily reset urgency missing');
+  assert(app.includes('Track deal'), 'personalized reward pick CTA missing');
+  const fakeSocialProof = new RegExp([
+    ['Only', '\\s+\\d+\\s+', 'left'].join(''),
+    ['people', ' bought'].join(''),
+    ['Jane', ' from'].join(''),
+    ['just', ' purchased'].join('')
+  ].join('|'), 'i');
+  assert(!fakeSocialProof.test(app), 'Rewards must not fabricate external social proof');
 });
 
 test('Beacon alerts are configurable and notify nearby unexpired deals', ()=>{

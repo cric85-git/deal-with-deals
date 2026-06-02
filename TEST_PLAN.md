@@ -26,10 +26,11 @@
 
 ## Photo/OCR
 
+- Open Settings and confirm Smart Capture shows whether the Perq AI service is connected
 - Tap Snap a deal
 - Select/take a photo
 - Confirm preview appears
-- Confirm no-key fallback works
+- Confirm no-service fallback opens the review form and allows manual save
 - Confirm OCR success fills merchant, expiry/valid-by, discount, barcode, link, and address when visible
 
 ## Native packaging
