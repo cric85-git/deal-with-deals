@@ -434,12 +434,18 @@
   }
 
   function refreshDailyQuests() {
-    if (quests.date === todayStr() && quests.items.length) return;
+    if (quests.date === todayStr() && quests.items.length) {
+      if (typeof quests.bonusClaimed !== 'boolean') {
+        quests.bonusClaimed = false;
+        save(KEYS.quests, quests);
+      }
+      return;
+    }
     quests = { date: todayStr(), items: [
       { id:'q_add', label:'Add a new deal', target:1, progress:0, reward:1, claimed:false },
       { id:'q_share', label:'Share a deal', target:1, progress:0, reward:1, claimed:false },
       { id:'q_redeem', label:'Mark a deal redeemed', target:1, progress:0, reward:1, claimed:false }
-    ]};
+    ], bonusClaimed: false };
     save(KEYS.quests, quests);
   }
   function bumpQuest(id) {
@@ -937,6 +943,7 @@
   // ---------- Tiers & point redemption ----------
   const POINTS_PER_SPIN = 10;
   const POINTS_PER_PREMIUM_DEAL = 50;
+  const DAILY_RUN_BONUS = { points: 25, spins: 1 };
   const TIERS = [
     { name: 'Bronze',   min: 0,    color: '#A07248', bg: '#F5EBDD', perk: '1 free spin per day' },
     { name: 'Silver',   min: 100,  color: '#6B7280', bg: '#E8EAED', perk: '2 free spins per day' },
@@ -975,6 +982,25 @@
     const progress = items.reduce((sum, q) => sum + Math.min(q.progress, q.target), 0);
     const target = items.reduce((sum, q) => sum + q.target, 0) || total;
     return { total, done, ready, progress, target, pct: pct(progress, target) };
+  }
+  function canClaimDailyRunBonus() {
+    const stats = questStats();
+    return stats.done >= stats.total && !quests.bonusClaimed;
+  }
+  function dailyRunBonusLabel() {
+    if (quests.bonusClaimed) return 'Claimed';
+    return `+${DAILY_RUN_BONUS.spins} spin · +${DAILY_RUN_BONUS.points} pts`;
+  }
+  function claimDailyRunBonus() {
+    if (!canClaimDailyRunBonus()) return;
+    quests.bonusClaimed = true;
+    rewards.points += DAILY_RUN_BONUS.points;
+    game.spins += DAILY_RUN_BONUS.spins;
+    game.history.unshift({ ts: Date.now(), label: 'Daily run bonus' });
+    if (game.history.length > 8) game.history.length = 8;
+    save(KEYS.quests, quests); save(KEYS.rewards, rewards); save(KEYS.game, game);
+    showToast(`Daily run complete — +${DAILY_RUN_BONUS.spins} spin, +${DAILY_RUN_BONUS.points} pts`);
+    renderAll();
   }
   function nextStreakTarget() {
     if (game.streak < 3) return { day: 3, label: 'Day 3 boost', detail: '2 daily spins' };
@@ -1033,6 +1059,12 @@
     if (action === 'redeem-deal') return switchTab('deals');
     if (action === 'suggest') return switchTab('suggest');
     if (action && action.startsWith('claim-quest:')) return claimQuest(action.split(':')[1]);
+  }
+  function runWalletAction(action) {
+    if (action === 'spin') return redeemPointsForSpin();
+    if (action === 'deal') return redeemPointsForPremiumDeal();
+    if (action === 'social') return switchTab('social');
+    if (action === 'rescue') return switchTab('deals');
   }
   function addRewardPick(index) {
     const pick = personalizedRewardPicks()[index];
@@ -1581,6 +1613,35 @@
     }).join('');
     const streakProgress = pct(Math.min(game.streak, streakTarget.day), streakTarget.day);
     const expiringSoon = deals.filter(d => !d.redeemed && statusOf(d) === 'soon').length;
+    const dailyRunReady = canClaimDailyRunBonus();
+    const dailyRunProgress = quests.bonusClaimed ? 100 : questSummary.pct;
+    const questIcons = { q_add: 'ti-camera-plus', q_share: 'ti-share', q_redeem: 'ti-ticket' };
+    const walletRows = [
+      {
+        icon: 'ti-bolt',
+        title: 'Spin token',
+        meta: rewards.points >= POINTS_PER_SPIN ? 'Ready to redeem now' : `${POINTS_PER_SPIN - rewards.points} pts away`,
+        cta: rewards.points >= POINTS_PER_SPIN ? 'Redeem' : 'Earn',
+        action: rewards.points >= POINTS_PER_SPIN ? 'spin' : 'social',
+        disabled: false
+      },
+      {
+        icon: 'ti-gift',
+        title: 'Premium deal drop',
+        meta: rewards.points >= POINTS_PER_PREMIUM_DEAL ? 'Personalized deal ready' : `${POINTS_PER_PREMIUM_DEAL - rewards.points} pts away`,
+        cta: rewards.points >= POINTS_PER_PREMIUM_DEAL ? 'Unlock' : 'Build',
+        action: rewards.points >= POINTS_PER_PREMIUM_DEAL ? 'deal' : 'social',
+        disabled: false
+      },
+      {
+        icon: 'ti-clock-exclamation',
+        title: 'Expiry rescue',
+        meta: expiringSoon ? `${expiringSoon} deal${expiringSoon === 1 ? '' : 's'} need attention` : 'No urgent deals today',
+        cta: 'Review',
+        action: 'rescue',
+        disabled: expiringSoon === 0
+      }
+    ];
 
     root.innerHTML = `
       <div class="reward-command">
@@ -1607,6 +1668,37 @@
             <p class="reward-command-label">Expiring</p>
           </div>
         </div>
+      </div>
+
+      <div class="daily-run-card">
+        <div class="daily-run-head">
+          <div style="min-width:0;">
+            <p class="daily-run-title">Today's savings run</p>
+            <p class="daily-run-sub">${quests.bonusClaimed ? 'Run complete. Come back tomorrow for a fresh bonus.' : "Complete useful deal actions to open today's bonus."}</p>
+          </div>
+          <div class="daily-run-bonus">
+            <p>Run bonus</p>
+            <strong>${dailyRunBonusLabel()}</strong>
+          </div>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${dailyRunProgress}%;"></div></div>
+        <div class="daily-run-steps">
+          ${quests.items.map(q => {
+            const state = q.claimed ? 'done' : (q.progress >= q.target ? 'ready' : '');
+            const label = q.id === 'q_add' ? 'Capture' : (q.id === 'q_share' ? 'Share' : 'Use');
+            const sub = q.claimed ? 'Done' : (q.progress >= q.target ? 'Ready' : `${q.progress}/${q.target}`);
+            return `
+              <div class="daily-run-step ${state}">
+                <i class="ti ${questIcons[q.id] || 'ti-circle'}"></i>
+                <p>${escapeHtml(label)}</p>
+                <span>${escapeHtml(sub)}</span>
+              </div>
+            `;
+          }).join('')}
+        </div>
+        <button id="daily-run-bonus-btn" data-daily-run-bonus class="daily-run-claim ${dailyRunReady ? 'btn-primary' : ''}" ${dailyRunReady ? '' : 'disabled'}>
+          <i class="ti ${quests.bonusClaimed ? 'ti-check' : 'ti-gift'}" style="font-size:14px; vertical-align:-2px; margin-right:5px;"></i>${quests.bonusClaimed ? 'Daily run claimed' : (dailyRunReady ? 'Claim run bonus' : 'Finish run to unlock')}
+        </button>
       </div>
 
       <div class="rewards-hero">
@@ -1638,6 +1730,11 @@
         <button id="spin-btn" ${game.spins<=0?'disabled':''} class="btn-primary spin-cta">
           <i class="ti ti-player-play" style="font-size:14px; vertical-align:-2px; margin-right:6px;"></i>${game.spins > 0 ? `Spin to win (${game.spins})` : 'No spins yet'}
         </button>
+        <div class="wheel-odds">
+          <div class="wheel-odds-item"><p>Points</p><span>Most spins</span></div>
+          <div class="wheel-odds-item"><p>Bonus deals</p><span>Personalized</span></div>
+          <div class="wheel-odds-item"><p>Jackpot</p><span>Rare drop</span></div>
+        </div>
         <div class="streak-strip">
           ${streakDots}
         </div>
@@ -1680,6 +1777,20 @@
           <span class="spend-pill-label">Premium deal</span>
           <span class="spend-pill-cost">${POINTS_PER_PREMIUM_DEAL} pts</span>
         </button>
+      </div>
+
+      <p class="section-title"><i class="ti ti-wallet"></i>Reward wallet</p>
+      <div class="reward-wallet">
+        ${walletRows.map(row => `
+          <div class="reward-wallet-row">
+            <div class="reward-wallet-icon"><i class="ti ${escapeHtml(row.icon)}"></i></div>
+            <div style="flex:1; min-width:0;">
+              <p class="reward-wallet-title">${escapeHtml(row.title)}</p>
+              <p class="reward-wallet-meta">${escapeHtml(row.meta)}</p>
+            </div>
+            <button data-wallet-action="${escapeHtml(row.action)}" ${row.disabled ? 'disabled' : ''}>${escapeHtml(row.cta)}</button>
+          </div>
+        `).join('')}
       </div>
 
       <p class="section-title"><i class="ti ti-sparkles"></i>Bonus picks</p>
@@ -1728,10 +1839,13 @@
       </div>
     `;
     document.getElementById('spin-btn').addEventListener('click', spinWheel);
+    const dailyRunBtn = document.getElementById('daily-run-bonus-btn');
+    if (dailyRunBtn) dailyRunBtn.addEventListener('click', claimDailyRunBonus);
     const rewardAction = root.querySelector('[data-reward-action]');
     if (rewardAction) rewardAction.addEventListener('click', () => runRewardAction(rewardAction.getAttribute('data-reward-action')));
     root.querySelectorAll('[data-claim-quest]').forEach(b => b.addEventListener('click', () => claimQuest(b.getAttribute('data-claim-quest'))));
     root.querySelectorAll('[data-reward-pick]').forEach(b => b.addEventListener('click', () => addRewardPick(Number(b.getAttribute('data-reward-pick')))));
+    root.querySelectorAll('[data-wallet-action]').forEach(b => b.addEventListener('click', () => runWalletAction(b.getAttribute('data-wallet-action'))));
     const redeemSpinBtn = document.getElementById('redeem-spin-btn');
     if (redeemSpinBtn) redeemSpinBtn.addEventListener('click', redeemPointsForSpin);
     const redeemDealBtn = document.getElementById('redeem-deal-btn');

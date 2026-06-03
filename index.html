@@ -638,6 +638,92 @@
     align-items: center;
     gap: 10px;
   }
+  .daily-run-card {
+    background: var(--bg-primary);
+    border: 0.5px solid var(--border-tertiary);
+    border-radius: var(--radius-lg);
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+  .daily-run-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .daily-run-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 750;
+    line-height: 1.2;
+  }
+  .daily-run-sub {
+    margin: 4px 0 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.35;
+  }
+  .daily-run-bonus {
+    background: var(--bg-warning);
+    color: var(--text-warning);
+    border-radius: var(--radius-md);
+    padding: 8px 10px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .daily-run-bonus p {
+    margin: 0;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  .daily-run-bonus strong {
+    display: block;
+    margin-top: 3px;
+    font-size: 12px;
+    color: inherit;
+    white-space: nowrap;
+  }
+  .daily-run-steps {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+    margin: 10px 0;
+  }
+  .daily-run-step {
+    background: var(--bg-secondary);
+    border: 0.5px solid var(--border-tertiary);
+    border-radius: var(--radius-md);
+    padding: 8px;
+    min-width: 0;
+  }
+  .daily-run-step.done { background: var(--bg-success); color: var(--text-success); }
+  .daily-run-step.ready { background: var(--bg-warning); color: var(--text-warning); }
+  .daily-run-step i { font-size: 15px; margin-bottom: 5px; display: block; }
+  .daily-run-step p {
+    margin: 0;
+    font-size: 11.5px;
+    font-weight: 700;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .daily-run-step span {
+    display: block;
+    margin-top: 3px;
+    color: var(--text-secondary);
+    font-size: 10.5px;
+  }
+  .daily-run-step.done span,
+  .daily-run-step.ready span { color: currentColor; opacity: 0.8; }
+  .daily-run-claim {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 13px;
+  }
   .reward-hero-copy h3 {
     margin: 0;
     font-size: 17px;
@@ -765,6 +851,74 @@
     width: 100%;
     padding: 8px 10px;
     font-size: 12px;
+  }
+  .reward-wallet {
+    background: var(--bg-primary);
+    border: 0.5px solid var(--border-tertiary);
+    border-radius: var(--radius-lg);
+    padding: 2px 14px;
+    margin-bottom: 12px;
+  }
+  .reward-wallet-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 0;
+    border-top: 0.5px solid var(--border-tertiary);
+  }
+  .reward-wallet-row:first-child { border-top: none; }
+  .reward-wallet-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-md);
+    background: var(--bg-info);
+    color: var(--text-info);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .reward-wallet-icon i { font-size: 17px; }
+  .reward-wallet-title {
+    margin: 0;
+    font-size: 13.5px;
+    font-weight: 700;
+    line-height: 1.22;
+  }
+  .reward-wallet-meta {
+    margin: 3px 0 0;
+    color: var(--text-secondary);
+    font-size: 11.5px;
+    line-height: 1.3;
+  }
+  .reward-wallet-row button {
+    font-size: 12px;
+    padding: 7px 10px;
+    white-space: nowrap;
+  }
+  .wheel-odds {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+    margin-top: 10px;
+  }
+  .wheel-odds-item {
+    background: var(--bg-secondary);
+    border: 0.5px solid var(--border-tertiary);
+    border-radius: var(--radius-md);
+    padding: 7px;
+  }
+  .wheel-odds-item p {
+    margin: 0;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .wheel-odds-item span {
+    display: block;
+    margin-top: 3px;
+    color: var(--text-secondary);
+    font-size: 10px;
   }
   .quest-board {
     background: var(--bg-primary);

@@ -85,7 +85,7 @@ test('Splash has a fail-safe hide path', ()=>{
 
 test('Service worker bumps cache and purges older caches', ()=>{
   const sw=readRootFile('sw.js');
-  assert(sw.includes("const CACHE_NAME = 'perq-v27-social-loop';"));
+  assert(sw.includes("const CACHE_NAME = 'perq-v28-rewards-run';"));
   assert(/caches\.keys\(\)[\s\S]*caches\.delete\(key\)/.test(sw), 'activate handler must delete stale caches');
   assert(sw.includes("'./icon-192.png'"));
   assert(sw.includes("'./icon-512.png'"));
@@ -157,14 +157,17 @@ test('Mobile browsers get install instructions for saving Perq as an app', ()=>{
 test('Rewards tab has adaptive gamification without fake social proof', ()=>{
   const html=readRootFile('index.html');
   const app=readRootFile('app.js');
-  ['reward-command','reward-path-step','reward-picks','quest-board','reward-feed'].forEach(cls=>{
+  ['reward-command','daily-run-card','reward-path-step','reward-picks','reward-wallet','wheel-odds','quest-board','reward-feed'].forEach(cls=>{
     assert(html.includes(`.${cls}`), `${cls} styling missing`);
     assert(app.includes(cls), `${cls} render missing`);
   });
-  ['nextRewardAction','personalizedRewardPicks','timeToMidnightLabel','rewardPulseRows','data-reward-pick'].forEach(token=>{
+  ['nextRewardAction','personalizedRewardPicks','timeToMidnightLabel','rewardPulseRows','claimDailyRunBonus','DAILY_RUN_BONUS','data-daily-run-bonus','data-wallet-action','data-reward-pick'].forEach(token=>{
     assert(app.includes(token), `${token} missing`);
   });
   assert(app.includes('Boost resets in'), 'daily reset urgency missing');
+  assert(app.includes('Claim run bonus'), 'daily run payoff missing');
+  assert(app.includes('Reward wallet'), 'reward wallet missing');
+  assert(app.includes('Rare drop'), 'transparent wheel odds missing');
   assert(app.includes('Track deal'), 'personalized reward pick CTA missing');
   const fakeSocialProof = new RegExp([
     ['Only', '\\s+\\d+\\s+', 'left'].join(''),

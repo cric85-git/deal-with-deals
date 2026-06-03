@@ -1,4 +1,4 @@
-const CACHE_NAME = 'perq-v27-social-loop';
+const CACHE_NAME = 'perq-v28-rewards-run';
 const ASSETS = [
   './',
   './index.html',
