@@ -9,10 +9,11 @@ Sources reviewed:
 
 Product takeaways for Perq Rewards:
 
-- Make the next action obvious. Temu-style loops work because the user always sees a near-term move; Perq maps that to a daily command card.
+- Adapt the lesson, not the shopping model. Temu shows the value of visible next actions, habit loops, and referral momentum; Perq should apply those ideas only where they make saving easier and more trustworthy.
+- Make the next action obvious. Perq maps the "what should I do next?" idea to a daily command card tied to useful deal actions.
 - Personalize rewards using behavior. Perq reuses saved deals and profile preferences to surface bonus picks.
 - Use progress, streaks, and milestones. The Rewards tab now shows daily quest progress, tier progress, and day 1 / day 3 / day 7 streak milestones.
 - Use urgency ethically. Perq shows the daily reset window without fake scarcity, inflated inventory, or fabricated purchases.
 - Reward useful savings behavior. Spins are earned by saving, sharing, and redeeming deals, so the game loop supports the actual utility of the app.
 - Keep trust visible. The reward pulse uses the user's own local activity instead of synthetic social proof.
-- Treat growth as a loop, not a widget. The Cubitrek article's strongest point is that Temu-style mechanics work when acquisition, daily rewards, referral triggers, and fast gamification infrastructure reinforce one another. For Perq, that means Social sharing should feed reward quests, onboarding should expose the first useful deal action quickly, and future referral work should reward both sender and recipient without relying on fake urgency.
+- Treat growth as a Perq loop, not a copied widget. The Cubitrek article's strongest point is that acquisition, daily rewards, referral triggers, and fast reward infrastructure can reinforce one another. For Perq, that means Social sharing should feed reward quests, onboarding should expose the first useful deal action quickly, and future referral work should reward both sender and recipient without relying on fake urgency.
