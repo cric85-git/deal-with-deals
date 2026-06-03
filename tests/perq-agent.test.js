@@ -175,6 +175,13 @@ test('Rewards tab has adaptive gamification without fake social proof', ()=>{
   assert(!fakeSocialProof.test(app), 'Rewards must not fabricate external social proof');
 });
 
+test('Deal Share routes to the Social tab instead of opening device share sheets', ()=>{
+  const app=readRootFile('app.js');
+  assert(/function shareDeal\(id\)[\s\S]*?switchTab\('social'\)/.test(app), 'deal share must navigate to Social tab');
+  assert(!app.includes(['Native','Share','.share'].join('')), 'deal share must not invoke Capacitor share sheet');
+  assert(!app.includes(['navigator','.share'].join('')), 'deal share must not invoke browser share sheet');
+});
+
 test('Beacon alerts are configurable and notify nearby unexpired deals', ()=>{
   const html=readRootFile('index.html');
   const app=readRootFile('app.js');

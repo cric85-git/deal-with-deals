@@ -1,9 +1,9 @@
 # Perq Automated Test Results
 
-Executed: 2026-06-02T21:49:57.803Z
+Executed: 2026-06-03T00:18:49.109Z
 
-Total: 21
-Passed: 21
+Total: 22
+Passed: 22
 Failed: 0
 
 | Test | Status | Error |
@@ -22,6 +22,7 @@ Failed: 0
 | Smart Capture uses a Perq AI service instead of browser provider tokens | PASS |  |
 | Mobile browsers get install instructions for saving Perq as an app | PASS |  |
 | Rewards tab has adaptive gamification without fake social proof | PASS |  |
+| Deal Share routes to the Social tab instead of opening device share sheets | PASS |  |
 | Beacon alerts are configurable and notify nearby unexpired deals | PASS |  |
 | Capacitor config packages Perq for native iOS and Android | PASS |  |
 | Native build keeps root Pages static and injects Capacitor only into dist | PASS |  |

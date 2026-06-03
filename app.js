@@ -1887,32 +1887,16 @@
     showToast(`Redeemed — saved $${Math.round(Number(d.value)||0)}`);
     renderAll();
   }
-  async function shareDeal(id) {
+  function shareDeal(id) {
     const d = deals.find(x=>x.id===id); if (!d) return;
-    const text = `${d.merchant}: ${d.discount}${d.code ? ` code ${d.code}` : ''}${d.expiry ? ` expires ${fmtDate(d.expiry)}` : ''}${d.url ? ` ${d.url}` : ''}`;
-    const NativeShare = nativePlugin('Share');
-    if (NativeShare && NativeShare.share) {
-      try {
-        await NativeShare.share({ title: `Perq deal: ${d.merchant}`, text, url: d.url || location.href, dialogTitle: 'Share deal' });
-      } catch(e) {
-        return;
-      }
-    } else if (navigator.share) {
-      try {
-        await navigator.share({ title: `Perq deal: ${d.merchant}`, text, url: d.url || location.href });
-      } catch(e) {
-        return;
-      }
-    } else {
-      try { await navigator.clipboard.writeText(text); }
-      catch(e) {}
-    }
+    if (d.shared) { switchTab('social'); return; }
     d.shared = true;
     rewards.shared += 1; rewards.points += 10;
     bumpQuest('q_share');
     save(KEYS.deals, deals); save(KEYS.rewards, rewards);
     showToast('Shared (+10 pts)');
     renderAll();
+    switchTab('social');
   }
   function deleteDeal(id) {
     if (!confirm('Delete this deal?')) return;
