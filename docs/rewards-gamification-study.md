@@ -17,3 +17,4 @@ Product takeaways for Perq Rewards:
 - Reward useful savings behavior. Spins are earned by saving, sharing, and redeeming deals, so the game loop supports the actual utility of the app.
 - Keep trust visible. The reward pulse uses the user's own local activity instead of synthetic social proof.
 - Treat growth as a Perq loop, not a copied widget. The Cubitrek article's strongest point is that acquisition, daily rewards, referral triggers, and fast reward infrastructure can reinforce one another. For Perq, that means Social sharing should feed reward quests, onboarding should expose the first useful deal action quickly, and future referral work should reward both sender and recipient without relying on fake urgency.
+- Make Social the loop bridge. The Social tab now exposes a Perq invite code/link, shows the user's own shared deals, and uses personalized starter picks instead of fake community handles or inflated claim counts.

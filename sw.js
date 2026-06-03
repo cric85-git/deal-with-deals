@@ -1,4 +1,4 @@
-const CACHE_NAME = 'perq-v26-ai-capture-install';
+const CACHE_NAME = 'perq-v27-social-loop';
 const ASSETS = [
   './',
   './index.html',

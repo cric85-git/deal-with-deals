@@ -85,7 +85,7 @@ test('Splash has a fail-safe hide path', ()=>{
 
 test('Service worker bumps cache and purges older caches', ()=>{
   const sw=readRootFile('sw.js');
-  assert(sw.includes("const CACHE_NAME = 'perq-v26-ai-capture-install';"));
+  assert(sw.includes("const CACHE_NAME = 'perq-v27-social-loop';"));
   assert(/caches\.keys\(\)[\s\S]*caches\.delete\(key\)/.test(sw), 'activate handler must delete stale caches');
   assert(sw.includes("'./icon-192.png'"));
   assert(sw.includes("'./icon-512.png'"));
@@ -180,6 +180,26 @@ test('Deal Share routes to the Social tab instead of opening device share sheets
   assert(/function shareDeal\(id\)[\s\S]*?switchTab\('social'\)/.test(app), 'deal share must navigate to Social tab');
   assert(!app.includes(['Native','Share','.share'].join('')), 'deal share must not invoke Capacitor share sheet');
   assert(!app.includes(['navigator','.share'].join('')), 'deal share must not invoke browser share sheet');
+});
+
+test('Social tab uses a Perq referral loop instead of fake community proof', ()=>{
+  const html=readRootFile('index.html');
+  const app=readRootFile('app.js');
+  ['social-loop','referral-code','social-action-row','social-list-row'].forEach(cls=>{
+    assert(html.includes(`.${cls}`), `${cls} styling missing`);
+    assert(app.includes(cls), `${cls} render missing`);
+  });
+  ['referralCode','referralInviteText','copyReferralInvite','data-social-pick','data-open-deals'].forEach(token=>{
+    assert(app.includes(token), `${token} missing`);
+  });
+  assert(app.includes("source:'Social pick'"), 'starter picks should save with Social pick source');
+  const fakeCommunity = new RegExp([
+    ['@maya', '_saves'].join(''),
+    ['Trending', ' in ', 'community'].join(''),
+    ['From', ' community'].join(''),
+    'claims:\\s*\\d+'
+  ].join('|'), 'i');
+  assert(!fakeCommunity.test(app), 'Social tab must not render synthetic community proof');
 });
 
 test('Beacon alerts are configurable and notify nearby unexpired deals', ()=>{

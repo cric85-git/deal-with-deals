@@ -828,11 +828,95 @@
   .reward-feed-row span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .reward-feed-time { color: var(--text-secondary); font-size: 11px; white-space: nowrap; }
 
+  .social-loop {
+    background:
+      linear-gradient(135deg, rgba(196, 240, 43, 0.16), transparent 34%),
+      var(--bg-primary);
+    border: 0.5px solid var(--border-tertiary);
+    border-radius: var(--radius-lg);
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+  .social-loop-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .social-loop-title {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 750;
+    line-height: 1.2;
+  }
+  .social-loop-sub {
+    margin: 4px 0 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.35;
+  }
+  .referral-code {
+    background: var(--brand-dark);
+    color: var(--brand-accent);
+    border-radius: var(--radius-md);
+    padding: 9px 10px;
+    font-family: ui-monospace, "SF Mono", monospace;
+    font-size: 12px;
+    font-weight: 750;
+    white-space: nowrap;
+  }
+  .social-action-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .social-action-row button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+  .social-action-row i { font-size: 14px; }
+  .social-list {
+    background: var(--bg-primary);
+    border: 0.5px solid var(--border-tertiary);
+    border-radius: var(--radius-lg);
+    padding: 2px 14px;
+    margin-bottom: 12px;
+  }
+  .social-list-row {
+    padding: 11px 0;
+    border-top: 0.5px solid var(--border-tertiary);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+  .social-list-row:first-child { border-top: none; }
+  .social-list-row button { font-size: 12px; padding: 7px 10px; white-space: nowrap; }
+  .social-list-title {
+    margin: 0;
+    font-size: 13.5px;
+    font-weight: 650;
+    line-height: 1.25;
+  }
+  .social-list-meta {
+    margin: 3px 0 0;
+    color: var(--text-secondary);
+    font-size: 11.5px;
+    line-height: 1.3;
+  }
+
   @media (max-width: 380px) {
     .reward-main-grid { grid-template-columns: minmax(0, 1fr) 154px; }
     .wheel-container.compact { width: 154px; height: 154px; max-width: 154px; }
     .reward-command h2 { font-size: 18px; }
     .reward-action-pill { padding: 8px 10px; }
+    .social-loop-top { flex-direction: column; }
+    .referral-code { width: 100%; text-align: center; }
   }
 
   /* Spend points: compact pill row */

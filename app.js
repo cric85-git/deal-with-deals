@@ -400,10 +400,37 @@
   }
   function suggestions() {
     const top = topCategories().slice(0,2);
-    const reasonMap = { Groceries:'Matches your grocery saving pattern', Dining:'Frequent dining redemptions', Apparel:'Trending in your community', Beauty:'Beauty category match', Home:'Spring season picks', Travel:'Avoid point expiration', Electronics:'Tech category match' };
+    const reasonMap = { Groceries:'Matches your grocery saving pattern', Dining:'Frequent dining redemptions', Apparel:'Matches apparel preference', Beauty:'Beauty category match', Home:'Home savings pick', Travel:'Travel savings pick', Electronics:'Tech category match' };
     const matched = BONUS_POOL.filter(p => top.includes(p.category));
     const rest = BONUS_POOL.filter(p => !top.includes(p.category));
     return [...matched, ...rest].slice(0, 6).map(s => ({...s, reason: reasonMap[s.category] || 'Popular pick'}));
+  }
+
+  function referralCode() {
+    const source = `${profile && (profile.email || profile.name) || 'perq'}:${STORAGE_PREFIX}`;
+    let hash = 0;
+    for (let i = 0; i < source.length; i++) hash = ((hash << 5) - hash + source.charCodeAt(i)) | 0;
+    const namePart = String(profile && profile.name || 'SAVE').replace(/[^a-z0-9]/gi, '').toUpperCase().slice(0, 4) || 'SAVE';
+    return `PERQ-${namePart}-${String(Math.abs(hash) % 10000).padStart(4, '0')}`;
+  }
+  function referralLink() {
+    const base = `${location.origin}${location.pathname}`;
+    return `${base}?ref=${encodeURIComponent(referralCode())}`;
+  }
+  function referralInviteText() {
+    return `Join me on Perq and start tracking deals before they expire: ${referralLink()}`;
+  }
+  async function copyReferralInvite() {
+    const text = referralInviteText();
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch(e) {
+      const ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); } catch(e2) {}
+      document.body.removeChild(ta);
+    }
+    showToast('Invite copied');
   }
 
   function refreshDailyQuests() {
@@ -1714,44 +1741,63 @@
   function renderSocial() {
     const root = document.getElementById('panel-social');
     const myShared = deals.filter(d => d.shared && !d.redeemed);
-    const community = [
-      { user:'@maya_saves', merchant:"Trader Joe's", discount:'$5 off $30', category:'Groceries', claims: 142 },
-      { user:'@plano_deals', merchant:'AMC Theatres', discount:'$3 off ticket', category:'Other', claims: 89 },
-      { user:'@coupon_dad_tx', merchant:"Lowe's", discount:'10% off paint', category:'Home', claims: 56 },
-      { user:'@thrifty_jen', merchant:'Panera', discount:'Free pastry', category:'Dining', claims: 211 }
-    ];
+    const starterPicks = suggestions().slice(0, 3);
+    const unsharedDeals = getUnexpiredDeals().filter(d => !d.shared);
+    const inviteCode = referralCode();
     root.innerHTML = `
+      <div class="social-loop">
+        <div class="social-loop-top">
+          <div style="min-width:0;">
+            <p class="social-loop-title">Share useful savings</p>
+            <p class="social-loop-sub">${myShared.length ? `${myShared.length} deal${myShared.length === 1 ? '' : 's'} ready for your circle.` : 'Start with one deal from your wallet or a Perq pick.'}</p>
+          </div>
+          <div class="referral-code">${escapeHtml(inviteCode)}</div>
+        </div>
+        <div class="social-action-row">
+          <button id="copy-referral-btn" class="btn-primary"><i class="ti ti-copy"></i>Copy invite</button>
+          <button data-open-deals><i class="ti ti-ticket"></i>${unsharedDeals.length ? 'Share a deal' : 'Add a deal'}</button>
+        </div>
+      </div>
+
       <div class="stat-grid-compact" style="grid-template-columns: repeat(3, 1fr);">
         <div class="stat-card compact"><p class="stat-label">Points</p><p class="stat-value">${rewards.points}</p></div>
         <div class="stat-card compact"><p class="stat-label">Shared</p><p class="stat-value">${rewards.shared}</p></div>
         <div class="stat-card compact"><p class="stat-label">Claimed</p><p class="stat-value">${rewards.claimed}</p></div>
       </div>
-      <p class="section-title">Your shared deals</p>
+
+      <p class="section-title"><i class="ti ti-share"></i>Your shared deals</p>
       ${myShared.length ? myShared.map(d => `
-        <div class="card" style="display:flex; justify-content:space-between; align-items:center; gap: 10px;">
+        <div class="social-list-row" style="background: var(--bg-primary); border: 0.5px solid var(--border-tertiary); border-radius: var(--radius-md); padding: 12px; margin-bottom: 8px;">
           <div style="min-width:0;">
-            <p style="margin:0; font-weight:500; font-size:14px;">${escapeHtml(d.merchant)} — ${escapeHtml(d.discount)}</p>
-            <p style="margin:2px 0 0; font-size:12px; color: var(--text-secondary);">Expires ${fmtDate(d.expiry)}</p>
+            <p class="social-list-title">${escapeHtml(d.merchant)} — ${escapeHtml(d.discount)}</p>
+            <p class="social-list-meta">${d.expiry ? `Expires ${fmtDate(d.expiry)}` : 'No expiry'}${d.code ? ` · ${escapeHtml(d.code)}` : ''}</p>
           </div>
           <span class="pill" style="background: var(--bg-success); color: var(--text-success);">Shared</span>
         </div>
       `).join('') : `<div class="empty" style="padding: 20px;"><i class="ti ti-share"></i>No shared deals yet.</div>`}
-      <p class="section-title">Trending in community</p>
-      ${community.map(c => `
-        <div class="card" style="display:flex; justify-content:space-between; align-items:center; gap: 10px;">
+
+      <p class="section-title"><i class="ti ti-sparkles"></i>Starter picks</p>
+      <div class="social-list">
+        ${starterPicks.map((pick, i) => `
+        <div class="social-list-row">
           <div style="min-width:0;">
-            <p style="margin:0; font-weight:500; font-size:14px;">${escapeHtml(c.merchant)} — ${escapeHtml(c.discount)}</p>
-            <p style="margin:2px 0 0; font-size:12px; color: var(--text-secondary);">${escapeHtml(c.user)} · ${c.claims} claims</p>
+            <p class="social-list-title">${escapeHtml(pick.merchant)} — ${escapeHtml(pick.discount)}</p>
+            <p class="social-list-meta">${escapeHtml(pick.category)} · ${escapeHtml(pick.reason || 'Personalized pick')}</p>
           </div>
-          <button data-claim="${escapeHtml(c.merchant)}|${escapeHtml(c.discount)}|${escapeHtml(c.category)}">Claim</button>
+          <button data-social-pick="${i}">Track</button>
         </div>
       `).join('')}
+      </div>
     `;
-    root.querySelectorAll('[data-claim]').forEach(b=>{
+    const referralBtn = document.getElementById('copy-referral-btn');
+    if (referralBtn) referralBtn.addEventListener('click', copyReferralInvite);
+    root.querySelectorAll('[data-open-deals]').forEach(b => b.addEventListener('click', () => switchTab(unsharedDeals.length ? 'deals' : 'dashboard')));
+    root.querySelectorAll('[data-social-pick]').forEach(b=>{
       b.addEventListener('click', () => {
-        const [m, d, c] = b.getAttribute('data-claim').split('|');
+        const pick = starterPicks[Number(b.getAttribute('data-social-pick'))];
+        if (!pick) return;
         const t = new Date(); t.setDate(t.getDate()+10);
-        openModalPrefilled({ merchant:m, discount:d, category:c, source:'App / digital', value: 10, expiry: t.toISOString().slice(0,10), notes:'From community', url: inferUrl(m) });
+        openModalPrefilled({ merchant:pick.merchant, discount:pick.discount, category:pick.category, source:'Social pick', value: pick.value || 10, expiry: t.toISOString().slice(0,10), notes:pick.reason || 'Perq starter pick', url: inferUrl(pick.merchant) });
       });
     });
   }

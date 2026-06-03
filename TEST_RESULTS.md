@@ -1,9 +1,9 @@
 # Perq Automated Test Results
 
-Executed: 2026-06-03T00:24:46.674Z
+Executed: 2026-06-03T22:20:58.934Z
 
-Total: 22
-Passed: 22
+Total: 23
+Passed: 23
 Failed: 0
 
 | Test | Status | Error |
@@ -23,6 +23,7 @@ Failed: 0
 | Mobile browsers get install instructions for saving Perq as an app | PASS |  |
 | Rewards tab has adaptive gamification without fake social proof | PASS |  |
 | Deal Share routes to the Social tab instead of opening device share sheets | PASS |  |
+| Social tab uses a Perq referral loop instead of fake community proof | PASS |  |
 | Beacon alerts are configurable and notify nearby unexpired deals | PASS |  |
 | Capacitor config packages Perq for native iOS and Android | PASS |  |
 | Native build keeps root Pages static and injects Capacitor only into dist | PASS |  |
