@@ -1817,29 +1817,60 @@ Return only the JSON, no other text.`;
   function renderSocial() {
     const root = document.getElementById('panel-social');
     const myShared = deals.filter(d => d.shared && !d.redeemed);
+    const activity = loadActivity();
+
+    // Community trending (static seed + dynamic)
     const community = [
       { user:'@maya_saves', merchant:"Trader Joe's", discount:'$5 off $30', category:'Groceries', claims: 142 },
       { user:'@plano_deals', merchant:'AMC Theatres', discount:'$3 off ticket', category:'Other', claims: 89 },
       { user:'@coupon_dad_tx', merchant:"Lowe's", discount:'10% off paint', category:'Home', claims: 56 },
       { user:'@thrifty_jen', merchant:'Panera', discount:'Free pastry', category:'Dining', claims: 211 }
     ];
+
+    const activityHtml = activity.length ? activity.slice(0, 15).map(a => {
+      const icon = a.type === 'share' ? 'ti-share' : a.type === 'claim' ? 'ti-download' : 'ti-bell';
+      const color = a.type === 'share' ? 'var(--text-info)' : 'var(--text-success)';
+      let desc = '';
+      if (a.type === 'share') desc = `You shared <strong>${escapeHtml(a.data.merchant)}</strong>`;
+      else if (a.type === 'claim') desc = `You claimed <strong>${escapeHtml(a.data.merchant)}</strong>${a.data.from ? ` from ${escapeHtml(a.data.from)}` : ''}`;
+      else desc = escapeHtml(a.data.text || 'Activity');
+      return `
+        <div style="display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:0.5px solid var(--border-tertiary);">
+          <i class="ti ${icon}" style="font-size:18px; color:${color}; flex-shrink:0;"></i>
+          <div style="flex:1; min-width:0;">
+            <p style="margin:0; font-size:13px; line-height:1.3;">${desc}</p>
+            <p style="margin:2px 0 0; font-size:11px; color:var(--text-tertiary);">${timeAgo(a.timestamp)}</p>
+          </div>
+        </div>
+      `;
+    }).join('') : `<p style="text-align:center; color:var(--text-tertiary); font-size:13px; padding:16px 0;">Share or claim deals to see activity here.</p>`;
+
     root.innerHTML = `
       <div class="stat-grid-compact" style="grid-template-columns: repeat(3, 1fr);">
         <div class="stat-card compact"><p class="stat-label">Points</p><p class="stat-value">${rewards.points}</p></div>
         <div class="stat-card compact"><p class="stat-label">Shared</p><p class="stat-value">${rewards.shared}</p></div>
         <div class="stat-card compact"><p class="stat-label">Claimed</p><p class="stat-value">${rewards.claimed}</p></div>
       </div>
-      <p class="section-title">Your shared deals</p>
+
+      <p class="section-title"><i class="ti ti-share"></i>Your shared deals</p>
       ${myShared.length ? myShared.map(d => `
         <div class="card" style="display:flex; justify-content:space-between; align-items:center; gap: 10px;">
           <div style="min-width:0;">
             <p style="margin:0; font-weight:500; font-size:14px;">${escapeHtml(d.merchant)} — ${escapeHtml(d.discount)}</p>
-            <p style="margin:2px 0 0; font-size:12px; color: var(--text-secondary);">Expires ${fmtDate(d.expiry)}</p>
+            <p style="margin:2px 0 0; font-size:12px; color: var(--text-secondary);">Expires ${fmtDate(d.expiry)}${d.shareCount > 1 ? ` · shared ${d.shareCount}x` : ''}</p>
           </div>
-          <span class="pill" style="background: var(--bg-success); color: var(--text-success);">Shared</span>
+          <button data-reshare="${d.id}" style="font-size:12px; padding:6px 10px;">
+            <i class="ti ti-share" style="font-size:13px; vertical-align:-1px; margin-right:2px;"></i>Again
+          </button>
         </div>
-      `).join('') : `<div class="empty" style="padding: 20px;"><i class="ti ti-share"></i>No shared deals yet.</div>`}
-      <p class="section-title">Trending in community</p>
+      `).join('') : `<div class="empty" style="padding: 20px;"><i class="ti ti-share"></i>No shared deals yet. Share from your deal cards!</div>`}
+
+      <p class="section-title"><i class="ti ti-activity"></i>Activity</p>
+      <div class="card" style="padding: 4px 14px;">
+        ${activityHtml}
+      </div>
+
+      <p class="section-title"><i class="ti ti-flame"></i>Trending in community</p>
       ${community.map(c => `
         <div class="card" style="display:flex; justify-content:space-between; align-items:center; gap: 10px;">
           <div style="min-width:0;">
@@ -1854,8 +1885,11 @@ Return only the JSON, no other text.`;
       b.addEventListener('click', () => {
         const [m, d, c] = b.getAttribute('data-claim').split('|');
         const t = new Date(); t.setDate(t.getDate()+10);
-        openModalPrefilled({ merchant:m, discount:d, category:c, source:'App / digital', value: 10, expiry: t.toISOString().slice(0,10), notes:'From community', url: inferUrl(m) });
+        openModalPrefilled({ merchant:m, discount:d, category:c, source:'Community / trending', value: 10, expiry: t.toISOString().slice(0,10), notes:'From community', url: inferUrl(m) });
       });
+    });
+    root.querySelectorAll('[data-reshare]').forEach(b=>{
+      b.addEventListener('click', () => shareDeal(b.getAttribute('data-reshare')));
     });
   }
 
@@ -1993,30 +2027,155 @@ Return only the JSON, no other text.`;
   }
   async function shareDeal(id) {
     const d = deals.find(x=>x.id===id); if (!d) return;
-    const text = `${d.merchant}: ${d.discount}${d.code ? ` code ${d.code}` : ''}${d.expiry ? ` expires ${fmtDate(d.expiry)}` : ''}${d.url ? ` ${d.url}` : ''}`;
+
+    // Build a shareable deep link with encoded deal data
+    const sharePayload = {
+      m: d.merchant,
+      d: d.discount,
+      v: d.value || 0,
+      c: d.category,
+      code: d.code || '',
+      exp: d.expiry || '',
+      url: d.url || '',
+      by: (profile && profile.name) || 'A Perq user'
+    };
+    const encoded = btoa(JSON.stringify(sharePayload)).replace(/=/g, '');
+    const baseUrl = location.origin + location.pathname;
+    const shareLink = `${baseUrl}?claim=${encoded}`;
+
+    const text = `🎟️ ${d.merchant}: ${d.discount}${d.code ? ` (code: ${d.code})` : ''}${d.expiry ? ` — expires ${fmtDate(d.expiry)}` : ''}\n\nClaim this deal on Perq: ${shareLink}`;
+
     const NativeShare = nativePlugin('Share');
     if (NativeShare && NativeShare.share) {
       try {
-        await NativeShare.share({ title: `Perq deal: ${d.merchant}`, text, url: d.url || location.href, dialogTitle: 'Share deal' });
-      } catch(e) {
-        return;
-      }
+        await NativeShare.share({ title: `Perq deal: ${d.merchant}`, text, url: shareLink, dialogTitle: 'Share deal' });
+      } catch(e) { return; }
     } else if (navigator.share) {
       try {
-        await navigator.share({ title: `Perq deal: ${d.merchant}`, text, url: d.url || location.href });
-      } catch(e) {
-        return;
-      }
+        await navigator.share({ title: `Perq deal: ${d.merchant}`, text, url: shareLink });
+      } catch(e) { return; }
     } else {
       try { await navigator.clipboard.writeText(text); }
       catch(e) {}
     }
     d.shared = true;
+    d.shareCount = (d.shareCount || 0) + 1;
     rewards.shared += 1; rewards.points += 10;
     bumpQuest('q_share');
+
+    // Log to activity feed
+    addActivity('share', { merchant: d.merchant, discount: d.discount, dealId: d.id });
+
     save(KEYS.deals, deals); save(KEYS.rewards, rewards);
     showToast('Shared (+10 pts)');
     renderAll();
+  }
+
+  // ---------- Social: Claim shared deals ----------
+  function handleIncomingClaim(params) {
+    const claimData = params.get('claim');
+    if (!claimData) return false;
+    try {
+      const padded = claimData + '='.repeat((4 - claimData.length % 4) % 4);
+      const payload = JSON.parse(atob(padded));
+      if (!payload.m) return false;
+      showClaimSharedDeal(payload);
+      return true;
+    } catch(e) {
+      return false;
+    }
+  }
+
+  function showClaimSharedDeal(payload) {
+    const expiryLabel = payload.exp ? `Expires ${fmtDate(payload.exp)}` : 'No expiry date';
+    const overlay = document.getElementById('modal-claim-shared');
+    overlay.innerHTML = `
+      <div class="modal center-modal" style="text-align:center; padding:28px 20px;">
+        <div style="font-size:40px; margin-bottom:12px;">🎟️</div>
+        <h2 style="font-size:20px; font-weight:600; margin:0 0 4px;">${escapeHtml(payload.m)}</h2>
+        <p style="font-size:16px; color:var(--text-secondary); margin:0 0 12px;">${escapeHtml(payload.d)}</p>
+        <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:16px;">
+          <span class="pill" style="background:var(--bg-info); color:var(--text-info);">${escapeHtml(payload.c || 'Deal')}</span>
+          <span class="pill" style="background:var(--bg-warning); color:var(--text-warning);">${expiryLabel}</span>
+        </div>
+        ${payload.code ? `<p style="font-family:ui-monospace,monospace; font-size:18px; letter-spacing:2px; background:var(--bg-secondary); padding:10px; border-radius:8px; margin:0 0 12px;">${escapeHtml(payload.code)}</p>` : ''}
+        <p style="font-size:13px; color:var(--text-tertiary); margin:0 0 20px;">Shared by ${escapeHtml(payload.by)}</p>
+        <div style="display:flex; gap:8px;">
+          <button style="flex:1; padding:14px; background:var(--text-primary); color:var(--bg-primary); border:none; border-radius:10px; font-weight:600; font-size:15px;" id="claim-shared-accept">
+            <i class="ti ti-check" style="margin-right:4px;"></i> Claim deal
+          </button>
+          <button style="flex:0 0 auto; padding:14px 20px; border-radius:10px;" id="claim-shared-dismiss">Not now</button>
+        </div>
+      </div>
+    `;
+    overlay.classList.add('active');
+
+    document.getElementById('claim-shared-accept').addEventListener('click', () => {
+      const t = new Date(); t.setDate(t.getDate() + 14);
+      const newDeal = {
+        id: uid(),
+        merchant: payload.m,
+        discount: payload.d,
+        value: payload.v || estimateValue(payload.d),
+        category: payload.c || 'Other',
+        source: 'Shared by ' + (payload.by || 'friend'),
+        code: payload.code || '',
+        barcode: '',
+        expiry: payload.exp || t.toISOString().slice(0, 10),
+        notes: 'Claimed from a shared link',
+        url: payload.url || inferUrl(payload.m),
+        redeemed: false,
+        shared: false,
+        createdAt: Date.now()
+      };
+      deals.push(newDeal);
+      scheduleExpiryReminders(newDeal);
+      rewards.claimed += 1;
+      rewards.points += 5;
+      save(KEYS.deals, deals);
+      save(KEYS.rewards, rewards);
+      addActivity('claim', { merchant: payload.m, discount: payload.d, from: payload.by });
+      overlay.classList.remove('active');
+      showToast('🎉 Deal claimed (+5 pts)');
+      switchTab('deals');
+      renderAll();
+    });
+
+    document.getElementById('claim-shared-dismiss').addEventListener('click', () => {
+      overlay.classList.remove('active');
+    });
+  }
+
+  // ---------- Social: Activity Feed ----------
+  const KEYS_ACTIVITY = STORAGE_PREFIX + 'activity';
+
+  function loadActivity() {
+    return load(KEYS_ACTIVITY, []);
+  }
+
+  function addActivity(type, data) {
+    const feed = loadActivity();
+    feed.unshift({
+      id: uid(),
+      type,
+      data,
+      timestamp: Date.now(),
+      user: (profile && profile.name) || 'You'
+    });
+    // Keep last 50 entries
+    if (feed.length > 50) feed.length = 50;
+    save(KEYS_ACTIVITY, feed);
+  }
+
+  function timeAgo(ts) {
+    const diff = Date.now() - ts;
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
+    return `${days}d ago`;
   }
   function deleteDeal(id) {
     if (!confirm('Delete this deal?')) return;
@@ -2272,13 +2431,17 @@ Return only the JSON, no other text.`;
     // Handle deep links from manifest shortcuts
     try {
       const action = params.get('action');
-      const sharedPayload = parseIncomingShare(params);
-      if (sharedPayload) {
-        setTimeout(() => openModalPrefilled(sharedPayload), 900);
-      } else if (action === 'snap') {
-        setTimeout(() => document.getElementById('capture-input').click(), 1000);
-      } else if (action === 'add') {
-        setTimeout(() => openModal(null), 1000);
+      // Check for incoming claim link first
+      const claimHandled = handleIncomingClaim(params);
+      if (!claimHandled) {
+        const sharedPayload = parseIncomingShare(params);
+        if (sharedPayload) {
+          setTimeout(() => openModalPrefilled(sharedPayload), 900);
+        } else if (action === 'snap') {
+          setTimeout(() => document.getElementById('capture-input').click(), 1000);
+        } else if (action === 'add') {
+          setTimeout(() => openModal(null), 1000);
+        }
       }
     } catch(e) {}
 

@@ -84,6 +84,45 @@ Then set the `OCR_PROXY_URL` constant in `app.js` to your Worker URL.
 6. Fill in remaining details → Save
 ```
 
+---
+
+## Phase 2: Social & Sharing — 2026-06-04
+
+### 🆕 Feature: Deep Link Sharing + Claim Flow + Activity Feed
+
+**What a user couldn't do yesterday:**
+- Sharing only copied plain text. Recipients had to manually create the deal in their own app.
+- No way to claim a deal someone shared with you in one tap.
+- No visibility into your sharing/claiming activity.
+
+**What a user can do today:**
+- **Share with deep links.** When you share a deal, it generates a Perq link that carries all deal details (merchant, discount, code, expiry). Recipients tap the link and the deal auto-imports.
+- **One-tap claim.** Opening a share link shows a beautiful claim modal with deal preview. Tap "Claim deal" → it's saved to your wallet with reminders set. (+5 pts)
+- **Activity feed.** The Social tab shows your real sharing/claiming history with timestamps.
+- **Re-share button.** Your shared deals have a "Share again" button for quick re-sharing.
+- **Share count tracking.** See how many times you've shared each deal.
+- **Community trending.** Browse and claim deals trending in the community.
+
+### Share link format:
+```
+https://yourapp.com/index.html?claim=<base64-encoded-deal-data>
+```
+
+### User flow (sharing):
+```
+1. On any deal card → tap Share
+2. Native share sheet opens with Perq deep link
+3. Send via iMessage, WhatsApp, email, etc.
+```
+
+### User flow (claiming):
+```
+1. Recipient taps the Perq link
+2. Claim modal shows: merchant, discount, expiry, promo code
+3. Tap "Claim deal" → saved to wallet + reminders set
+4. +5 points awarded
+```
+
 ### Technical details:
 - Uses `@capacitor/local-notifications` scheduled notification API
 - Notifications scheduled at creation time, not checked on a polling loop
