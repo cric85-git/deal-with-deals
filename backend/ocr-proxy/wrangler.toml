@@ -1,0 +1,10 @@
+name = "perq-ocr-proxy"
+main = "src/index.js"
+compatibility_date = "2024-12-01"
+
+[vars]
+ALLOWED_ORIGINS = "https://cric85-git.github.io,http://localhost:3000,capacitor://localhost"
+RATE_LIMIT_PER_MIN = "10"
+
+# Set this secret via: wrangler secret put ANTHROPIC_API_KEY
+# Never commit the actual key
