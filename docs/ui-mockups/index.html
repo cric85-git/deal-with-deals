@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Perq UI Variations — Designer Mockups</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.0.0/tabler-icons.min.css">
+<style>
+:root {
+  --bg: #0F0E13;
+  --surface: #1A1A22;
+  --surface-2: #25252F;
+  --text: #F5F4EF;
+  --text-dim: #9C9AA8;
+  --accent: #C4F02B;
+  --accent-warm: #FF6B6B;
+  --brand: #071B4D;
+  --brand-2: #6366F1;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body {
+  margin: 0; padding: 24px;
+  font-family: -apple-system, "SF Pro Display", BlinkMacSystemFont, system-ui, sans-serif;
+  background: var(--bg); color: var(--text);
+  min-height: 100vh;
+}
+h1 { font-size: 28px; font-weight: 700; margin: 0 0 8px; letter-spacing: -0.5px; }
+.lead { color: var(--text-dim); font-size: 14px; margin: 0 0 32px; max-width: 700px; line-height: 1.5; }
+
+.tabs {
+  display: flex; gap: 8px; margin-bottom: 24px;
+  flex-wrap: wrap;
+  position: sticky; top: 0; background: var(--bg);
+  padding: 8px 0; z-index: 10;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.tab {
+  padding: 10px 16px; border-radius: 999px;
+  background: var(--surface); color: var(--text-dim);
+  border: 1px solid transparent;
+  cursor: pointer; font-size: 13px; font-weight: 500;
+  transition: all 0.15s;
+}
+.tab:hover { color: var(--text); }
+.tab.active {
+  background: var(--accent); color: #000;
+  border-color: var(--accent);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 32px;
+  align-items: start;
+}
+
+.phone-frame {
+  background: #000;
+  border-radius: 44px;
+  padding: 12px;
+  width: 390px;
+  margin: 0 auto;
+  box-shadow: 0 30px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08);
+}
+.phone-screen {
+  background: var(--bg);
+  border-radius: 32px;
+  width: 100%;
+  height: 780px;
+  overflow: hidden;
+  position: relative;
+}
+
+.variant-label {
+  font-size: 12px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 1px;
+  color: var(--accent);
+  margin: 0 0 4px;
+}
+.variant-title {
+  font-size: 22px; font-weight: 700; margin: 0 0 8px;
+  letter-spacing: -0.3px;
+}
+.variant-desc {
+  font-size: 13px; color: var(--text-dim);
+  margin: 0 0 16px; line-height: 1.5;
+}
+.variant-features {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin: 0 0 16px;
+}
+.feature-chip {
+  background: var(--surface-2); color: var(--text-dim);
+  padding: 4px 10px; border-radius: 999px;
+  font-size: 11px; font-weight: 500;
+}
+.variant-block {
+  display: none;
+}
+.variant-block.active { display: block; }
+
+/* ========================================
+   VARIANT 1: TINDER-STYLE SWIPE STACK
+======================================== */
+.v1-screen {
+  background: linear-gradient(180deg, #1a1a22 0%, #0F0E13 100%);
+  display: flex; flex-direction: column;
+  padding: 60px 0 0;
+}
+.v1-header {
+  padding: 0 24px 16px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.v1-greeting { font-size: 14px; color: var(--text-dim); margin: 0; }
+.v1-name { font-size: 22px; font-weight: 700; margin: 2px 0 0; letter-spacing: -0.3px; }
+.v1-points {
+  background: var(--accent); color: #000;
+  padding: 6px 12px; border-radius: 999px;
+  font-size: 13px; font-weight: 700;
+  display: flex; align-items: center; gap: 4px;
+}
+.v1-stack {
+  flex: 1; position: relative;
+  margin: 0 24px;
+}
+.v1-card {
+  position: absolute; inset: 0;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+.v1-card-1 { z-index: 3; transform: translateY(0) scale(1); }
+.v1-card-2 { z-index: 2; transform: translateY(12px) scale(0.96); opacity: 0.85; }
+.v1-card-3 { z-index: 1; transform: translateY(24px) scale(0.92); opacity: 0.6; }
+.v1-card-bg {
+  width: 100%; height: 100%;
+  background: linear-gradient(135deg, #FF6B6B 0%, #FFA06B 100%);
+  display: flex; flex-direction: column;
+  justify-content: space-between;
+  padding: 24px;
+  position: relative;
+}
+.v1-card-bg.green { background: linear-gradient(135deg, #00C9A7 0%, #4FACFE 100%); }
+.v1-card-bg.purple { background: linear-gradient(135deg, #6366F1 0%, #C084FC 100%); }
+.v1-card-cat {
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  background: rgba(255,255,255,0.2);
+  backdrop-filter: blur(10px);
+  padding: 6px 12px; border-radius: 999px;
+  align-self: flex-start;
+  color: white;
+}
+.v1-card-merchant {
+  font-size: 32px; font-weight: 800;
+  color: white; margin: 0 0 4px;
+  letter-spacing: -0.5px; line-height: 1.05;
+}
+.v1-card-discount {
+  font-size: 48px; font-weight: 900;
+  color: white; margin: 0;
+  letter-spacing: -1.5px; line-height: 1;
+}
+.v1-card-meta {
+  display: flex; justify-content: space-between; align-items: flex-end;
+  color: rgba(255,255,255,0.9); font-size: 13px;
+  margin-top: 8px;
+}
+.v1-card-expiry {
+  background: rgba(0,0,0,0.25);
+  backdrop-filter: blur(10px);
+  padding: 8px 14px; border-radius: 999px;
+  font-weight: 600;
+}
+.v1-actions {
+  display: flex; justify-content: center; gap: 16px;
+  padding: 20px 0;
+}
+.v1-action-btn {
+  width: 56px; height: 56px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  border: none; cursor: pointer; font-size: 24px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+  transition: transform 0.15s;
+}
+.v1-action-btn:active { transform: scale(0.92); }
+.v1-action-btn.skip { background: white; color: #FF6B6B; }
+.v1-action-btn.save { background: var(--accent); color: #000; width: 72px; height: 72px; font-size: 30px; }
+.v1-action-btn.share { background: white; color: var(--brand-2); }
+.v1-tabbar {
+  display: flex; justify-content: space-around;
+  padding: 12px 24px 28px;
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(20px);
+}
+.v1-tabbar i { font-size: 24px; color: var(--text-dim); }
+.v1-tabbar i.active { color: var(--accent); }
+
+/* ========================================
+   VARIANT 2: APPLE WALLET — STACKED PASSES
+======================================== */
+.v2-screen { background: #000; padding: 60px 0 0; }
+.v2-header { padding: 0 20px 20px; }
+.v2-title { font-size: 28px; font-weight: 700; margin: 0; letter-spacing: -0.5px; }
+.v2-sub { font-size: 14px; color: var(--text-dim); margin: 4px 0 0; }
+.v2-cards {
+  position: relative;
+  padding: 0 20px;
+}
+.v2-pass {
+  background: linear-gradient(135deg, #FF6B6B 0%, #FFA06B 100%);
+  border-radius: 18px;
+  padding: 18px 20px;
+  margin-bottom: -100px;
+  position: relative;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  cursor: pointer;
+  transition: all 0.3s;
+}
+.v2-pass:hover { transform: translateY(-8px); }
+.v2-pass:nth-child(2) { background: linear-gradient(135deg, #00C9A7 0%, #4FACFE 100%); }
+.v2-pass:nth-child(3) { background: linear-gradient(135deg, #6366F1 0%, #C084FC 100%); }
+.v2-pass:nth-child(4) { background: linear-gradient(135deg, #F472B6 0%, #FB923C 100%); margin-bottom: 0; }
+.v2-pass-top {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 60px;
+}
+.v2-pass-merchant {
+  color: white; font-size: 16px; font-weight: 700;
+  margin: 0; letter-spacing: -0.2px;
+}
+.v2-pass-cat {
+  font-size: 9px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; color: rgba(255,255,255,0.9);
+  margin: 2px 0 0;
+}
+.v2-pass-icon {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: rgba(255,255,255,0.25); backdrop-filter: blur(10px);
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 18px;
+}
+.v2-pass-bottom {
+  display: flex; justify-content: space-between; align-items: flex-end;
+  color: white;
+}
+.v2-pass-discount {
+  font-size: 22px; font-weight: 800; margin: 0;
+  letter-spacing: -0.3px;
+}
+.v2-pass-expiry {
+  font-size: 11px; opacity: 0.9; margin: 2px 0 0;
+}
+.v2-pass-code {
+  background: rgba(0,0,0,0.25);
+  padding: 4px 10px; border-radius: 6px;
+  font-family: ui-monospace, monospace; font-size: 11px;
+  font-weight: 600;
+}
+
+/* ========================================
+   VARIANT 3: BUMBLE-STYLE FEED
+======================================== */
+.v3-screen {
+  background: #FAF8F3; color: #1a1a1a;
+  padding: 60px 0 0;
+}
+.v3-header {
+  padding: 0 20px 16px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.v3-greeting {
+  font-size: 24px; font-weight: 700;
+  letter-spacing: -0.4px; margin: 0;
+}
+.v3-greeting span { color: #FFB400; }
+.v3-stats-row {
+  display: flex; gap: 8px; padding: 0 20px 20px;
+}
+.v3-stat-pill {
+  flex: 1;
+  background: white;
+  border-radius: 16px;
+  padding: 14px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.v3-stat-num {
+  font-size: 24px; font-weight: 800;
+  margin: 0; letter-spacing: -0.4px;
+  color: #1a1a1a;
+}
+.v3-stat-lbl {
+  font-size: 11px; color: #777;
+  margin: 2px 0 0; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.v3-feed { padding: 0 20px; }
+.v3-feed-card {
+  background: white;
+  border-radius: 24px;
+  margin-bottom: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+}
+.v3-feed-hero {
+  height: 120px;
+  background: linear-gradient(135deg, #FF6B6B 0%, #FFA06B 100%);
+  position: relative;
+  padding: 16px;
+  display: flex; flex-direction: column; justify-content: space-between;
+}
+.v3-feed-hero.green { background: linear-gradient(135deg, #00C9A7 0%, #4FACFE 100%); }
+.v3-feed-hero.purple { background: linear-gradient(135deg, #6366F1 0%, #C084FC 100%); }
+.v3-feed-cat {
+  background: rgba(255,255,255,0.95);
+  color: #1a1a1a;
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.8px; text-transform: uppercase;
+  padding: 5px 10px; border-radius: 999px;
+  align-self: flex-start;
+}
+.v3-feed-discount {
+  color: white; font-size: 36px; font-weight: 900;
+  margin: 0; letter-spacing: -1px; line-height: 1;
+}
+.v3-feed-body {
+  padding: 14px 16px 16px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.v3-feed-merchant {
+  font-size: 17px; font-weight: 700;
+  margin: 0; letter-spacing: -0.2px;
+}
+.v3-feed-meta {
+  font-size: 12px; color: #777;
+  margin: 2px 0 0;
+}
+.v3-feed-cta {
+  background: #1a1a1a; color: white;
+  border: none; border-radius: 999px;
+  padding: 10px 18px; font-size: 13px; font-weight: 700;
+  cursor: pointer;
+}
+
+/* ========================================
+   VARIANT 4: PINTEREST MASONRY GRID
+======================================== */
+.v4-screen {
+  background: #fff; color: #1a1a1a;
+  padding: 60px 0 0;
+}
+.v4-header {
+  padding: 0 16px 12px;
+  display: flex; gap: 8px; align-items: center;
+}
+.v4-search {
+  flex: 1; background: #f5f5f5;
+  border-radius: 999px; padding: 10px 14px;
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; color: #777;
+}
+.v4-tabs {
+  display: flex; gap: 8px; padding: 0 16px 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.v4-tabs::-webkit-scrollbar { display: none; }
+.v4-tab-chip {
+  flex-shrink: 0;
+  padding: 8px 14px; border-radius: 999px;
+  background: #f5f5f5; color: #1a1a1a;
+  font-size: 12px; font-weight: 600;
+  white-space: nowrap;
+}
+.v4-tab-chip.active { background: #1a1a1a; color: white; }
+.v4-masonry {
+  columns: 2; column-gap: 8px;
+  padding: 0 16px;
+}
+.v4-pin {
+  break-inside: avoid;
+  margin-bottom: 8px;
+  border-radius: 16px; overflow: hidden;
+  position: relative;
+  cursor: pointer;
+}
+.v4-pin-img {
+  width: 100%;
+  background: linear-gradient(135deg, #FF6B6B, #FFA06B);
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-weight: 800; font-size: 32px;
+  letter-spacing: -1px;
+}
+.v4-pin:nth-child(1) .v4-pin-img { height: 200px; background: linear-gradient(135deg, #FF6B6B, #FFA06B); }
+.v4-pin:nth-child(2) .v4-pin-img { height: 240px; background: linear-gradient(135deg, #00C9A7, #4FACFE); }
+.v4-pin:nth-child(3) .v4-pin-img { height: 180px; background: linear-gradient(135deg, #6366F1, #C084FC); }
+.v4-pin:nth-child(4) .v4-pin-img { height: 220px; background: linear-gradient(135deg, #F472B6, #FB923C); }
+.v4-pin:nth-child(5) .v4-pin-img { height: 160px; background: linear-gradient(135deg, #34D399, #06B6D4); }
+.v4-pin:nth-child(6) .v4-pin-img { height: 200px; background: linear-gradient(135deg, #FBBF24, #FB923C); }
+.v4-pin-overlay {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: linear-gradient(180deg, transparent, rgba(0,0,0,0.85));
+  padding: 24px 12px 12px;
+  color: white;
+}
+.v4-pin-merchant {
+  font-size: 13px; font-weight: 700;
+  margin: 0 0 2px; letter-spacing: -0.2px;
+}
+.v4-pin-discount {
+  font-size: 11px; opacity: 0.9; margin: 0;
+}
+.v4-pin-save {
+  position: absolute; top: 8px; right: 8px;
+  background: #E60023; color: white;
+  border: none; border-radius: 999px;
+  padding: 6px 12px; font-size: 11px; font-weight: 700;
+  cursor: pointer;
+}
+
+/* ========================================
+   VARIANT 5: HONEY/RAKUTEN HYBRID DASHBOARD
+======================================== */
+.v5-screen {
+  background: linear-gradient(180deg, #FFE16B 0%, #FAF8F3 25%);
+  color: #1a1a1a;
+  padding: 60px 0 0;
+}
+.v5-header {
+  padding: 0 20px 16px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.v5-logo {
+  font-size: 22px; font-weight: 800;
+  letter-spacing: -0.4px;
+}
+.v5-logo span { color: #B45309; }
+.v5-bell {
+  background: white; width: 38px; height: 38px;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  position: relative;
+}
+.v5-bell::after {
+  content: ''; position: absolute;
+  top: 8px; right: 10px;
+  width: 8px; height: 8px;
+  border-radius: 50%; background: #FF6B6B;
+}
+.v5-savings-card {
+  margin: 0 20px 20px;
+  background: linear-gradient(135deg, #1a1a1a 0%, #2a2a3e 100%);
+  border-radius: 24px; padding: 20px;
+  color: white; position: relative; overflow: hidden;
+}
+.v5-savings-card::before {
+  content: '💰'; position: absolute;
+  top: -20px; right: -10px; font-size: 100px;
+  opacity: 0.15;
+}
+.v5-savings-lbl {
+  font-size: 11px; font-weight: 600; letter-spacing: 1.5px;
+  text-transform: uppercase; opacity: 0.7; margin: 0;
+}
+.v5-savings-amt {
+  font-size: 42px; font-weight: 900;
+  margin: 4px 0 4px; letter-spacing: -1.5px;
+}
+.v5-savings-trend {
+  font-size: 12px; opacity: 0.85;
+  display: flex; align-items: center; gap: 4px;
+}
+.v5-savings-trend i { color: var(--accent); }
+.v5-cats {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 8px; padding: 0 20px 16px;
+}
+.v5-cat {
+  background: white;
+  border-radius: 16px; padding: 12px 8px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.v5-cat-emoji { font-size: 28px; line-height: 1; }
+.v5-cat-lbl {
+  font-size: 10px; font-weight: 600; color: #555;
+  margin: 4px 0 0;
+}
+.v5-section-title {
+  font-size: 14px; font-weight: 700; letter-spacing: -0.2px;
+  padding: 8px 20px; margin: 0;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.v5-section-title a { font-size: 11px; color: #B45309; font-weight: 600; }
+.v5-carousel {
+  display: flex; gap: 12px; overflow-x: auto;
+  padding: 8px 20px 16px;
+  scrollbar-width: none;
+}
+.v5-carousel::-webkit-scrollbar { display: none; }
+.v5-deal-card {
+  flex-shrink: 0;
+  width: 200px;
+  background: white;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+.v5-deal-hero {
+  height: 110px;
+  background: linear-gradient(135deg, #FF6B6B, #FFA06B);
+  position: relative;
+  padding: 12px;
+}
+.v5-deal-hero.green { background: linear-gradient(135deg, #00C9A7, #4FACFE); }
+.v5-deal-hero.purple { background: linear-gradient(135deg, #6366F1, #C084FC); }
+.v5-deal-pct {
+  position: absolute; top: 12px; right: 12px;
+  background: white; color: #1a1a1a;
+  padding: 4px 10px; border-radius: 999px;
+  font-size: 13px; font-weight: 800;
+}
+.v5-deal-merchant-overlay {
+  position: absolute; bottom: 12px; left: 12px;
+  color: white;
+  font-size: 16px; font-weight: 800;
+  letter-spacing: -0.2px;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+.v5-deal-body { padding: 12px; }
+.v5-deal-discount {
+  font-size: 14px; font-weight: 700; margin: 0 0 2px;
+}
+.v5-deal-expiry {
+  font-size: 11px; color: #777; margin: 0;
+}
+.v5-deal-cta {
+  width: 100%; margin-top: 10px;
+  background: #FFE16B; color: #1a1a1a;
+  border: none; border-radius: 12px;
+  padding: 10px; font-size: 12px; font-weight: 700;
+  cursor: pointer;
+}
+</style>
+</head>
+<body>
+
+<h1>Perq UI — Designer Mockups</h1>
+<p class="lead">
+  Five UI directions inspired by the best swipe/card patterns in coupon, deal, and dating apps.
+  Click each tab to compare. Each design solves the same goal — surface deals fast, make claiming delightful — but with different personality and information density.
+</p>
+
+<div class="tabs">
+  <button class="tab active" data-variant="v1">Variant 1 · Tinder Swipe</button>
+  <button class="tab" data-variant="v2">Variant 2 · Apple Wallet</button>
+  <button class="tab" data-variant="v3">Variant 3 · Bumble Feed</button>
+  <button class="tab" data-variant="v4">Variant 4 · Pinterest Grid</button>
+  <button class="tab" data-variant="v5">Variant 5 · Honey Dashboard</button>
+</div>
+
+<!-- VARIANT 1 -->
+<div class="variant-block active" data-block="v1">
+  <p class="variant-label">Variant 1</p>
+  <h2 class="variant-title">Tinder-Style Swipe Stack</h2>
+  <p class="variant-desc">
+    Big, beautiful cards stacked one behind another. Swipe right to claim, left to dismiss, tap heart to favorite.
+    Maximum visual impact, single-task focus, addictive loop. Best for the "Discover" tab where users browse new public deals.
+  </p>
+  <div class="variant-features">
+    <span class="feature-chip">High engagement</span>
+    <span class="feature-chip">One deal at a time</span>
+    <span class="feature-chip">Gamified</span>
+    <span class="feature-chip">Bold gradients</span>
+  </div>
+  <div class="phone-frame"><div class="phone-screen v1-screen">
+    <div class="v1-header">
+      <div>
+        <p class="v1-greeting">Tuesday, June 4</p>
+        <h2 class="v1-name">Hey Shail 👋</h2>
+      </div>
+      <div class="v1-points">⚡ 142 pts</div>
+    </div>
+    <div class="v1-stack">
+      <div class="v1-card v1-card-3"><div class="v1-card-bg purple">
+        <span class="v1-card-cat">Travel</span>
+        <div>
+          <h3 class="v1-card-merchant">Marriott</h3>
+          <p class="v1-card-discount">$50 off</p>
+          <div class="v1-card-meta">
+            <span>weekend stays</span>
+            <span class="v1-card-expiry">Jun 25</span>
+          </div>
+        </div>
+      </div></div>
+      <div class="v1-card v1-card-2"><div class="v1-card-bg green">
+        <span class="v1-card-cat">Groceries</span>
+        <div>
+          <h3 class="v1-card-merchant">Whole Foods</h3>
+          <p class="v1-card-discount">20% off</p>
+          <div class="v1-card-meta">
+            <span>organic produce</span>
+            <span class="v1-card-expiry">Jun 20</span>
+          </div>
+        </div>
+      </div></div>
+      <div class="v1-card v1-card-1"><div class="v1-card-bg">
+        <span class="v1-card-cat">Dining</span>
+        <div>
+          <h3 class="v1-card-merchant">Starbucks</h3>
+          <p class="v1-card-discount">FREE drink</p>
+          <div class="v1-card-meta">
+            <span>any grande size</span>
+            <span class="v1-card-expiry">Jun 8</span>
+          </div>
+        </div>
+      </div></div>
+    </div>
+    <div class="v1-actions">
+      <button class="v1-action-btn skip">✕</button>
+      <button class="v1-action-btn save">♥</button>
+      <button class="v1-action-btn share">↗</button>
+    </div>
+    <div class="v1-tabbar">
+      <i class="ti ti-home"></i>
+      <i class="ti ti-stack-2 active"></i>
+      <i class="ti ti-trophy"></i>
+      <i class="ti ti-sparkles"></i>
+      <i class="ti ti-user"></i>
+    </div>
+  </div></div>
+</div>
+
+<!-- VARIANT 2 -->
+<div class="variant-block" data-block="v2">
+  <p class="variant-label">Variant 2</p>
+  <h2 class="variant-title">Apple Wallet — Stacked Passes</h2>
+  <p class="variant-desc">
+    Familiar pass-stack metaphor (think Apple Wallet boarding passes). Each deal is a colored pass.
+    Tap to expand & show barcode. Premium, organized, instantly recognizable. Best for the "My Deals" wallet view.
+  </p>
+  <div class="variant-features">
+    <span class="feature-chip">Familiar metaphor</span>
+    <span class="feature-chip">Dense info</span>
+    <span class="feature-chip">Premium feel</span>
+    <span class="feature-chip">Fast scanning</span>
+  </div>
+  <div class="phone-frame"><div class="phone-screen v2-screen">
+    <div class="v2-header">
+      <h2 class="v2-title">My Wallet</h2>
+      <p class="v2-sub">7 active · expiring soon · $234 saved this month</p>
+    </div>
+    <div class="v2-cards">
+      <div class="v2-pass">
+        <div class="v2-pass-top">
+          <div>
+            <p class="v2-pass-cat">Dining</p>
+            <h3 class="v2-pass-merchant">Starbucks</h3>
+          </div>
+          <div class="v2-pass-icon">☕</div>
+        </div>
+        <div class="v2-pass-bottom">
+          <div>
+            <p class="v2-pass-discount">FREE grande</p>
+            <p class="v2-pass-expiry">Expires Jun 8 · 4 days left</p>
+          </div>
+          <span class="v2-pass-code">SB25</span>
+        </div>
+      </div>
+      <div class="v2-pass">
+        <div class="v2-pass-top">
+          <div>
+            <p class="v2-pass-cat">Groceries</p>
+            <h3 class="v2-pass-merchant">Whole Foods</h3>
+          </div>
+          <div class="v2-pass-icon">🥬</div>
+        </div>
+        <div class="v2-pass-bottom">
+          <div>
+            <p class="v2-pass-discount">20% off produce</p>
+            <p class="v2-pass-expiry">Expires Jun 20</p>
+          </div>
+          <span class="v2-pass-code">FRESH20</span>
+        </div>
+      </div>
+      <div class="v2-pass">
+        <div class="v2-pass-top">
+          <div>
+            <p class="v2-pass-cat">Apparel</p>
+            <h3 class="v2-pass-merchant">Nike</h3>
+          </div>
+          <div class="v2-pass-icon">👟</div>
+        </div>
+        <div class="v2-pass-bottom">
+          <div>
+            <p class="v2-pass-discount">25% off sale</p>
+            <p class="v2-pass-expiry">Expires Jun 15</p>
+          </div>
+          <span class="v2-pass-code">EXTRA25</span>
+        </div>
+      </div>
+      <div class="v2-pass">
+        <div class="v2-pass-top">
+          <div>
+            <p class="v2-pass-cat">Home</p>
+            <h3 class="v2-pass-merchant">Target</h3>
+          </div>
+          <div class="v2-pass-icon">🛒</div>
+        </div>
+        <div class="v2-pass-bottom">
+          <div>
+            <p class="v2-pass-discount">$10 off $50</p>
+            <p class="v2-pass-expiry">Expires Jun 30</p>
+          </div>
+          <span class="v2-pass-code">SAVE10</span>
+        </div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<!-- VARIANT 3 -->
+<div class="variant-block" data-block="v3">
+  <p class="variant-label">Variant 3</p>
+  <h2 class="variant-title">Bumble — Bold Card Feed</h2>
+  <p class="variant-desc">
+    Inspired by Bumble's friendly, light-mode aesthetic. Soft cream background, rounded cards, warm gradients, bold typography.
+    Vertical scroll, one tap to claim. Approachable & feminine, broad appeal.
+  </p>
+  <div class="variant-features">
+    <span class="feature-chip">Light mode</span>
+    <span class="feature-chip">Friendly</span>
+    <span class="feature-chip">Bold type</span>
+    <span class="feature-chip">Single column</span>
+  </div>
+  <div class="phone-frame"><div class="phone-screen v3-screen">
+    <div class="v3-header">
+      <h2 class="v3-greeting">Hi <span>Shail!</span></h2>
+      <i class="ti ti-bell-ringing" style="font-size:22px;color:#1a1a1a;"></i>
+    </div>
+    <div class="v3-stats-row">
+      <div class="v3-stat-pill">
+        <p class="v3-stat-num">$234</p>
+        <p class="v3-stat-lbl">Saved</p>
+      </div>
+      <div class="v3-stat-pill">
+        <p class="v3-stat-num">7</p>
+        <p class="v3-stat-lbl">Active</p>
+      </div>
+      <div class="v3-stat-pill">
+        <p class="v3-stat-num">142</p>
+        <p class="v3-stat-lbl">Points</p>
+      </div>
+    </div>
+    <div class="v3-feed">
+      <div class="v3-feed-card">
+        <div class="v3-feed-hero">
+          <span class="v3-feed-cat">Dining · Expires in 4d</span>
+          <p class="v3-feed-discount">FREE grande</p>
+        </div>
+        <div class="v3-feed-body">
+          <div>
+            <h4 class="v3-feed-merchant">Starbucks</h4>
+            <p class="v3-feed-meta">Code SB25 · valid in-store</p>
+          </div>
+          <button class="v3-feed-cta">Claim</button>
+        </div>
+      </div>
+      <div class="v3-feed-card">
+        <div class="v3-feed-hero green">
+          <span class="v3-feed-cat">Groceries · Expires Jun 20</span>
+          <p class="v3-feed-discount">20% off</p>
+        </div>
+        <div class="v3-feed-body">
+          <div>
+            <h4 class="v3-feed-merchant">Whole Foods Market</h4>
+            <p class="v3-feed-meta">Organic produce · code FRESH20</p>
+          </div>
+          <button class="v3-feed-cta">Claim</button>
+        </div>
+      </div>
+      <div class="v3-feed-card">
+        <div class="v3-feed-hero purple">
+          <span class="v3-feed-cat">Travel · Expires Jun 25</span>
+          <p class="v3-feed-discount">$50 off</p>
+        </div>
+        <div class="v3-feed-body">
+          <div>
+            <h4 class="v3-feed-merchant">Marriott</h4>
+            <p class="v3-feed-meta">Weekend stays · code WEEKEND50</p>
+          </div>
+          <button class="v3-feed-cta">Claim</button>
+        </div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<!-- VARIANT 4 -->
+<div class="variant-block" data-block="v4">
+  <p class="variant-label">Variant 4</p>
+  <h2 class="variant-title">Pinterest — Masonry Grid</h2>
+  <p class="variant-desc">
+    Visual discovery feed. Two-column masonry grid with varied heights. Best for browsing many deals at once.
+    Visual-first — color and merchant identity drive the experience. Save button on hover. Best for the "Discover" tab.
+  </p>
+  <div class="variant-features">
+    <span class="feature-chip">High density</span>
+    <span class="feature-chip">Visual discovery</span>
+    <span class="feature-chip">Two-column</span>
+    <span class="feature-chip">Search-first</span>
+  </div>
+  <div class="phone-frame"><div class="phone-screen v4-screen">
+    <div class="v4-header">
+      <div class="v4-search">
+        <i class="ti ti-search"></i> Search deals
+      </div>
+      <i class="ti ti-adjustments-horizontal" style="font-size:22px;"></i>
+    </div>
+    <div class="v4-tabs">
+      <span class="v4-tab-chip active">For you</span>
+      <span class="v4-tab-chip">Trending</span>
+      <span class="v4-tab-chip">Dining</span>
+      <span class="v4-tab-chip">Apparel</span>
+      <span class="v4-tab-chip">Travel</span>
+      <span class="v4-tab-chip">Home</span>
+    </div>
+    <div class="v4-masonry">
+      <div class="v4-pin">
+        <div class="v4-pin-img">20% off</div>
+        <button class="v4-pin-save">Save</button>
+        <div class="v4-pin-overlay">
+          <p class="v4-pin-merchant">Whole Foods</p>
+          <p class="v4-pin-discount">Organic produce</p>
+        </div>
+      </div>
+      <div class="v4-pin">
+        <div class="v4-pin-img">FREE</div>
+        <button class="v4-pin-save">Save</button>
+        <div class="v4-pin-overlay">
+          <p class="v4-pin-merchant">Starbucks</p>
+          <p class="v4-pin-discount">Grande drink</p>
+        </div>
+      </div>
+      <div class="v4-pin">
+        <div class="v4-pin-img">$50</div>
+        <button class="v4-pin-save">Save</button>
+        <div class="v4-pin-overlay">
+          <p class="v4-pin-merchant">Marriott</p>
+          <p class="v4-pin-discount">Weekend stays</p>
+        </div>
+      </div>
+      <div class="v4-pin">
+        <div class="v4-pin-img">25%</div>
+        <button class="v4-pin-save">Save</button>
+        <div class="v4-pin-overlay">
+          <p class="v4-pin-merchant">Nike</p>
+          <p class="v4-pin-discount">Sale items</p>
+        </div>
+      </div>
+      <div class="v4-pin">
+        <div class="v4-pin-img">$10</div>
+        <button class="v4-pin-save">Save</button>
+        <div class="v4-pin-overlay">
+          <p class="v4-pin-merchant">Target</p>
+          <p class="v4-pin-discount">$50 minimum</p>
+        </div>
+      </div>
+      <div class="v4-pin">
+        <div class="v4-pin-img">40%</div>
+        <button class="v4-pin-save">Save</button>
+        <div class="v4-pin-overlay">
+          <p class="v4-pin-merchant">Old Navy</p>
+          <p class="v4-pin-discount">Site-wide</p>
+        </div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<!-- VARIANT 5 -->
+<div class="variant-block" data-block="v5">
+  <p class="variant-label">Variant 5</p>
+  <h2 class="variant-title">Honey/Rakuten — Hybrid Dashboard</h2>
+  <p class="variant-desc">
+    Inspired by Honey's bright yellow brand and Rakuten's rewards-first approach. Hero savings card up top, category icons, horizontal carousels.
+    Maximum information at a glance. Best for the "Home" tab — the dashboard.
+  </p>
+  <div class="variant-features">
+    <span class="feature-chip">Information-rich</span>
+    <span class="feature-chip">Hero metric</span>
+    <span class="feature-chip">Category nav</span>
+    <span class="feature-chip">Carousels</span>
+  </div>
+  <div class="phone-frame"><div class="phone-screen v5-screen">
+    <div class="v5-header">
+      <div class="v5-logo">Per<span>q</span></div>
+      <div class="v5-bell"><i class="ti ti-bell" style="color:#1a1a1a;"></i></div>
+    </div>
+    <div class="v5-savings-card">
+      <p class="v5-savings-lbl">Total saved this year</p>
+      <h2 class="v5-savings-amt">$1,247</h2>
+      <p class="v5-savings-trend"><i class="ti ti-trending-up"></i> +$84 this week</p>
+    </div>
+    <div class="v5-cats">
+      <div class="v5-cat"><div class="v5-cat-emoji">🛒</div><p class="v5-cat-lbl">Groceries</p></div>
+      <div class="v5-cat"><div class="v5-cat-emoji">☕</div><p class="v5-cat-lbl">Dining</p></div>
+      <div class="v5-cat"><div class="v5-cat-emoji">👗</div><p class="v5-cat-lbl">Apparel</p></div>
+      <div class="v5-cat"><div class="v5-cat-emoji">✈️</div><p class="v5-cat-lbl">Travel</p></div>
+    </div>
+    <h3 class="v5-section-title">Expiring soon <a>See all</a></h3>
+    <div class="v5-carousel">
+      <div class="v5-deal-card">
+        <div class="v5-deal-hero">
+          <span class="v5-deal-pct">FREE</span>
+          <span class="v5-deal-merchant-overlay">Starbucks</span>
+        </div>
+        <div class="v5-deal-body">
+          <p class="v5-deal-discount">Grande drink</p>
+          <p class="v5-deal-expiry">Expires in 4 days</p>
+          <button class="v5-deal-cta">Use now</button>
+        </div>
+      </div>
+      <div class="v5-deal-card">
+        <div class="v5-deal-hero green">
+          <span class="v5-deal-pct">20%</span>
+          <span class="v5-deal-merchant-overlay">Whole Foods</span>
+        </div>
+        <div class="v5-deal-body">
+          <p class="v5-deal-discount">Organic produce</p>
+          <p class="v5-deal-expiry">Expires Jun 20</p>
+          <button class="v5-deal-cta">Use now</button>
+        </div>
+      </div>
+      <div class="v5-deal-card">
+        <div class="v5-deal-hero purple">
+          <span class="v5-deal-pct">$50</span>
+          <span class="v5-deal-merchant-overlay">Marriott</span>
+        </div>
+        <div class="v5-deal-body">
+          <p class="v5-deal-discount">Weekend stays</p>
+          <p class="v5-deal-expiry">Expires Jun 25</p>
+          <button class="v5-deal-cta">Use now</button>
+        </div>
+      </div>
+    </div>
+    <h3 class="v5-section-title">Trending nearby <a>See all</a></h3>
+    <div class="v5-carousel">
+      <div class="v5-deal-card">
+        <div class="v5-deal-hero">
+          <span class="v5-deal-pct">25%</span>
+          <span class="v5-deal-merchant-overlay">Nike</span>
+        </div>
+        <div class="v5-deal-body">
+          <p class="v5-deal-discount">Sale items</p>
+          <p class="v5-deal-expiry">2 mi away</p>
+          <button class="v5-deal-cta">Use now</button>
+        </div>
+      </div>
+      <div class="v5-deal-card">
+        <div class="v5-deal-hero green">
+          <span class="v5-deal-pct">40%</span>
+          <span class="v5-deal-merchant-overlay">Old Navy</span>
+        </div>
+        <div class="v5-deal-body">
+          <p class="v5-deal-discount">Site-wide</p>
+          <p class="v5-deal-expiry">3 mi away</p>
+          <button class="v5-deal-cta">Use now</button>
+        </div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<script>
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const variant = tab.getAttribute('data-variant');
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.variant-block').forEach(b => b.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelector('.variant-block[data-block="' + variant + '"]').classList.add('active');
+    window.scrollTo({ top: 200, behavior: 'smooth' });
+  });
+});
+</script>
+
+</body>
+</html>
