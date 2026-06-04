@@ -34,6 +34,32 @@ All notable feature changes to the Perq app are documented here.
 
 ### 🐛 Fix: Daily Spin toast no longer floats over every screen
 
+**Before:** The "+1 daily spin" notification appeared as a floating pill on every screen — including modals, forms, and deal cards — blocking content.
+
+**After:** Removed entirely. The existing "1 spin ready → Spin now" card on the Home screen is the only prompt — tapping it navigates to Rewards.
+
+---
+
+### 🆕 Feature: Backend AI Proxy (no API key required)
+
+**What a user couldn't do yesterday:**
+- Had to go into Settings and paste their own Anthropic API key before the camera scan would work. Most users would never do this.
+
+**What a user can do today:**
+- **Just snap a photo.** The app calls a backend proxy that holds the API key server-side. Zero configuration needed.
+- Falls back gracefully to user's own key if the proxy is unreachable.
+- Rate limited (10 scans/min) to prevent abuse.
+
+### Deployment (one-time setup for the developer):
+```bash
+cd backend/ocr-proxy
+npm install
+wrangler login
+wrangler secret put ANTHROPIC_API_KEY
+npm run deploy
+```
+Then set the `OCR_PROXY_URL` constant in `app.js` to your Worker URL.
+
 ### Technical details:
 - Uses `@capacitor/local-notifications` scheduled notification API
 - Notifications scheduled at creation time, not checked on a polling loop
