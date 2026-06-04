@@ -30,6 +30,9 @@
       "smallIcon": "ic_stat_perq",
       "iconColor": "#1B6C8C",
       "sound": "default"
+    },
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
     }
   }
 }
