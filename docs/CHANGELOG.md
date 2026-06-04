@@ -6,6 +6,33 @@ All notable feature changes to the Perq app are documented here.
 
 ## [Unreleased] — 2026-06-04
 
+### 🆕 Phase 4: Deal Discovery + Enhanced Gamification
+
+**Crawled Deals — What users couldn't do yesterday:**
+- The only deals in the app were ones you manually added. No way to browse or discover new deals passively.
+
+**What users can do today:**
+- **Discover tab.** A personalized feed of public deals crawled from coupon aggregators (Slickdeals, DealNews, RetailMeNot RSS feeds).
+- **Category filter chips.** Tap Groceries, Apparel, Travel, etc. to filter the discovery feed.
+- **Preference-ranked.** Deals matching your profile preferences appear first.
+- **One-tap claim.** Tap "Claim" on any discovered deal → adds to your wallet with reminders.
+- **Crawler runs every 6 hours** (Cloudflare Cron) — fresh deals daily.
+- **Offline fallback.** When crawler isn't deployed, a curated local pool provides 12+ rotating deals.
+
+**Achievements — What users couldn't do yesterday:**
+- Gamification was limited to spin wheel + points + streaks. No long-term progression goals.
+
+**What users can do today:**
+- **10 achievements** to unlock, each worth 25 bonus points:
+  - 🏆 First Snap, Deal Hoarder (10 deals), Social Butterfly (5 shares)
+  - 💰 Super Saver ($100 redeemed), Week Warrior (7-day streak), Jackpot Winner
+  - ⚡ Quick Draw (barcode scan), Autopilot (email connected), Deal Claimer (3 claims), Variety Pack (5 categories)
+- **Visual progress.** Achievements displayed with locked/unlocked state in the For You tab.
+- **Auto-detection.** Achievements unlock automatically as you use the app — no action needed.
+- **Toast celebration.** "🏆 Achievement: First Snap" appears when you unlock one.
+
+---
+
 ### 🆕 Feature: Snap & Forget — Smart Scheduled Reminders
 
 **What a user couldn't do yesterday:**
