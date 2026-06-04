@@ -30,9 +30,9 @@ The foundational **Capture → Remind → Redeem** loop.
 
 | # | Feature | Status | Description |
 |---|---------|--------|-------------|
-| 2.1 | Share Deals | ✅ Done | Native share sheet — share deal with friends via link/message |
-| 2.2 | Claim Shared Deals | 🔜 Planned | Tap to claim a deal someone shared with you |
-| 2.3 | Deal Feed | 🔜 Planned | See what deals friends are saving (opt-in social) |
+| 2.1 | Share Deals | ✅ Done | Deep-link sharing with encoded deal data + native share sheet |
+| 2.2 | Claim Shared Deals | ✅ Done | Tap share link → deal auto-imports with confirmation modal |
+| 2.3 | Deal Feed | ✅ Done | Activity feed tracking shares, claims, community trending |
 
 ---
 
