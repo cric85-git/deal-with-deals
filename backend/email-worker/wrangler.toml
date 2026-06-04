@@ -6,8 +6,23 @@ compatibility_date = "2024-12-01"
 APP_URL = "https://cric85-git.github.io/deal-with-deals"
 WORKER_URL = "https://perq-email-worker.yourname.workers.dev"
 
-# Set these via: wrangler secret put <NAME>
+# KV Namespace bindings (create via: wrangler kv:namespace create <NAME>)
+[[kv_namespaces]]
+binding = "TOKENS"
+id = "REPLACE_WITH_TOKENS_KV_ID"
+
+[[kv_namespaces]]
+binding = "DEALS"
+id = "REPLACE_WITH_DEALS_KV_ID"
+
+[[kv_namespaces]]
+binding = "DEVICES"
+id = "REPLACE_WITH_DEVICES_KV_ID"
+
+# Secrets (set via: wrangler secret put <NAME>):
 # GOOGLE_CLIENT_ID
 # GOOGLE_CLIENT_SECRET
 # MICROSOFT_CLIENT_ID
 # MICROSOFT_CLIENT_SECRET
+# FCM_SERVER_KEY
+# GMAIL_PUBSUB_TOPIC (e.g. projects/perq-app/topics/gmail-push)
