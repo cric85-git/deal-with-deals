@@ -123,6 +123,51 @@ https://yourapp.com/index.html?claim=<base64-encoded-deal-data>
 4. +5 points awarded
 ```
 
+---
+
+## Phase 3: Integrations & Aggregation — 2026-06-04
+
+### 🆕 Feature: Email Integration Backend
+
+**What a user couldn't do yesterday:**
+- No way to automatically import deals from promotional emails. Had to manually snap or type every deal.
+
+**What a user can do today:**
+- **Connect Gmail or Outlook** via OAuth (backend handles tokens securely).
+- Backend worker parses incoming emails for deal keywords, extracts merchant/discount/code/expiry.
+- Auto-imports extracted deals to user's Perq wallet.
+- Status check + disconnect endpoint for privacy control.
+
+*Note: Requires deploying `backend/email-worker` with OAuth credentials. The client UI intent capture is already live.*
+
+---
+
+### 🆕 Feature: Reward Programs Tracker
+
+**What a user couldn't do yesterday:**
+- No way to track airline miles, hotel points, or credit card rewards in the same app. Had to open separate apps to check balances and expiry.
+
+**What a user can do today:**
+- **Add reward programs** (Delta SkyMiles, Marriott Bonvoy, Chase Sapphire, etc.) with balance, unit, and expiry.
+- **Expiry countdown** — programs with points expiring soon show warnings (≤30d = red, ≤90d = yellow).
+- **Type-specific icons** — airline ✈️, hotel 🏨, credit card 💳, cashback 💵.
+- **Delete programs** when no longer needed.
+- All accessible from the "For You" tab.
+
+---
+
+### 🆕 Feature: Loyalty Cards Wallet
+
+**What a user couldn't do yesterday:**
+- Had to carry physical loyalty cards or dig through separate wallet apps to find membership numbers at checkout.
+
+**What a user can do today:**
+- **Store loyalty/membership cards** with name, card number, and custom color.
+- **Quick access** from the "For You" tab — no searching.
+- **Color-coded cards** for easy visual identification.
+- **Delete cards** when expired or no longer needed.
+- Card numbers displayed in monospace for easy reading at checkout.
+
 ### Technical details:
 - Uses `@capacitor/local-notifications` scheduled notification API
 - Notifications scheduled at creation time, not checked on a polling loop

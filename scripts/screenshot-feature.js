@@ -179,6 +179,30 @@ const fs = require('fs');
   await page.screenshot({ path: path.join(outputDir, '06-social-feed.png') });
   console.log('✅ 06-social-feed.png — Social tab with activity feed');
 
+  // Screenshot 7: For You tab with reward programs + loyalty cards
+  await page.evaluate(() => {
+    // Add sample reward programs and loyalty cards
+    localStorage.setItem('perq:rewardPrograms', JSON.stringify([
+      { id: 'rp1', name: 'Delta SkyMiles', balance: '52400', unit: 'miles', expiry: '2027-03-15', type: 'airline', icon: 'plane', addedAt: Date.now() },
+      { id: 'rp2', name: 'Marriott Bonvoy', balance: '18200', unit: 'points', expiry: '2026-08-01', type: 'hotel', icon: 'building', addedAt: Date.now() },
+      { id: 'rp3', name: 'Chase Sapphire', balance: '34100', unit: 'points', expiry: null, type: 'creditcard', icon: 'credit-card', addedAt: Date.now() }
+    ]));
+    localStorage.setItem('perq:loyaltyCards', JSON.stringify([
+      { id: 'lc1', name: 'Costco Membership', number: '1234 5678 9012 3456', color: '#DC2626', addedAt: Date.now() },
+      { id: 'lc2', name: 'CVS ExtraCare', number: '8901234567', color: '#059669', addedAt: Date.now() }
+    ]));
+  });
+  await page.reload();
+  await page.waitForTimeout(1500);
+  await page.evaluate(() => {
+    document.querySelectorAll('.nav-btn').forEach(b => {
+      if (b.getAttribute('data-tab') === 'suggest') b.click();
+    });
+  });
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: path.join(outputDir, '07-for-you-programs.png') });
+  console.log('✅ 07-for-you-programs.png — For You tab with rewards + loyalty cards');
+
   await browser.close();
   console.log('\n📸 All screenshots saved to docs/screenshots/');
 })();
