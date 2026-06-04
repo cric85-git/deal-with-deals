@@ -1,0 +1,13 @@
+name = "perq-email-worker"
+main = "src/index.js"
+compatibility_date = "2024-12-01"
+
+[vars]
+APP_URL = "https://cric85-git.github.io/deal-with-deals"
+WORKER_URL = "https://perq-email-worker.yourname.workers.dev"
+
+# Set these via: wrangler secret put <NAME>
+# GOOGLE_CLIENT_ID
+# GOOGLE_CLIENT_SECRET
+# MICROSOFT_CLIENT_ID
+# MICROSOFT_CLIENT_SECRET

@@ -5,7 +5,7 @@
   const STORAGE_KEY_NAMES = [
     'deals', 'rewards', 'game', 'quests', 'seeded', 'installDismissed',
     'apiKey', 'settings', 'notified', 'geocache', 'userLoc', 'profile',
-    'emailConnection', 'beaconNotified'
+    'emailConnection', 'beaconNotified', 'rewardPrograms', 'loyaltyCards'
   ];
   const LEGACY_STORAGE_PREFIX = String.fromCharCode(100, 119, 100, 58);
   const KEYS = Object.fromEntries(STORAGE_KEY_NAMES.map(name => [name, STORAGE_PREFIX + name]));
@@ -1659,13 +1659,95 @@ Return only the JSON, no other text.`;
   function renderSuggest() {
     const root = document.getElementById('panel-suggest');
     const sugg = suggestions();
+    const programs = load(KEYS.rewardPrograms, []);
+    const cards = load(KEYS.loyaltyCards, []);
+
+    let programsHtml = '';
+    if (programs.length) {
+      programsHtml = `
+        <p class="section-title"><i class="ti ti-plane"></i>Reward programs</p>
+        ${programs.map(p => {
+          const du = daysUntil(p.expiry);
+          const expiryClass = du !== null && du <= 30 ? 'var(--text-danger)' : du !== null && du <= 90 ? 'var(--text-warning)' : 'var(--text-secondary)';
+          const expiryText = du === null ? '' : du <= 0 ? ' · EXPIRED' : ` · ${du}d left`;
+          return `
+            <div class="card" style="display:flex; align-items:center; gap:12px;">
+              <div style="width:40px; height:40px; border-radius:10px; background:var(--bg-info); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <i class="ti ti-${p.icon || 'star'}" style="font-size:20px; color:var(--text-info);"></i>
+              </div>
+              <div style="flex:1; min-width:0;">
+                <p style="margin:0; font-weight:500; font-size:14px;">${escapeHtml(p.name)}</p>
+                <p style="margin:2px 0 0; font-size:12px; color:var(--text-secondary);">
+                  ${escapeHtml(p.balance)} ${escapeHtml(p.unit)}
+                  <span style="color:${expiryClass};">${expiryText}</span>
+                </p>
+              </div>
+              <button data-delete-program="${escapeHtml(p.id)}" style="background:none; border:none; padding:6px; color:var(--text-tertiary);">
+                <i class="ti ti-x" style="font-size:16px;"></i>
+              </button>
+            </div>
+          `;
+        }).join('')}
+        <button id="btn-add-program" style="width:100%; margin-top:8px; padding:10px; font-size:13px; background:var(--bg-secondary); border:0.5px solid var(--border-secondary); border-radius:var(--radius-md);">
+          <i class="ti ti-plus" style="font-size:14px; vertical-align:-2px; margin-right:4px;"></i> Add reward program
+        </button>
+      `;
+    } else {
+      programsHtml = `
+        <p class="section-title"><i class="ti ti-plane"></i>Reward programs</p>
+        <div class="card" style="text-align:center; padding:20px; color:var(--text-secondary);">
+          <i class="ti ti-plane" style="font-size:32px; display:block; margin-bottom:8px; opacity:0.5;"></i>
+          <p style="margin:0 0 8px; font-size:13px;">Track airline miles, hotel points, credit card rewards.</p>
+          <button id="btn-add-program" style="padding:8px 16px; font-size:13px; background:var(--text-info); color:var(--bg-primary); border:none; border-radius:8px; font-weight:500;">Add program</button>
+        </div>
+      `;
+    }
+
+    let cardsHtml = '';
+    if (cards.length) {
+      cardsHtml = `
+        <p class="section-title"><i class="ti ti-id"></i>Loyalty cards</p>
+        ${cards.map(c => `
+          <div class="card" data-flip-card="${c.id}" style="cursor:pointer; display:flex; align-items:center; gap:12px;">
+            <div style="width:40px; height:40px; border-radius:10px; background:${c.color || 'var(--bg-success)'}; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+              <i class="ti ti-id" style="font-size:20px; color:white;"></i>
+            </div>
+            <div style="flex:1; min-width:0;">
+              <p style="margin:0; font-weight:500; font-size:14px;">${escapeHtml(c.name)}</p>
+              <p style="margin:2px 0 0; font-size:12px; color:var(--text-secondary); font-family:ui-monospace,monospace; letter-spacing:1px;">${escapeHtml(c.number)}</p>
+            </div>
+            <button data-delete-card="${escapeHtml(c.id)}" style="background:none; border:none; padding:6px; color:var(--text-tertiary);">
+              <i class="ti ti-x" style="font-size:16px;"></i>
+            </button>
+          </div>
+        `).join('')}
+        <button id="btn-add-card" style="width:100%; margin-top:8px; padding:10px; font-size:13px; background:var(--bg-secondary); border:0.5px solid var(--border-secondary); border-radius:var(--radius-md);">
+          <i class="ti ti-plus" style="font-size:14px; vertical-align:-2px; margin-right:4px;"></i> Add loyalty card
+        </button>
+      `;
+    } else {
+      cardsHtml = `
+        <p class="section-title"><i class="ti ti-id"></i>Loyalty cards</p>
+        <div class="card" style="text-align:center; padding:20px; color:var(--text-secondary);">
+          <i class="ti ti-id" style="font-size:32px; display:block; margin-bottom:8px; opacity:0.5;"></i>
+          <p style="margin:0 0 8px; font-size:13px;">Store membership & loyalty cards with barcodes.</p>
+          <button id="btn-add-card" style="padding:8px 16px; font-size:13px; background:var(--text-info); color:var(--bg-primary); border:none; border-radius:8px; font-weight:500;">Add card</button>
+        </div>
+      `;
+    }
+
     root.innerHTML = `
       <div class="card" style="background: var(--bg-info); border-color: var(--bg-info); margin-bottom: 14px;">
         <p style="margin: 0; font-size: 13px; color: var(--text-info); line-height: 1.5;">
           <i class="ti ti-sparkles" style="font-size: 14px; vertical-align: -2px; margin-right: 4px;"></i>
-          Based on your preferences and saved deals, here are picks you might like — tap <strong>Claim</strong> to add them to your tracked deals.
+          Your personal savings hub — reward programs, loyalty cards, and curated deal picks all in one place.
         </p>
       </div>
+
+      ${programsHtml}
+      ${cardsHtml}
+
+      <p class="section-title"><i class="ti ti-sparkles"></i>Recommended deals</p>
       ${sugg.map((s, i) => `
         <div class="card" style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
           <div style="min-width:0;">
@@ -1676,6 +1758,8 @@ Return only the JSON, no other text.`;
         </div>
       `).join('')}
     `;
+
+    // Wire suggestion buttons
     root.querySelectorAll('[data-add-sugg]').forEach(b=>{
       b.addEventListener('click', () => {
         const s = sugg[Number(b.getAttribute('data-add-sugg'))];
@@ -1683,6 +1767,155 @@ Return only the JSON, no other text.`;
         openModalPrefilled({ merchant: s.merchant, discount: s.discount, category: s.category, source: 'App / digital', value: s.value || 10, expiry: t.toISOString().slice(0,10), url: inferUrl(s.merchant) });
       });
     });
+
+    // Wire add program button
+    const addProgramBtn = root.querySelector('#btn-add-program');
+    if (addProgramBtn) addProgramBtn.addEventListener('click', openAddProgram);
+
+    // Wire add card button
+    const addCardBtn = root.querySelector('#btn-add-card');
+    if (addCardBtn) addCardBtn.addEventListener('click', openAddLoyaltyCard);
+
+    // Wire delete buttons
+    root.querySelectorAll('[data-delete-program]').forEach(b => {
+      b.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = b.getAttribute('data-delete-program');
+        const progs = load(KEYS.rewardPrograms, []).filter(p => p.id !== id);
+        save(KEYS.rewardPrograms, progs);
+        renderSuggest();
+      });
+    });
+    root.querySelectorAll('[data-delete-card]').forEach(b => {
+      b.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = b.getAttribute('data-delete-card');
+        const crds = load(KEYS.loyaltyCards, []).filter(c => c.id !== id);
+        save(KEYS.loyaltyCards, crds);
+        renderSuggest();
+      });
+    });
+  }
+
+  // ---------- Add Reward Program Modal ----------
+  function openAddProgram() {
+    const html = `
+      <div class="modal-header"><h3 class="modal-title">Add reward program</h3></div>
+      <div class="form-row"><label>Program name</label><input id="rp-name" placeholder="e.g. Delta SkyMiles, Marriott Bonvoy"></div>
+      <div class="form-grid">
+        <div class="form-row"><label>Balance</label><input id="rp-balance" type="number" placeholder="50000"></div>
+        <div class="form-row"><label>Unit</label><input id="rp-unit" placeholder="miles, points"></div>
+      </div>
+      <div class="form-row"><label>Expiry date (if any)</label><input id="rp-expiry" type="date"></div>
+      <div class="form-row"><label>Type</label>
+        <select id="rp-type">
+          <option value="airline">Airline miles</option>
+          <option value="hotel">Hotel points</option>
+          <option value="creditcard">Credit card rewards</option>
+          <option value="cashback">Cashback</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-actions">
+        <button id="rp-cancel">Cancel</button>
+        <button id="rp-save" class="btn-primary">Save program</button>
+      </div>
+    `;
+    showGenericModal(html, (modal) => {
+      modal.querySelector('#rp-cancel').addEventListener('click', closeGenericModal);
+      modal.querySelector('#rp-save').addEventListener('click', () => {
+        const name = modal.querySelector('#rp-name').value.trim();
+        if (!name) { showToast('Name required'); return; }
+        const typeIcons = { airline: 'plane', hotel: 'building', creditcard: 'credit-card', cashback: 'cash', other: 'star' };
+        const type = modal.querySelector('#rp-type').value;
+        const program = {
+          id: uid(),
+          name,
+          balance: modal.querySelector('#rp-balance').value || '0',
+          unit: modal.querySelector('#rp-unit').value || 'points',
+          expiry: modal.querySelector('#rp-expiry').value || null,
+          type,
+          icon: typeIcons[type] || 'star',
+          addedAt: Date.now()
+        };
+        const programs = load(KEYS.rewardPrograms, []);
+        programs.push(program);
+        save(KEYS.rewardPrograms, programs);
+        closeGenericModal();
+        showToast('Program added');
+        renderAll();
+      });
+    });
+  }
+
+  // ---------- Add Loyalty Card Modal ----------
+  function openAddLoyaltyCard() {
+    const html = `
+      <div class="modal-header"><h3 class="modal-title">Add loyalty card</h3></div>
+      <div class="form-row"><label>Store / program name</label><input id="lc-name" placeholder="e.g. Costco, CVS ExtraCare"></div>
+      <div class="form-row"><label>Card / member number</label><input id="lc-number" placeholder="1234 5678 9012"></div>
+      <div class="form-row"><label>Color</label>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;" id="lc-colors">
+          <span data-color="#2563EB" style="width:32px; height:32px; border-radius:8px; background:#2563EB; cursor:pointer; border:2px solid transparent;"></span>
+          <span data-color="#DC2626" style="width:32px; height:32px; border-radius:8px; background:#DC2626; cursor:pointer; border:2px solid transparent;"></span>
+          <span data-color="#059669" style="width:32px; height:32px; border-radius:8px; background:#059669; cursor:pointer; border:2px solid transparent;"></span>
+          <span data-color="#7C3AED" style="width:32px; height:32px; border-radius:8px; background:#7C3AED; cursor:pointer; border:2px solid transparent;"></span>
+          <span data-color="#D97706" style="width:32px; height:32px; border-radius:8px; background:#D97706; cursor:pointer; border:2px solid transparent;"></span>
+          <span data-color="#1F2937" style="width:32px; height:32px; border-radius:8px; background:#1F2937; cursor:pointer; border:2px solid transparent;"></span>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button id="lc-cancel">Cancel</button>
+        <button id="lc-save" class="btn-primary">Save card</button>
+      </div>
+    `;
+    let selectedColor = '#2563EB';
+    showGenericModal(html, (modal) => {
+      modal.querySelectorAll('[data-color]').forEach(el => {
+        el.addEventListener('click', () => {
+          selectedColor = el.getAttribute('data-color');
+          modal.querySelectorAll('[data-color]').forEach(e => e.style.border = '2px solid transparent');
+          el.style.border = '2px solid var(--text-primary)';
+        });
+      });
+      // Select first by default
+      modal.querySelector('[data-color]').style.border = '2px solid var(--text-primary)';
+
+      modal.querySelector('#lc-cancel').addEventListener('click', closeGenericModal);
+      modal.querySelector('#lc-save').addEventListener('click', () => {
+        const name = modal.querySelector('#lc-name').value.trim();
+        const number = modal.querySelector('#lc-number').value.trim();
+        if (!name || !number) { showToast('Name and number required'); return; }
+        const card = { id: uid(), name, number, color: selectedColor, addedAt: Date.now() };
+        const cards = load(KEYS.loyaltyCards, []);
+        cards.push(card);
+        save(KEYS.loyaltyCards, cards);
+        closeGenericModal();
+        showToast('Card added');
+        renderAll();
+      });
+    });
+  }
+
+  // ---------- Generic Modal Helper ----------
+  function showGenericModal(innerHTML, wireCallback) {
+    let overlay = document.getElementById('modal-generic');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'modal-generic';
+      overlay.className = 'modal-overlay center';
+      overlay.innerHTML = '<div class="modal center-modal" id="modal-generic-content"></div>';
+      document.body.appendChild(overlay);
+    }
+    const content = overlay.querySelector('#modal-generic-content');
+    content.innerHTML = innerHTML;
+    overlay.classList.add('active');
+    if (wireCallback) wireCallback(content);
+  }
+
+  function closeGenericModal() {
+    const overlay = document.getElementById('modal-generic');
+    if (overlay) overlay.classList.remove('active');
   }
 
   function buildWheelSVG() {
