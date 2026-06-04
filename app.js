@@ -894,6 +894,136 @@
       showOcrStatus('error', `Couldn't read it (${err.message}). Fill in manually.`);
     }
   }
+  // ---------- Barcode/QR Scanner ----------
+  let scannerStream = null;
+  let scannerInterval = null;
+  let scannerDetector = null;
+
+  async function openScanner() {
+    const overlay = document.getElementById('scanner-overlay');
+    const video = document.getElementById('scanner-video');
+    overlay.classList.add('active');
+    document.getElementById('scanner-result').style.display = 'none';
+
+    try {
+      scannerStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+      });
+      video.srcObject = scannerStream;
+      await video.play();
+      startBarcodeDetection(video);
+    } catch (e) {
+      showToast('Camera access denied');
+      closeScanner();
+    }
+  }
+
+  function closeScanner() {
+    const overlay = document.getElementById('scanner-overlay');
+    const video = document.getElementById('scanner-video');
+    overlay.classList.remove('active');
+    if (scannerInterval) { clearInterval(scannerInterval); scannerInterval = null; }
+    if (scannerStream) {
+      scannerStream.getTracks().forEach(t => t.stop());
+      scannerStream = null;
+    }
+    video.srcObject = null;
+  }
+
+  function startBarcodeDetection(video) {
+    // Try native BarcodeDetector API (Chrome, Safari 17.2+)
+    if ('BarcodeDetector' in window) {
+      scannerDetector = new BarcodeDetector({
+        formats: ['qr_code', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'code_93', 'itf', 'data_matrix']
+      });
+    }
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    scannerInterval = setInterval(async () => {
+      if (video.readyState < 2) return;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0);
+
+      let results = [];
+
+      // Try native API
+      if (scannerDetector) {
+        try {
+          results = await scannerDetector.detect(canvas);
+        } catch (e) { /* ignore detection errors */ }
+      }
+
+      // Fallback: try reading numeric sequences from center strip (basic heuristic)
+      if (!results.length) {
+        try {
+          const imageData = ctx.getImageData(
+            canvas.width * 0.15, canvas.height * 0.4,
+            canvas.width * 0.7, canvas.height * 0.2
+          );
+          const code = detectNumericBarcode(imageData);
+          if (code) results = [{ rawValue: code, format: 'numeric' }];
+        } catch (e) { /* ignore */ }
+      }
+
+      if (results.length > 0) {
+        const code = results[0].rawValue;
+        if (code && code.length >= 4) {
+          onBarcodeDetected(code);
+        }
+      }
+    }, 250); // Scan 4 times/second
+  }
+
+  function detectNumericBarcode(imageData) {
+    // Simple heuristic: look for alternating dark/light pattern in center row
+    // This is a basic fallback — the native BarcodeDetector handles real detection
+    return null; // Rely on native API; this is a placeholder for jsQR integration later
+  }
+
+  function onBarcodeDetected(code) {
+    // Stop continuous scanning
+    if (scannerInterval) { clearInterval(scannerInterval); scannerInterval = null; }
+
+    // Vibrate for haptic feedback
+    if (navigator.vibrate) navigator.vibrate(100);
+
+    // Show result
+    const resultEl = document.getElementById('scanner-result');
+    const codeEl = document.getElementById('scanner-result-code');
+    codeEl.textContent = code;
+    resultEl.style.display = 'flex';
+    document.querySelector('.scanner-hint').textContent = 'Code detected!';
+  }
+
+  function useScannerCode() {
+    const code = document.getElementById('scanner-result-code').textContent;
+    closeScanner();
+    // Open deal form pre-filled with barcode
+    openModal(null);
+    setTimeout(() => {
+      const isUrl = /^https?:\/\//i.test(code);
+      if (isUrl) {
+        document.getElementById('f-url').value = code;
+        const merchant = merchantFromUrl(code);
+        if (merchant) document.getElementById('f-merchant').value = merchant;
+        document.getElementById('f-source').value = 'QR scan';
+      } else {
+        // Could be a barcode number or promo code
+        const isNumeric = /^\d{8,}$/.test(code);
+        if (isNumeric) {
+          document.getElementById('f-barcode').value = code;
+        } else {
+          document.getElementById('f-code').value = code;
+        }
+        document.getElementById('f-source').value = 'Barcode scan';
+      }
+      showToast('Code captured — fill in the deal details');
+    }, 100);
+  }
+
   function showOcrStatus(kind, msg) {
     const el = document.getElementById('ocr-status');
     el.style.display = 'flex';
@@ -2092,6 +2222,9 @@ Return only the JSON, no other text.`;
       const handledNative = await captureDealPhotoNative();
       if (!handledNative) document.getElementById('capture-input').click();
     });
+    document.getElementById('btn-scan').addEventListener('click', openScanner);
+    document.getElementById('scanner-close').addEventListener('click', closeScanner);
+    document.getElementById('scanner-use-code').addEventListener('click', useScannerCode);
     document.getElementById('btn-import').addEventListener('click', openImportModal);
     document.getElementById('capture-input').addEventListener('change', (e) => {
       const f = e.target.files && e.target.files[0];

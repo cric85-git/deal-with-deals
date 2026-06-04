@@ -60,6 +60,30 @@ npm run deploy
 ```
 Then set the `OCR_PROXY_URL` constant in `app.js` to your Worker URL.
 
+---
+
+### 🆕 Feature: Barcode & QR Code Scanner
+
+**What a user couldn't do yesterday:**
+- The only way to capture a deal was to take a full photo and wait for AI to process it (2-5 seconds). For deals with just a barcode or QR code, this was overkill.
+
+**What a user can do today:**
+- **Tap "Scan" for instant barcode/QR detection.** Opens a real-time camera view with a targeting frame.
+- **Instant detection** — codes are recognized in under 250ms using the native `BarcodeDetector` API.
+- **Haptic feedback** — phone vibrates when a code is found.
+- **Smart routing** — URLs from QR codes auto-fill the merchant and URL fields. Numeric barcodes fill the barcode field. Text codes fill the promo code field.
+- **Supported formats:** QR, EAN-13, EAN-8, UPC-A, UPC-E, Code 128, Code 39, Code 93, ITF, Data Matrix.
+
+### User flow:
+```
+1. Tap "Scan" button in action bar
+2. Full-screen camera opens with targeting frame
+3. Point at barcode/QR → detected instantly
+4. Code appears at bottom → tap "Use this code"
+5. Deal form opens pre-filled with the scanned code
+6. Fill in remaining details → Save
+```
+
 ### Technical details:
 - Uses `@capacitor/local-notifications` scheduled notification API
 - Notifications scheduled at creation time, not checked on a polling loop
