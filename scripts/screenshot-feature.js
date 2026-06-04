@@ -157,6 +157,28 @@ const fs = require('fs');
   await page.screenshot({ path: path.join(outputDir, '04-deals-list.png') });
   console.log('✅ 04-deals-list.png — Deal cards with expiry countdown & status');
 
+  // Screenshot 5: Social tab with activity feed
+  await page.evaluate(() => {
+    // Add activity feed data
+    const activity = [
+      { id: 'a1', type: 'share', data: { merchant: 'Whole Foods Market', discount: '20% off produce', dealId: 'demo1' }, timestamp: Date.now() - 3600000, user: 'Demo User' },
+      { id: 'a2', type: 'claim', data: { merchant: 'Starbucks', discount: 'Free grande drink', from: '@thrifty_jen' }, timestamp: Date.now() - 7200000, user: 'Demo User' },
+      { id: 'a3', type: 'share', data: { merchant: 'Target', discount: '$10 off $50+', dealId: 'demo2' }, timestamp: Date.now() - 86400000, user: 'Demo User' }
+    ];
+    localStorage.setItem('perq:activity', JSON.stringify(activity));
+  });
+  await page.reload();
+  await page.waitForTimeout(1500);
+  // Navigate to Social tab
+  await page.evaluate(() => {
+    document.querySelectorAll('.nav-btn').forEach(b => {
+      if (b.getAttribute('data-tab') === 'social') b.click();
+    });
+  });
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: path.join(outputDir, '06-social-feed.png') });
+  console.log('✅ 06-social-feed.png — Social tab with activity feed');
+
   await browser.close();
   console.log('\n📸 All screenshots saved to docs/screenshots/');
 })();
