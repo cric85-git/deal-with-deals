@@ -142,6 +142,32 @@ https://yourapp.com/index.html?claim=<base64-encoded-deal-data>
 
 ---
 
+### 🆕 Feature: Push Notifications + Sync Mechanism
+
+**What a user couldn't do yesterday:**
+- Email deals existed in the backend but had no way to reach the user's phone. The app only checked for deals when manually opened.
+
+**What a user can do today:**
+- **Push notifications for new email deals.** When the backend finds a deal in your email, your phone gets a push notification: "📬 New deal found: Target — 20% off"
+- **Tap notification → deal is synced.** Opens the app, imports the deal, sets reminders. Zero manual steps.
+- **Background sync on foreground.** Every time you open the app, it checks for new email-extracted deals and imports them silently.
+- **Acknowledgment flow.** Once synced, deals are marked as delivered so you never get duplicates.
+- **OAuth callback handling.** After connecting email, the app automatically starts syncing.
+
+### Complete email flow (zero-effort):
+```
+1. One-time: Connect Gmail/Outlook in Settings
+2. Promo email arrives → backend webhook fires
+3. Worker parses email → extracts deal → stores in KV
+4. Push notification sent to phone: "📬 New deal: Target 20% off"
+5. User taps notification (or opens app later)
+6. App syncs → deal card appears → reminders set
+7. Near Target? Proximity alert fires. Expiring? Reminder fires.
+8. User did NOTHING after step 1. Pure autopilot.
+```
+
+---
+
 ### 🆕 Feature: Reward Programs Tracker
 
 **What a user couldn't do yesterday:**

@@ -1038,6 +1038,143 @@
   // OCR proxy endpoint — set after deploying backend/ocr-proxy
   const OCR_PROXY_URL = ''; // e.g. 'https://perq-ocr-proxy.yourname.workers.dev'
 
+  // Email sync endpoint — set after deploying backend/email-worker
+  const EMAIL_WORKER_URL = ''; // e.g. 'https://perq-email-worker.yourname.workers.dev'
+
+  // ---------- Push Notifications & Email Sync ----------
+  async function registerPushToken() {
+    const PushNotifications = nativePlugin('PushNotifications');
+    if (!PushNotifications) return;
+
+    try {
+      const perm = await PushNotifications.requestPermissions();
+      if (perm.receive !== 'granted') return;
+
+      await PushNotifications.register();
+
+      PushNotifications.addListener('registration', async (token) => {
+        if (!EMAIL_WORKER_URL || !profile) return;
+        const userId = profile.email || 'anonymous';
+        try {
+          await fetch(`${EMAIL_WORKER_URL}/api/register-device`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId, token: token.value, platform: isNativeApp() ? 'native' : 'web' })
+          });
+        } catch (e) { /* ignore */ }
+      });
+
+      PushNotifications.addListener('pushNotificationReceived', (notification) => {
+        // When push arrives while app is open, trigger sync
+        if (notification.data && notification.data.action === 'sync') {
+          syncEmailDeals();
+        }
+      });
+
+      PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+        // User tapped the notification — open deals tab
+        if (action.notification?.data?.action === 'sync') {
+          syncEmailDeals().then(() => switchTab('deals'));
+        }
+      });
+    } catch (e) { /* push not available */ }
+  }
+
+  async function syncEmailDeals() {
+    if (!EMAIL_WORKER_URL || !profile) return;
+    const userId = profile.email || '';
+    if (!userId) return;
+
+    try {
+      const resp = await fetch(`${EMAIL_WORKER_URL}/api/sync?userId=${encodeURIComponent(userId)}`);
+      if (!resp.ok) return;
+      const data = await resp.json();
+
+      if (!data.deals || !data.deals.length) return;
+
+      // Import new deals
+      const newIds = [];
+      for (const deal of data.deals) {
+        // Avoid duplicates
+        const exists = deals.find(d => d.merchant === deal.merchant && d.discount === deal.discount && d.expiry === deal.expiry);
+        if (exists) continue;
+
+        const newDeal = {
+          id: deal.id || uid(),
+          merchant: deal.merchant,
+          discount: deal.discount,
+          value: deal.value || 10,
+          category: deal.category || 'Other',
+          source: 'Email auto-import',
+          code: deal.code || '',
+          barcode: deal.barcode || '',
+          expiry: deal.expiry || '',
+          notes: deal.notes || 'Auto-imported from email',
+          url: deal.url || inferUrl(deal.merchant),
+          redeemed: false,
+          shared: false,
+          createdAt: Date.now()
+        };
+        deals.push(newDeal);
+        scheduleExpiryReminders(newDeal);
+        newIds.push(deal.id);
+      }
+
+      if (newIds.length > 0) {
+        save(KEYS.deals, deals);
+        renderAll();
+        showToast(`📬 ${newIds.length} deal${newIds.length === 1 ? '' : 's'} imported from email`);
+
+        // Acknowledge synced deals
+        await fetch(`${EMAIL_WORKER_URL}/api/sync/ack`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, dealIds: newIds })
+        });
+      }
+    } catch (e) {
+      // Sync failed silently — will retry next time
+    }
+  }
+
+  async function checkEmailConnection() {
+    if (!EMAIL_WORKER_URL || !profile || !profile.email) return;
+    try {
+      const resp = await fetch(`${EMAIL_WORKER_URL}/api/status?userId=${encodeURIComponent(profile.email)}`);
+      if (!resp.ok) return;
+      const data = await resp.json();
+      if (data.connected) {
+        emailConnection.status = 'connected';
+        emailConnection.provider = data.provider;
+        save(KEYS.emailConnection, emailConnection);
+        renderProfileSummary();
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  async function startEmailOAuth(provider) {
+    if (!EMAIL_WORKER_URL || !profile || !profile.email) {
+      showToast('Set up your profile first');
+      return;
+    }
+    try {
+      const resp = await fetch(`${EMAIL_WORKER_URL}/oauth/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider, userId: profile.email })
+      });
+      const data = await resp.json();
+      if (data.authUrl) {
+        // Open OAuth in browser/in-app browser
+        window.open(data.authUrl, '_blank');
+      } else {
+        showToast(data.error || 'Could not start connection');
+      }
+    } catch (e) {
+      showToast('Connection failed — check network');
+    }
+  }
+
   async function runOcr(dataUrl, apiKey) {
     const match = dataUrl.match(/^data:(image\/[a-z]+);base64,(.+)$/);
     if (!match) throw new Error('Invalid image format');
@@ -2664,6 +2801,19 @@ Return only the JSON, no other text.`;
     // Handle deep links from manifest shortcuts
     try {
       const action = params.get('action');
+
+      // Handle OAuth callback from email worker
+      if (params.get('email_connected') === '1') {
+        const provider = params.get('provider') || '';
+        emailConnection = { requested: true, provider, status: 'connected', connectedAt: Date.now() };
+        save(KEYS.emailConnection, emailConnection);
+        renderProfileSummary();
+        showToast(`✅ ${provider || 'Email'} connected — deals will auto-import`);
+        syncEmailDeals();
+        // Clean URL
+        window.history.replaceState({}, '', location.pathname);
+      }
+
       // Check for incoming claim link first
       const claimHandled = handleIncomingClaim(params);
       if (!claimHandled) {
@@ -2681,11 +2831,18 @@ Return only the JSON, no other text.`;
     // Run reminder check on load and every time the app comes back to foreground
     checkAndSendReminders();
     scheduleAllDealReminders();
+
+    // Register push token and sync email deals
+    registerPushToken();
+    syncEmailDeals();
+    checkEmailConnection();
+
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
         refreshDailyQuests();
         const r = autoGrantDailySpin();
         checkAndSendReminders();
+        syncEmailDeals(); // Sync on foreground
         if (settings.nearbyOn) {
           startBeaconWatch();
           findNearbyDeals();
