@@ -50,10 +50,10 @@ The foundational **Capture → Remind → Redeem** loop.
 
 | # | Feature | Status | Description |
 |---|---------|--------|-------------|
-| 4.1 | Crawled Deals | 📋 Planned | Non-copyrighted public deals surfaced by preference/location |
-| 4.2 | Personalized Feed | 📋 Planned | ML recommendations from usage patterns |
-| 4.3 | Gamification | ✅ Done | Streaks, spin wheel, points, tiers, daily quests |
-| 4.4 | Freemium Gate | 📋 Planned | Free tier (X claims/month), premium unlocks unlimited |
+| 4.1 | Crawled Deals | ✅ Done | Cloudflare Worker crawler (RSS feeds, cron every 6h) + personalized discovery feed |
+| 4.2 | Personalized Feed | ✅ Done | Category-filtered discovery, preference-ranked results |
+| 4.3 | Gamification | ✅ Done | 10 achievements, streak system, spin wheel, tiers, daily quests, points |
+| 4.4 | Freemium Gate | 📋 P1 Fast-follow | Free tier (X claims/month), premium unlocks unlimited |
 
 ---
 
