@@ -130,7 +130,7 @@
 
   /* Action bar — labeled, prominent */
   .action-bar {
-    display: grid; grid-template-columns: 2fr 1fr 1fr;
+    display: grid; grid-template-columns: 2fr 1fr 1fr 1fr;
     gap: 8px; margin-bottom: 12px;
   }
   .action-bar.hidden { display: none; }
@@ -460,6 +460,88 @@
     max-width: calc(100% - 32px); text-align: center;
   }
   .toast.show { display: block; }
+
+  /* Barcode/QR Scanner Overlay */
+  .scanner-overlay {
+    position: fixed; inset: 0;
+    background: #000;
+    z-index: 500;
+    display: none;
+    flex-direction: column;
+  }
+  .scanner-overlay.active { display: flex; }
+  .scanner-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px;
+    padding-top: calc(12px + var(--safe-top));
+    background: rgba(0,0,0,0.8);
+    color: white;
+  }
+  .scanner-close {
+    background: rgba(255,255,255,0.15); border: none;
+    border-radius: 50%; width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    color: white; cursor: pointer;
+  }
+  .scanner-close i { font-size: 20px; }
+  .scanner-title { font-size: 15px; font-weight: 500; }
+  .scanner-viewport {
+    flex: 1; position: relative;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  .scanner-viewport video {
+    width: 100%; height: 100%;
+    object-fit: cover;
+  }
+  .scanner-frame {
+    position: absolute;
+    width: 260px; height: 260px;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 16px;
+  }
+  .scanner-corner {
+    position: absolute; width: 28px; height: 28px;
+    border: 3px solid #C4F02B;
+  }
+  .scanner-corner.tl { top: 0; left: 0; border-right: none; border-bottom: none; border-radius: 8px 0 0 0; }
+  .scanner-corner.tr { top: 0; right: 0; border-left: none; border-bottom: none; border-radius: 0 8px 0 0; }
+  .scanner-corner.bl { bottom: 0; left: 0; border-right: none; border-top: none; border-radius: 0 0 0 8px; }
+  .scanner-corner.br { bottom: 0; right: 0; border-left: none; border-top: none; border-radius: 0 0 8px 0; }
+  .scanner-line {
+    position: absolute;
+    top: 50%; left: 10%; right: 10%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #C4F02B, transparent);
+    animation: scanPulse 2s ease-in-out infinite;
+  }
+  @keyframes scanPulse {
+    0%, 100% { opacity: 0.3; transform: translateY(-40px); }
+    50% { opacity: 1; transform: translateY(40px); }
+  }
+  .scanner-footer {
+    padding: 16px;
+    padding-bottom: calc(16px + var(--safe-bottom));
+    background: rgba(0,0,0,0.8);
+    text-align: center;
+  }
+  .scanner-hint { color: rgba(255,255,255,0.7); font-size: 13px; margin: 0; }
+  .scanner-result {
+    background: #1a1a1a; border-radius: 12px;
+    padding: 12px 16px; margin-top: 10px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .scanner-result-code {
+    flex: 1; font-family: ui-monospace, monospace;
+    font-size: 16px; color: #C4F02B; font-weight: 600;
+    letter-spacing: 1px;
+  }
+  .scanner-result-btn {
+    background: #C4F02B; color: #071B4D; border: none;
+    border-radius: 8px; padding: 10px 16px;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+  }
 
   .progress-bar { height: 6px; background: var(--bg-secondary); border-radius: 999px; overflow: hidden; }
   .progress-fill { height: 100%; background: var(--text-info); transition: width 0.3s; }
@@ -997,7 +1079,11 @@
   <div class="action-bar" id="action-bar">
     <button class="action-btn primary" id="btn-snap">
       <span class="snap-icon" aria-hidden="true">📷</span>
-      <span>Snap a deal</span>
+      <span>Snap</span>
+    </button>
+    <button class="action-btn secondary" id="btn-scan" aria-label="Scan barcode or QR code">
+      <i class="ti ti-scan"></i>
+      <span>Scan</span>
     </button>
     <button class="action-btn add-pill" id="btn-add" aria-label="Add deal manually">
       <span class="plus-circle">+</span>
@@ -1215,6 +1301,34 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- Barcode/QR Scanner Overlay -->
+<div class="scanner-overlay" id="scanner-overlay">
+  <div class="scanner-header">
+    <button class="scanner-close" id="scanner-close" aria-label="Close scanner">
+      <i class="ti ti-x"></i>
+    </button>
+    <span class="scanner-title">Scan barcode or QR code</span>
+    <span></span>
+  </div>
+  <div class="scanner-viewport">
+    <video id="scanner-video" autoplay playsinline muted></video>
+    <div class="scanner-frame">
+      <div class="scanner-corner tl"></div>
+      <div class="scanner-corner tr"></div>
+      <div class="scanner-corner bl"></div>
+      <div class="scanner-corner br"></div>
+      <div class="scanner-line"></div>
+    </div>
+  </div>
+  <div class="scanner-footer">
+    <p class="scanner-hint">Point at a barcode, QR code, or coupon number</p>
+    <div class="scanner-result" id="scanner-result" style="display:none;">
+      <span class="scanner-result-code" id="scanner-result-code"></span>
+      <button class="scanner-result-btn" id="scanner-use-code">Use this code</button>
+    </div>
+  </div>
+</div>
 
 <script src="app.js"></script>
 <script>
