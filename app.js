@@ -1041,6 +1041,9 @@
   // Email sync endpoint — set after deploying backend/email-worker
   const EMAIL_WORKER_URL = ''; // e.g. 'https://perq-email-worker.yourname.workers.dev'
 
+  // Deal crawler endpoint — set after deploying backend/deal-crawler
+  const CRAWLER_URL = ''; // e.g. 'https://perq-deal-crawler.yourname.workers.dev'
+
   // ---------- Push Notifications & Email Sync ----------
   async function registerPushToken() {
     const PushNotifications = nativePlugin('PushNotifications');
@@ -1172,6 +1175,89 @@
       }
     } catch (e) {
       showToast('Connection failed — check network');
+    }
+  }
+
+  // ---------- Deal Discovery (Crawler) ----------
+  let discoveredDeals = [];
+  let discoveryLoading = false;
+
+  async function fetchDiscoveredDeals(category) {
+    if (!CRAWLER_URL) {
+      discoveredDeals = generateLocalDiscovery();
+      return;
+    }
+    discoveryLoading = true;
+    try {
+      const catParam = category && category !== 'all' ? `&category=${encodeURIComponent(category)}` : '';
+      const resp = await fetch(`${CRAWLER_URL}/api/discover?limit=20${catParam}`);
+      if (resp.ok) {
+        const data = await resp.json();
+        discoveredDeals = data.deals || [];
+      }
+    } catch (e) {
+      discoveredDeals = generateLocalDiscovery();
+    }
+    discoveryLoading = false;
+  }
+
+  function generateLocalDiscovery() {
+    const pool = [
+      { merchant: 'Target', discount: '15% off home decor', value: 15, category: 'Home', code: 'HOME15', expiry: futureDate(7), url: 'https://target.com', source: 'Discovered' },
+      { merchant: 'Whole Foods', discount: '$10 off $50 order', value: 10, category: 'Groceries', code: 'FRESH10', expiry: futureDate(5), url: 'https://wholefoodsmarket.com', source: 'Discovered' },
+      { merchant: 'Nike', discount: '25% off sale items', value: 25, category: 'Apparel', code: 'EXTRA25', expiry: futureDate(10), url: 'https://nike.com', source: 'Discovered' },
+      { merchant: 'Starbucks', discount: 'Free tall drink with purchase', value: 5, category: 'Dining', code: '', expiry: futureDate(3), url: 'https://starbucks.com', source: 'Discovered' },
+      { merchant: 'Best Buy', discount: '$50 off laptops over $500', value: 50, category: 'Electronics', code: 'LAPTOP50', expiry: futureDate(14), url: 'https://bestbuy.com', source: 'Discovered' },
+      { merchant: 'Sephora', discount: 'Free shipping + 3 samples', value: 8, category: 'Beauty', code: 'BEAUTY3', expiry: futureDate(6), url: 'https://sephora.com', source: 'Discovered' },
+      { merchant: 'Marriott', discount: '20% off weekend stays', value: 40, category: 'Travel', code: 'WEEKEND20', expiry: futureDate(21), url: 'https://marriott.com', source: 'Discovered' },
+      { merchant: 'Costco', discount: '$25 off $250 online', value: 25, category: 'Groceries', code: 'SAVE25', expiry: futureDate(12), url: 'https://costco.com', source: 'Discovered' },
+      { merchant: 'Panera', discount: 'Free soup with entrée', value: 7, category: 'Dining', code: 'SOUP', expiry: futureDate(4), url: 'https://panerabread.com', source: 'Discovered' },
+      { merchant: "Lowe's", discount: '10% off appliances', value: 30, category: 'Home', code: 'APPLIANCE10', expiry: futureDate(9), url: 'https://lowes.com', source: 'Discovered' },
+      { merchant: 'Old Navy', discount: '40% off everything', value: 20, category: 'Apparel', code: 'FORTY', expiry: futureDate(5), url: 'https://oldnavy.gap.com', source: 'Discovered' },
+      { merchant: 'Ulta', discount: '$10 off $40 purchase', value: 10, category: 'Beauty', code: 'GLOW10', expiry: futureDate(8), url: 'https://ulta.com', source: 'Discovered' }
+    ];
+    const prefs = (profile && profile.preferences) || [];
+    const matched = pool.filter(d => prefs.includes(d.category));
+    const rest = pool.filter(d => !prefs.includes(d.category));
+    return [...matched, ...rest].slice(0, 12);
+  }
+
+  function futureDate(days) {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    return d.toISOString().slice(0, 10);
+  }
+
+  // ---------- Enhanced Gamification: Achievements ----------
+  const ACHIEVEMENTS = [
+    { id: 'first_snap', name: 'First Snap', icon: 'ti-camera', desc: 'Capture your first deal', condition: () => deals.length >= 1 },
+    { id: 'deal_hoarder', name: 'Deal Hoarder', icon: 'ti-stack-2', desc: 'Save 10 deals', condition: () => deals.length >= 10 },
+    { id: 'social_butterfly', name: 'Social Butterfly', icon: 'ti-share', desc: 'Share 5 deals', condition: () => rewards.shared >= 5 },
+    { id: 'saver_100', name: 'Super Saver', icon: 'ti-piggy-bank', desc: 'Save $100 total', condition: () => deals.filter(d => d.redeemed).reduce((s, d) => s + (d.value || 0), 0) >= 100 },
+    { id: 'streak_7', name: 'Week Warrior', icon: 'ti-flame', desc: '7-day streak', condition: () => game.streak >= 7 },
+    { id: 'jackpot', name: 'Jackpot Winner', icon: 'ti-trophy', desc: 'Hit the jackpot spin', condition: () => (game.history || []).some(h => h.type === 'jackpot') },
+    { id: 'scanner', name: 'Quick Draw', icon: 'ti-scan', desc: 'Scan a barcode', condition: () => deals.some(d => d.source === 'Barcode scan') },
+    { id: 'email_connect', name: 'Autopilot', icon: 'ti-mail', desc: 'Connect email', condition: () => emailConnection.status === 'connected' },
+    { id: 'claimer', name: 'Deal Claimer', icon: 'ti-download', desc: 'Claim 3 shared deals', condition: () => rewards.claimed >= 3 },
+    { id: 'all_categories', name: 'Variety Pack', icon: 'ti-palette', desc: 'Deals in 5+ categories', condition: () => new Set(deals.map(d => d.category)).size >= 5 }
+  ];
+
+  function getUnlockedAchievements() {
+    return ACHIEVEMENTS.filter(a => a.condition());
+  }
+
+  function checkNewAchievements() {
+    const unlocked = load(STORAGE_PREFIX + 'achievements', []);
+    const current = getUnlockedAchievements();
+    const newOnes = current.filter(a => !unlocked.includes(a.id));
+    if (newOnes.length > 0) {
+      const ids = [...unlocked, ...newOnes.map(a => a.id)];
+      save(STORAGE_PREFIX + 'achievements', ids);
+      newOnes.forEach(a => {
+        showToast(`🏆 Achievement: ${a.name}`);
+        rewards.points += 25;
+      });
+      if (newOnes.length) save(KEYS.rewards, rewards);
     }
   }
 
@@ -1884,7 +1970,41 @@ Return only the JSON, no other text.`;
       ${programsHtml}
       ${cardsHtml}
 
-      <p class="section-title"><i class="ti ti-sparkles"></i>Recommended deals</p>
+      <p class="section-title"><i class="ti ti-world"></i>Discovered deals</p>
+      <div class="filter-chips" id="discover-chips">
+        <span class="chip chip-active" data-discover-cat="all">All</span>
+        ${DEAL_CATEGORIES.map(c => `<span class="chip" data-discover-cat="${c}">${c}</span>`).join('')}
+      </div>
+      <div id="discovered-deals-list">
+        ${discoveredDeals.length ? discoveredDeals.slice(0, 8).map((d, i) => `
+          <div class="card" style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+            <div style="min-width:0;">
+              <p style="margin:0; font-weight:500; font-size:14px;">${escapeHtml(d.merchant)} — ${escapeHtml(d.discount)}</p>
+              <p style="margin:2px 0 0; font-size:12px; color: var(--text-secondary);">${escapeHtml(d.category)}${d.code ? ` · <code>${escapeHtml(d.code)}</code>` : ''} · expires ${fmtDate(d.expiry)}</p>
+            </div>
+            <button class="use-btn" data-claim-discover="${i}" style="white-space:nowrap;"><i class="ti ti-plus"></i>Claim</button>
+          </div>
+        `).join('') : '<p style="text-align:center; padding:16px; color:var(--text-tertiary); font-size:13px;">Loading deals...</p>'}
+      </div>
+
+      <p class="section-title"><i class="ti ti-trophy"></i>Achievements</p>
+      <div class="card" style="padding:10px 14px;">
+        ${ACHIEVEMENTS.map(a => {
+          const unlocked = getUnlockedAchievements().some(u => u.id === a.id);
+          return `
+            <div style="display:flex; align-items:center; gap:10px; padding:8px 0; ${unlocked ? '' : 'opacity:0.4;'}">
+              <i class="ti ${a.icon}" style="font-size:20px; color:${unlocked ? 'var(--text-info)' : 'var(--text-tertiary)'};"></i>
+              <div style="flex:1;">
+                <p style="margin:0; font-size:13px; font-weight:500;">${escapeHtml(a.name)}</p>
+                <p style="margin:1px 0 0; font-size:11px; color:var(--text-secondary);">${escapeHtml(a.desc)}</p>
+              </div>
+              ${unlocked ? '<span style="font-size:11px; color:var(--text-success); font-weight:600;">✓ Unlocked</span>' : '<span style="font-size:11px; color:var(--text-tertiary);">Locked</span>'}
+            </div>
+          `;
+        }).join('')}
+      </div>
+
+      <p class="section-title"><i class="ti ti-sparkles"></i>Recommended for you</p>
       ${sugg.map((s, i) => `
         <div class="card" style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
           <div style="min-width:0;">
@@ -1902,6 +2022,25 @@ Return only the JSON, no other text.`;
         const s = sugg[Number(b.getAttribute('data-add-sugg'))];
         const t = new Date(); t.setDate(t.getDate()+14);
         openModalPrefilled({ merchant: s.merchant, discount: s.discount, category: s.category, source: 'App / digital', value: s.value || 10, expiry: t.toISOString().slice(0,10), url: inferUrl(s.merchant) });
+      });
+    });
+
+    // Wire discovered deal claim buttons
+    root.querySelectorAll('[data-claim-discover]').forEach(b => {
+      b.addEventListener('click', () => {
+        const d = discoveredDeals[Number(b.getAttribute('data-claim-discover'))];
+        if (!d) return;
+        openModalPrefilled({ merchant: d.merchant, discount: d.discount, category: d.category, source: d.source || 'Discovered', value: d.value || 10, expiry: d.expiry || futureDate(14), code: d.code || '', url: d.url || inferUrl(d.merchant) });
+      });
+    });
+
+    // Wire discover category chips
+    root.querySelectorAll('[data-discover-cat]').forEach(chip => {
+      chip.addEventListener('click', async () => {
+        root.querySelectorAll('[data-discover-cat]').forEach(c => c.classList.remove('chip-active'));
+        chip.classList.add('chip-active');
+        await fetchDiscoveredDeals(chip.getAttribute('data-discover-cat'));
+        renderSuggest(); // Re-render with new category
       });
     });
 
@@ -2633,6 +2772,7 @@ Return only the JSON, no other text.`;
     closeModal();
     showToast(editingId ? 'Deal updated' : 'Deal saved');
     checkAndSendReminders();
+    checkNewAchievements();
     renderAll();
   }
 
@@ -2836,6 +2976,8 @@ Return only the JSON, no other text.`;
     registerPushToken();
     syncEmailDeals();
     checkEmailConnection();
+    fetchDiscoveredDeals('all');
+    checkNewAchievements();
 
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {

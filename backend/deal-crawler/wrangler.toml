@@ -1,0 +1,11 @@
+name = "perq-deal-crawler"
+main = "src/index.js"
+compatibility_date = "2024-12-01"
+
+# Cron trigger — crawl every 6 hours
+[triggers]
+crons = ["0 */6 * * *"]
+
+[[kv_namespaces]]
+binding = "CRAWLED_DEALS"
+id = "REPLACE_WITH_CRAWLED_DEALS_KV_ID"
