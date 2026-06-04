@@ -1,0 +1,12 @@
+{
+  "name": "Scan Meeting Summaries",
+  "version": "1.0.0",
+  "description": "Scan Outlook inbox for new Amazon Meeting Summary emails and save them as markdown files",
+  "when": {
+    "type": "userTriggered"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "#meeting-summary-scanner Scan my inbox for meeting summaries from the last 24 hours. Search for emails with subject containing 'meeting summary', filter to only emails from 'Amazon Meetings Summary' sender, convert each to markdown, save to meeting-notes/ folder, skip duplicates, and update meeting-notes/INDEX.md. For each meeting note, look for any action items or follow-ups assigned to my alias and surface them. After processing, send me an email summary with the subject 'Meeting Notes Scan Summary' that includes: at the top, a highlighted section listing all action items and follow-ups assigned to me across all meetings (grouped by meeting), then the date/time of the scan, how many emails were found, how many notes were saved (with their titles and filenames), how many were skipped as duplicates, and any errors encountered."
+  }
+}

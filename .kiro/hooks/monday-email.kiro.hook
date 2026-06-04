@@ -1,0 +1,15 @@
+{
+  "enabled": true,
+  "name": "[Monday] Email Summary to kick off the week",
+  "description": "Monday morning kickoff — scans last 24h for hot items, recaps the past week, lists L8+ meetings, flags meeting prep needed, and checks team OOO. Sends formatted HTML summary to itsshail@amazon.com.",
+  "version": "2",
+  "when": {
+    "type": "userTriggered"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "#email-scanner Generate my Monday morning kickoff email. Two scopes: last 24 hours (hot items) and last 7 days (week recap).\n\nSCOPE 1 — LAST 24 HOURS: Scan inbox for emails received in the last 24 hours. For each, detect action items or follow-ups assigned to my alias (itsshail) or name (Shail Bhatt), flag callouts mentioning me, and note any escalations or blockers.\n\nSCOPE 2 — LAST 7 DAYS: Scan inbox for the full past week. Summarize key threads, decisions made, and items that carried over. For emails where I was CC'd or added mid-thread, provide a 1–2 sentence thread summary.\n\nSend an HTML email to itsshail@amazon.com with subject \"Monday Kickoff — [M/DD/YY]\" structured as:\n\nSECTION 1 — 🔥 NEEDS ATTENTION NOW (LAST 24 HOURS)\nAction items, escalations, and callouts from the last 24 hours. Organized by priority: Critical/Urgent → Action Required. Include sender, subject, 1-sentence insight, deadline if applicable.\n\nSECTION 2 — 📋 LAST WEEK AT A GLANCE\nKey decisions, status changes, and notable updates from the past 7 days. Group by: decisions made, open action items carried forward, and threads I was looped into (CC'd/added mid-thread — 1–2 sentence summary each). Skip noise — only surface items with signal.\n\nSECTION 3 — 📅 THIS WEEK'S L8+ MEETINGS\nAll meetings this week involving L8+ leaders (Panos Panay, Tapas Roy, Charlie Ward, Kevin Keith, Nedim Fresko, Prakash Iyer, Leila Rouhi, Aidan Marcuss, Volker Schildwach — expand as encountered). For each: title, date/time (M/DD/YY, H:MM AM/PM Central), organizer, key L8+ attendees, and prep required.\n\nSECTION 4 — 📝 MEETING PREP NEEDED\nFor all meetings this week (not just L8+), flag any that require me to prepare materials, review docs, present, or take notes. Include what's needed and any deadlines for prep.\n\nSECTION 5 — 👥 TEAM STATUS\nTeam members on PTO/OOO this week. If none, state that.\n\nUse em dashes, M/DD/YY dates, H:MM AM/PM Central times. Crisp, executive-friendly language — lead with impact. One sentence max per item. Color-coded section headers (red for attention, blue for info, neutral for meetings/team)."
+  },
+  "workspaceFolderName": "Kiro-workspace",
+  "shortName": "monday-email"
+}

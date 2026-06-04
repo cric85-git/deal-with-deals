@@ -1,0 +1,15 @@
+{
+  "enabled": true,
+  "name": "[Daily] Email Summary",
+  "description": "One-click trigger to scan inbox (last 24 hours), classify emails by priority, pull L8+ meetings for the week, check team OOO status, and send a formatted daily summary email to itsshail@amazon.com.",
+  "version": "1",
+  "when": {
+    "type": "userTriggered"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "#email-scanner Generate my daily morning summary email. Scan my inbox for the last 24 hours and organize by priority (Critical/Urgent, Action Required, FYI). Format as HTML email and send to itsshail@amazon.com with subject \"Email Summary — [M/DD/YY]\". Use em dashes, M/DD/YY date format, crisp executive-friendly language. Lead with impact and concrete pain points.\n\nFor each email, check if there are action items or follow-ups assigned to my alias or name, and check for any specific callouts mentioning me. For emails where I was looped in (CC'd or added mid-thread), provide a crisp 1-2 sentence summary of the thread. SHow a highlighted section at the top with all action items grouped by thread, then callouts, then thread summaries I was looped into. \n\nDo not include scan stats."
+  },
+  "workspaceFolderName": "Kiro-workspace",
+  "shortName": "daily-email-summary"
+}

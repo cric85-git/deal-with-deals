@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "TPMCon 2026 Registration Check",
+  "description": "Searches inbox for TPMCon 2026 emails related to workshop (June 17) and conference day (June 18) registration openings. Summarizes any new updates.",
+  "version": "1",
+  "when": {
+    "type": "userTriggered"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Search the user's inbox for emails matching \"TPMCon 2026\" or from \"tpmcon-core-2026\" or from \"Shilpika Khera\" related to registration. Look specifically for workshop registration (June 17) and conference day registration (June 18). Summarize any new emails found — highlight if registration links are now open, deadlines, or capacity warnings. If nothing new, say so."
+  }
+}
