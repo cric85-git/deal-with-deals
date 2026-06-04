@@ -22,7 +22,7 @@ The foundational **Capture → Remind → Redeem** loop.
 | 1.4 | Proximity Alerts | ✅ Done | Geofencing — notify when near a store where you have an active deal |
 | 1.5 | Manual Add | ✅ Done | Quick-add form as fallback |
 | 1.6 | Backend AI Proxy | ✅ Done | Cloudflare Worker proxies OCR calls — users don't need their own API key |
-| 1.7 | Barcode Scanner | 🔜 Planned | Quick-scan mode for barcodes/QR without full OCR |
+| 1.7 | Barcode Scanner | ✅ Done | Real-time camera barcode/QR scanner with native BarcodeDetector API |
 
 ---
 

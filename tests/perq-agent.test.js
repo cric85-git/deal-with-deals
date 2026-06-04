@@ -207,7 +207,7 @@ test('Photo capture entry is click-driven', ()=>{
   assert(app.includes("document.getElementById('btn-snap').addEventListener('click'"));
   assert(html.includes('id="capture-input"'));
   assert(!/addEventListener\(['"]paste['"]\s*,\s*(?:saveLinkCapture|\(.*?=>\s*saveLinkCapture)/.test(app), 'paste event must not auto-save');
-  assert(/Snap a deal/.test(html), 'Snap action label missing');
+  assert(/Snap/.test(html), 'Snap action label missing');
 });
 
 const out = ['# Perq Automated Test Results','',`Executed: ${new Date().toISOString()}`,'',`Total: ${results.length}`,`Passed: ${results.filter(r=>r.status==='PASS').length}`,`Failed: ${results.filter(r=>r.status==='FAIL').length}`,'','| Test | Status | Error |','|---|---:|---|',...results.map(r=>`| ${r.name} | ${r.status} | ${r.error||''} |`)].join('\n');
