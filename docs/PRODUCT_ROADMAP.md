@@ -40,9 +40,9 @@ The foundational **Capture → Remind → Redeem** loop.
 
 | # | Feature | Status | Description |
 |---|---------|--------|-------------|
-| 3.1 | Email Integration | 📐 Designed | Connect Gmail/Outlook → auto-parse deal/coupon emails |
-| 3.2 | Rewards Platforms | 📋 Planned | Airline miles, hotel rewards, credit card points — track balances & expiry |
-| 3.3 | Loyalty Cards | 📋 Planned | Store loyalty/membership cards with expiry tracking |
+| 3.1 | Email Integration | ✅ Done | Backend email worker (Gmail/Outlook OAuth + webhook) + client connection UI |
+| 3.2 | Rewards Platforms | ✅ Done | Track airline miles, hotel points, credit card rewards with expiry alerts |
+| 3.3 | Loyalty Cards | ✅ Done | Store membership/loyalty cards with number, barcode, color-coded display |
 
 ---
 
