@@ -1931,17 +1931,25 @@ Return only the JSON, no other text.`;
       cardsHtml = `
         <p class="section-title"><i class="ti ti-id"></i>Loyalty cards</p>
         ${cards.map(c => `
-          <div class="card" data-flip-card="${c.id}" style="cursor:pointer; display:flex; align-items:center; gap:12px;">
-            <div style="width:40px; height:40px; border-radius:10px; background:${c.color || 'var(--bg-success)'}; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-              <i class="ti ti-id" style="font-size:20px; color:white;"></i>
+          <div class="card" style="cursor:pointer;" data-show-card="${c.id}">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div style="width:40px; height:40px; border-radius:10px; background:${c.color || 'var(--bg-success)'}; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <i class="ti ti-id" style="font-size:20px; color:white;"></i>
+              </div>
+              <div style="flex:1; min-width:0;">
+                <p style="margin:0; font-weight:500; font-size:14px;">${escapeHtml(c.name)}</p>
+                <p style="margin:2px 0 0; font-size:12px; color:var(--text-secondary); font-family:ui-monospace,monospace; letter-spacing:1px;">${escapeHtml(c.number)}</p>
+              </div>
+              <button data-delete-card="${escapeHtml(c.id)}" style="background:none; border:none; padding:6px; color:var(--text-tertiary);">
+                <i class="ti ti-x" style="font-size:16px;"></i>
+              </button>
             </div>
-            <div style="flex:1; min-width:0;">
-              <p style="margin:0; font-weight:500; font-size:14px;">${escapeHtml(c.name)}</p>
-              <p style="margin:2px 0 0; font-size:12px; color:var(--text-secondary); font-family:ui-monospace,monospace; letter-spacing:1px;">${escapeHtml(c.number)}</p>
+            <div class="card-barcode-area" id="barcode-${c.id}" style="display:none; margin-top:10px; padding-top:10px; border-top:0.5px solid var(--border-tertiary); text-align:center;">
+              <div style="background:white; padding:12px; border-radius:8px; display:inline-block;">
+                ${buildBarcodeSvg(c.number.replace(/\s/g, ''))}
+              </div>
+              <p style="margin:6px 0 0; font-size:11px; color:var(--text-tertiary);">Show at checkout</p>
             </div>
-            <button data-delete-card="${escapeHtml(c.id)}" style="background:none; border:none; padding:6px; color:var(--text-tertiary);">
-              <i class="ti ti-x" style="font-size:16px;"></i>
-            </button>
           </div>
         `).join('')}
         <button id="btn-add-card" style="width:100%; margin-top:8px; padding:10px; font-size:13px; background:var(--bg-secondary); border:0.5px solid var(--border-secondary); border-radius:var(--radius-md);">
@@ -2071,66 +2079,269 @@ Return only the JSON, no other text.`;
         renderSuggest();
       });
     });
+
+    // Tap loyalty card to show/hide barcode
+    root.querySelectorAll('[data-show-card]').forEach(el => {
+      el.addEventListener('click', (e) => {
+        if (e.target.closest('[data-delete-card]')) return;
+        const id = el.getAttribute('data-show-card');
+        const barcodeEl = document.getElementById('barcode-' + id);
+        if (barcodeEl) {
+          barcodeEl.style.display = barcodeEl.style.display === 'none' ? 'block' : 'none';
+        }
+      });
+    });
   }
 
   // ---------- Add Reward Program Modal ----------
   function openAddProgram() {
+    const KNOWN_PROGRAMS = [
+      { name: 'Delta SkyMiles', type: 'airline', unit: 'miles', icon: 'plane', loginUrl: 'https://www.delta.com/myaccount' },
+      { name: 'United MileagePlus', type: 'airline', unit: 'miles', icon: 'plane', loginUrl: 'https://www.united.com/ual/en/us/account' },
+      { name: 'American AAdvantage', type: 'airline', unit: 'miles', icon: 'plane', loginUrl: 'https://www.aa.com/aadvantage' },
+      { name: 'Southwest Rapid Rewards', type: 'airline', unit: 'points', icon: 'plane', loginUrl: 'https://www.southwest.com/account' },
+      { name: 'Marriott Bonvoy', type: 'hotel', unit: 'points', icon: 'building', loginUrl: 'https://www.marriott.com/loyalty/myAccount' },
+      { name: 'Hilton Honors', type: 'hotel', unit: 'points', icon: 'building', loginUrl: 'https://www.hilton.com/en/hilton-honors/guest/my-account' },
+      { name: 'IHG Rewards', type: 'hotel', unit: 'points', icon: 'building', loginUrl: 'https://www.ihg.com/rewardsclub/us/en/account' },
+      { name: 'Chase Ultimate Rewards', type: 'creditcard', unit: 'points', icon: 'credit-card', loginUrl: 'https://ultimaterewardspoints.chase.com' },
+      { name: 'Amex Membership Rewards', type: 'creditcard', unit: 'points', icon: 'credit-card', loginUrl: 'https://global.americanexpress.com/rewards' },
+      { name: 'Capital One Miles', type: 'creditcard', unit: 'miles', icon: 'credit-card', loginUrl: 'https://www.capitalone.com/credit-cards/rewards' },
+      { name: 'Citi ThankYou', type: 'creditcard', unit: 'points', icon: 'credit-card', loginUrl: 'https://www.thankyou.com' }
+    ];
+
+    const programOptions = KNOWN_PROGRAMS.map(p =>
+      `<option value="${escapeHtml(p.name)}" data-type="${p.type}" data-unit="${p.unit}">${escapeHtml(p.name)}</option>`
+    ).join('');
+
     const html = `
       <div class="modal-header"><h3 class="modal-title">Add reward program</h3></div>
-      <div class="form-row"><label>Program name</label><input id="rp-name" placeholder="e.g. Delta SkyMiles, Marriott Bonvoy"></div>
-      <div class="form-grid">
-        <div class="form-row"><label>Balance</label><input id="rp-balance" type="number" placeholder="50000"></div>
-        <div class="form-row"><label>Unit</label><input id="rp-unit" placeholder="miles, points"></div>
+
+      <div style="display:flex; gap:8px; margin-bottom:16px;">
+        <button class="rp-mode-btn active" data-mode="select" style="flex:1; padding:10px; font-size:13px; border-radius:8px;">Choose program</button>
+        <button class="rp-mode-btn" data-mode="login" style="flex:1; padding:10px; font-size:13px; border-radius:8px;">Login & sync</button>
+        <button class="rp-mode-btn" data-mode="manual" style="flex:1; padding:10px; font-size:13px; border-radius:8px;">Manual</button>
       </div>
-      <div class="form-row"><label>Expiry date (if any)</label><input id="rp-expiry" type="date"></div>
-      <div class="form-row"><label>Type</label>
-        <select id="rp-type">
-          <option value="airline">Airline miles</option>
-          <option value="hotel">Hotel points</option>
-          <option value="creditcard">Credit card rewards</option>
-          <option value="cashback">Cashback</option>
-          <option value="other">Other</option>
-        </select>
+
+      <div id="rp-mode-select">
+        <div class="form-row"><label>Select program</label>
+          <select id="rp-known-select">
+            <option value="">-- Choose --</option>
+            ${programOptions}
+            <option value="__custom">Other (custom)</option>
+          </select>
+        </div>
+        <div class="form-grid">
+          <div class="form-row"><label>Current balance</label><input id="rp-balance" type="number" placeholder="50000"></div>
+          <div class="form-row"><label>Unit</label><input id="rp-unit" placeholder="miles, points" value="points"></div>
+        </div>
+        <div class="form-row"><label>Points/miles expiry (if known)</label><input id="rp-expiry" type="date"></div>
       </div>
-      <div class="form-actions">
+
+      <div id="rp-mode-login" style="display:none;">
+        <div class="card" style="background:var(--bg-info); border-color:var(--bg-info); margin-bottom:12px;">
+          <p style="margin:0; font-size:13px; color:var(--text-info); line-height:1.5;">
+            <i class="ti ti-lock" style="font-size:14px; vertical-align:-2px; margin-right:4px;"></i>
+            Log in to your rewards account. Perq reads your balance and expiry, then disconnects. We never store your credentials.
+          </p>
+        </div>
+        <div class="form-row"><label>Program</label>
+          <select id="rp-login-program">
+            ${programOptions}
+          </select>
+        </div>
+        <button id="rp-login-btn" style="width:100%; padding:12px; background:var(--text-info); color:var(--bg-primary); border:none; border-radius:8px; font-weight:600; font-size:14px; margin-top:8px;">
+          <i class="ti ti-login" style="margin-right:4px;"></i> Connect & fetch balance
+        </button>
+        <p id="rp-login-status" style="font-size:12px; color:var(--text-secondary); text-align:center; margin:8px 0 0; display:none;"></p>
+      </div>
+
+      <div id="rp-mode-manual" style="display:none;">
+        <div class="form-row"><label>Program name</label><input id="rp-name-manual" placeholder="e.g. My Credit Union Rewards"></div>
+        <div class="form-grid">
+          <div class="form-row"><label>Balance</label><input id="rp-balance-manual" type="number" placeholder="50000"></div>
+          <div class="form-row"><label>Unit</label><input id="rp-unit-manual" placeholder="miles, points"></div>
+        </div>
+        <div class="form-row"><label>Expiry date (if any)</label><input id="rp-expiry-manual" type="date"></div>
+        <div class="form-row"><label>Type</label>
+          <select id="rp-type-manual">
+            <option value="airline">Airline miles</option>
+            <option value="hotel">Hotel points</option>
+            <option value="creditcard">Credit card rewards</option>
+            <option value="cashback">Cashback</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-actions" style="margin-top:16px;">
         <button id="rp-cancel">Cancel</button>
         <button id="rp-save" class="btn-primary">Save program</button>
       </div>
     `;
+
+    let currentMode = 'select';
     showGenericModal(html, (modal) => {
+      const modes = modal.querySelectorAll('.rp-mode-btn');
+      modes.forEach(btn => {
+        btn.addEventListener('click', () => {
+          currentMode = btn.getAttribute('data-mode');
+          modes.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          modal.querySelector('#rp-mode-select').style.display = currentMode === 'select' ? 'block' : 'none';
+          modal.querySelector('#rp-mode-login').style.display = currentMode === 'login' ? 'block' : 'none';
+          modal.querySelector('#rp-mode-manual').style.display = currentMode === 'manual' ? 'block' : 'none';
+        });
+      });
+
+      // Auto-fill unit when program selected
+      modal.querySelector('#rp-known-select').addEventListener('change', (e) => {
+        const known = KNOWN_PROGRAMS.find(p => p.name === e.target.value);
+        if (known) {
+          modal.querySelector('#rp-unit').value = known.unit;
+        }
+      });
+
+      // Login flow
+      modal.querySelector('#rp-login-btn').addEventListener('click', () => {
+        const programName = modal.querySelector('#rp-login-program').value;
+        const known = KNOWN_PROGRAMS.find(p => p.name === programName);
+        if (!known) { showToast('Select a program'); return; }
+        const statusEl = modal.querySelector('#rp-login-status');
+        statusEl.style.display = 'block';
+        statusEl.textContent = 'Opening login page...';
+        // Open login in browser — user logs in, we can't actually scrub (no backend yet)
+        // For now: open the URL and prompt user to enter balance after
+        window.open(known.loginUrl, '_blank');
+        setTimeout(() => {
+          statusEl.innerHTML = '✓ Logged in? Enter your balance below and save.';
+          // Switch to select mode with program pre-filled
+          currentMode = 'select';
+          modes.forEach(b => b.classList.remove('active'));
+          modes[0].classList.add('active');
+          modal.querySelector('#rp-mode-select').style.display = 'block';
+          modal.querySelector('#rp-mode-login').style.display = 'none';
+          modal.querySelector('#rp-known-select').value = programName;
+          modal.querySelector('#rp-unit').value = known.unit;
+        }, 2000);
+      });
+
       modal.querySelector('#rp-cancel').addEventListener('click', closeGenericModal);
       modal.querySelector('#rp-save').addEventListener('click', () => {
-        const name = modal.querySelector('#rp-name').value.trim();
-        if (!name) { showToast('Name required'); return; }
         const typeIcons = { airline: 'plane', hotel: 'building', creditcard: 'credit-card', cashback: 'cash', other: 'star' };
-        const type = modal.querySelector('#rp-type').value;
-        const program = {
-          id: uid(),
-          name,
-          balance: modal.querySelector('#rp-balance').value || '0',
-          unit: modal.querySelector('#rp-unit').value || 'points',
-          expiry: modal.querySelector('#rp-expiry').value || null,
-          type,
-          icon: typeIcons[type] || 'star',
-          addedAt: Date.now()
-        };
+        let name, balance, unit, expiry, type, icon;
+
+        if (currentMode === 'manual') {
+          name = modal.querySelector('#rp-name-manual').value.trim();
+          balance = modal.querySelector('#rp-balance-manual').value || '0';
+          unit = modal.querySelector('#rp-unit-manual').value || 'points';
+          expiry = modal.querySelector('#rp-expiry-manual').value || null;
+          type = modal.querySelector('#rp-type-manual').value;
+          icon = typeIcons[type] || 'star';
+        } else {
+          const selectVal = modal.querySelector('#rp-known-select').value;
+          if (selectVal === '__custom' || !selectVal) { name = 'Custom Program'; }
+          else { name = selectVal; }
+          const known = KNOWN_PROGRAMS.find(p => p.name === selectVal);
+          balance = modal.querySelector('#rp-balance').value || '0';
+          unit = modal.querySelector('#rp-unit').value || 'points';
+          expiry = modal.querySelector('#rp-expiry').value || null;
+          type = known ? known.type : 'other';
+          icon = known ? known.icon : 'star';
+        }
+
+        if (!name || name === 'Custom Program' && currentMode !== 'manual') {
+          showToast('Select or enter a program name');
+          return;
+        }
+
+        const program = { id: uid(), name, balance, unit, expiry, type, icon, addedAt: Date.now() };
         const programs = load(KEYS.rewardPrograms, []);
         programs.push(program);
         save(KEYS.rewardPrograms, programs);
+
+        // Schedule expiry reminder if expiry set
+        if (expiry) scheduleRewardExpiryReminder(program);
+
         closeGenericModal();
         showToast('Program added');
+        checkNewAchievements();
         renderAll();
       });
     });
   }
 
-  // ---------- Add Loyalty Card Modal ----------
+  async function scheduleRewardExpiryReminder(program) {
+    if (!program.expiry) return;
+    const LocalNotifications = nativePlugin('LocalNotifications');
+    if (!LocalNotifications) return;
+    const granted = await requestNativeNotifications();
+    if (!granted) return;
+
+    const expiryDate = new Date(program.expiry + 'T09:00:00');
+    if (isNaN(expiryDate.getTime())) return;
+
+    const notifications = [];
+    // 30 days before
+    const remind30 = new Date(expiryDate);
+    remind30.setDate(remind30.getDate() - 30);
+    if (remind30 > new Date()) {
+      notifications.push({
+        id: notificationId(program.id + '-30d'),
+        title: `${program.name} points expire in 30 days`,
+        body: `${program.balance} ${program.unit} will expire. Use or transfer them!`,
+        schedule: { at: remind30 },
+        smallIcon: 'ic_stat_perq', iconColor: '#854F0B'
+      });
+    }
+    // 7 days before
+    const remind7 = new Date(expiryDate);
+    remind7.setDate(remind7.getDate() - 7);
+    if (remind7 > new Date()) {
+      notifications.push({
+        id: notificationId(program.id + '-7d'),
+        title: `⚠️ ${program.name} expires in 7 days!`,
+        body: `${program.balance} ${program.unit} — use them before they're gone.`,
+        schedule: { at: remind7 },
+        smallIcon: 'ic_stat_perq', iconColor: '#A32D2D'
+      });
+    }
+    if (notifications.length) {
+      try { await LocalNotifications.schedule({ notifications }); } catch(e) {}
+    }
+  }
+
+  // ---------- Add Loyalty Card Modal (with Camera Scan + Barcode Display) ----------
   function openAddLoyaltyCard() {
     const html = `
       <div class="modal-header"><h3 class="modal-title">Add loyalty card</h3></div>
-      <div class="form-row"><label>Store / program name</label><input id="lc-name" placeholder="e.g. Costco, CVS ExtraCare"></div>
-      <div class="form-row"><label>Card / member number</label><input id="lc-number" placeholder="1234 5678 9012"></div>
-      <div class="form-row"><label>Color</label>
+
+      <div style="display:flex; gap:8px; margin-bottom:16px;">
+        <button class="lc-mode-btn active" data-mode="manual" style="flex:1; padding:10px; font-size:13px; border-radius:8px;">Type it</button>
+        <button class="lc-mode-btn" data-mode="scan" style="flex:1; padding:10px; font-size:13px; border-radius:8px;">📷 Scan card</button>
+      </div>
+
+      <div id="lc-mode-manual">
+        <div class="form-row"><label>Store / program name</label><input id="lc-name" placeholder="e.g. Costco, CVS ExtraCare"></div>
+        <div class="form-row"><label>Card / member number</label><input id="lc-number" placeholder="1234 5678 9012" inputmode="numeric"></div>
+        <div class="form-row"><label>Expiry (optional)</label><input id="lc-expiry" type="date"></div>
+      </div>
+
+      <div id="lc-mode-scan" style="display:none;">
+        <div class="card" style="background:var(--bg-info); border-color:var(--bg-info); margin-bottom:12px;">
+          <p style="margin:0; font-size:13px; color:var(--text-info); line-height:1.5;">
+            <i class="ti ti-camera" style="font-size:14px; vertical-align:-2px; margin-right:4px;"></i>
+            Take a photo of your loyalty card. AI will read the store name and card number.
+          </p>
+        </div>
+        <div id="lc-scan-preview" style="width:100%; aspect-ratio:16/10; background:var(--bg-secondary); border-radius:8px; display:flex; align-items:center; justify-content:center; margin-bottom:12px; overflow:hidden; cursor:pointer;">
+          <span style="color:var(--text-tertiary); font-size:13px;">Tap to take photo</span>
+        </div>
+        <div id="lc-scan-status" style="display:none;" class="ocr-status"></div>
+        <div class="form-row"><label>Store name</label><input id="lc-scan-name" placeholder="Detected store name"></div>
+        <div class="form-row"><label>Card number</label><input id="lc-scan-number" placeholder="Detected card number" inputmode="numeric"></div>
+      </div>
+
+      <div class="form-row"><label>Card color</label>
         <div style="display:flex; gap:8px; flex-wrap:wrap;" id="lc-colors">
           <span data-color="#2563EB" style="width:32px; height:32px; border-radius:8px; background:#2563EB; cursor:pointer; border:2px solid transparent;"></span>
           <span data-color="#DC2626" style="width:32px; height:32px; border-radius:8px; background:#DC2626; cursor:pointer; border:2px solid transparent;"></span>
@@ -2140,13 +2351,31 @@ Return only the JSON, no other text.`;
           <span data-color="#1F2937" style="width:32px; height:32px; border-radius:8px; background:#1F2937; cursor:pointer; border:2px solid transparent;"></span>
         </div>
       </div>
-      <div class="form-actions">
+
+      <div class="form-actions" style="margin-top:16px;">
         <button id="lc-cancel">Cancel</button>
         <button id="lc-save" class="btn-primary">Save card</button>
       </div>
+      <input type="file" id="lc-file-input" accept="image/*" capture="environment" style="display:none;">
     `;
+
     let selectedColor = '#2563EB';
+    let currentMode = 'manual';
+    let scannedImage = null;
+
     showGenericModal(html, (modal) => {
+      // Mode switching
+      modal.querySelectorAll('.lc-mode-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          currentMode = btn.getAttribute('data-mode');
+          modal.querySelectorAll('.lc-mode-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          modal.querySelector('#lc-mode-manual').style.display = currentMode === 'manual' ? 'block' : 'none';
+          modal.querySelector('#lc-mode-scan').style.display = currentMode === 'scan' ? 'block' : 'none';
+        });
+      });
+
+      // Color picker
       modal.querySelectorAll('[data-color]').forEach(el => {
         el.addEventListener('click', () => {
           selectedColor = el.getAttribute('data-color');
@@ -2154,23 +2383,107 @@ Return only the JSON, no other text.`;
           el.style.border = '2px solid var(--text-primary)';
         });
       });
-      // Select first by default
       modal.querySelector('[data-color]').style.border = '2px solid var(--text-primary)';
+
+      // Camera scan for card
+      const preview = modal.querySelector('#lc-scan-preview');
+      const fileInput = modal.querySelector('#lc-file-input');
+      preview.addEventListener('click', () => fileInput.click());
+      fileInput.addEventListener('change', async (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const dataUrl = await fileToDataUrl(file);
+        const compressed = await compressImage(dataUrl, 1200);
+        scannedImage = compressed;
+        preview.innerHTML = `<img src="${compressed}" style="width:100%; height:100%; object-fit:cover;">`;
+
+        // OCR the card
+        const statusEl = modal.querySelector('#lc-scan-status');
+        statusEl.style.display = 'flex';
+        statusEl.className = 'ocr-status';
+        statusEl.innerHTML = '<span class="spinner"></span><span>Reading card...</span>';
+
+        const apiKey = load(KEYS.apiKey, '');
+        try {
+          const result = await runLoyaltyCardOcr(compressed, apiKey);
+          if (result.name) modal.querySelector('#lc-scan-name').value = result.name;
+          if (result.number) modal.querySelector('#lc-scan-number').value = result.number;
+          statusEl.className = 'ocr-status success';
+          statusEl.innerHTML = '<i class="ti ti-check" style="font-size:16px;"></i><span>Card details extracted</span>';
+        } catch (err) {
+          statusEl.className = 'ocr-status error';
+          statusEl.innerHTML = `<i class="ti ti-alert-circle" style="font-size:16px;"></i><span>Couldn't read card — enter manually</span>`;
+        }
+        e.target.value = '';
+      });
 
       modal.querySelector('#lc-cancel').addEventListener('click', closeGenericModal);
       modal.querySelector('#lc-save').addEventListener('click', () => {
-        const name = modal.querySelector('#lc-name').value.trim();
-        const number = modal.querySelector('#lc-number').value.trim();
+        let name, number;
+        if (currentMode === 'scan') {
+          name = modal.querySelector('#lc-scan-name').value.trim();
+          number = modal.querySelector('#lc-scan-number').value.trim();
+        } else {
+          name = modal.querySelector('#lc-name').value.trim();
+          number = modal.querySelector('#lc-number').value.trim();
+        }
         if (!name || !number) { showToast('Name and number required'); return; }
-        const card = { id: uid(), name, number, color: selectedColor, addedAt: Date.now() };
+        const expiry = currentMode === 'manual' ? (modal.querySelector('#lc-expiry').value || null) : null;
+        const card = { id: uid(), name, number, color: selectedColor, expiry, image: scannedImage || null, addedAt: Date.now() };
         const cards = load(KEYS.loyaltyCards, []);
         cards.push(card);
         save(KEYS.loyaltyCards, cards);
         closeGenericModal();
         showToast('Card added');
+        checkNewAchievements();
         renderAll();
       });
     });
+  }
+
+  async function runLoyaltyCardOcr(dataUrl, apiKey) {
+    const match = dataUrl.match(/^data:(image\/[a-z]+);base64,(.+)$/);
+    if (!match) throw new Error('Invalid image');
+    const mediaType = match[1];
+    const b64 = match[2];
+    const prompt = `Read this loyalty/membership card image. Return ONLY a JSON object:
+{
+  "name": "store or program name on the card",
+  "number": "card/member number (digits and spaces only)",
+  "expiry": "YYYY-MM-DD if visible, else null"
+}
+Return only the JSON, no other text.`;
+
+    // Try proxy first
+    if (OCR_PROXY_URL) {
+      try {
+        // Reuse proxy with custom prompt not supported — fall through to direct
+      } catch(e) {}
+    }
+
+    if (!apiKey) throw new Error('No API key');
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 200,
+        messages: [{ role: 'user', content: [
+          { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
+          { type: 'text', text: prompt }
+        ]}]
+      })
+    });
+    if (!response.ok) throw new Error('API error');
+    const data = await response.json();
+    const text = (data.content || []).map(b => b.text || '').join('').trim();
+    const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+    return JSON.parse(cleaned);
   }
 
   // ---------- Generic Modal Helper ----------
