@@ -14,7 +14,8 @@
   },
   "devDependencies": {
     "@capacitor/cli": "^8.4.0",
-    "@playwright/test": "^1.60.0"
+    "@playwright/test": "^1.60.0",
+    "playwright": "^1.60.0"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.0",

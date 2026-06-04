@@ -459,6 +459,89 @@
     save(KEYS.notified, notified);
   }
 
+  // ---------- Scheduled Notifications (fire even when app is closed) ----------
+  async function scheduleExpiryReminders(deal) {
+    if (!settings.remindersOn || !deal.expiry) return;
+    const LocalNotifications = nativePlugin('LocalNotifications');
+    if (!LocalNotifications) return;
+    const granted = await requestNativeNotifications();
+    if (!granted) return;
+
+    const expiryDate = new Date(deal.expiry + 'T09:00:00');
+    if (isNaN(expiryDate.getTime())) return;
+
+    const reminderDays = settings.reminderDays || 3;
+    const notifications = [];
+
+    // Schedule reminder X days before expiry
+    const reminderDate = new Date(expiryDate);
+    reminderDate.setDate(reminderDate.getDate() - reminderDays);
+    if (reminderDate > new Date()) {
+      notifications.push({
+        id: notificationId(deal.id + '-pre'),
+        title: `${deal.merchant} expires in ${reminderDays} day${reminderDays === 1 ? '' : 's'}`,
+        body: `${deal.discount}${deal.code ? ' — code ' + deal.code : ''}. Don't forget to use it!`,
+        schedule: { at: reminderDate },
+        smallIcon: 'ic_stat_perq',
+        iconColor: '#1B6C8C'
+      });
+    }
+
+    // Schedule day-of reminder at 9am
+    if (expiryDate > new Date()) {
+      notifications.push({
+        id: notificationId(deal.id + '-day'),
+        title: `⏰ ${deal.merchant} expires TODAY`,
+        body: `${deal.discount}${deal.code ? ' — code ' + deal.code : ''}. Last chance!`,
+        schedule: { at: expiryDate },
+        smallIcon: 'ic_stat_perq',
+        iconColor: '#A32D2D'
+      });
+    }
+
+    // Schedule 1 day before at 6pm (evening reminder)
+    const eveningBefore = new Date(expiryDate);
+    eveningBefore.setDate(eveningBefore.getDate() - 1);
+    eveningBefore.setHours(18, 0, 0, 0);
+    if (eveningBefore > new Date()) {
+      notifications.push({
+        id: notificationId(deal.id + '-eve'),
+        title: `${deal.merchant} expires tomorrow`,
+        body: `${deal.discount} — use it before it's gone!`,
+        schedule: { at: eveningBefore },
+        smallIcon: 'ic_stat_perq',
+        iconColor: '#854F0B'
+      });
+    }
+
+    if (notifications.length) {
+      try {
+        await LocalNotifications.schedule({ notifications });
+      } catch(e) { console.warn('Failed to schedule notifications:', e); }
+    }
+  }
+
+  async function cancelExpiryReminders(dealId) {
+    const LocalNotifications = nativePlugin('LocalNotifications');
+    if (!LocalNotifications) return;
+    try {
+      const ids = [
+        { id: notificationId(dealId + '-pre') },
+        { id: notificationId(dealId + '-day') },
+        { id: notificationId(dealId + '-eve') }
+      ];
+      await LocalNotifications.cancel({ notifications: ids });
+    } catch(e) { /* ignore */ }
+  }
+
+  async function scheduleAllDealReminders() {
+    if (!settings.remindersOn) return;
+    const active = deals.filter(d => !d.redeemed && d.expiry && daysUntil(d.expiry) > 0);
+    for (const deal of active) {
+      await scheduleExpiryReminders(deal);
+    }
+  }
+
   function notifyNearbyDeals(results) {
     if (!settings.nearbyOn || !results.length) return;
     const today = todayStr();
@@ -796,8 +879,8 @@
     pendingImage = dataUrl;
     openModal(null, { imageOnly: true });
     const apiKey = load(KEYS.apiKey, '');
-    if (!apiKey) {
-      showOcrStatus('warn', 'No API key set — fill in the details manually.');
+    if (!apiKey && !OCR_PROXY_URL) {
+      showOcrStatus('warn', 'No API key set — fill in the details manually, or deploy the OCR proxy.');
       return;
     }
     showOcrStatus('reading', 'Extracting deal details with AI…');
@@ -805,6 +888,7 @@
       const result = await runOcr(dataUrl, apiKey);
       applyOcrResult(result);
       showOcrStatus('success', 'Got it — review and save below.');
+      showQuickSave(result);
     } catch (err) {
       console.error('OCR failed:', err);
       showOcrStatus('error', `Couldn't read it (${err.message}). Fill in manually.`);
@@ -821,11 +905,36 @@
       el.innerHTML = `<i class="ti ${icon}" style="font-size:16px;"></i><span>${escapeHtml(msg)}</span>`;
     }
   }
+  // OCR proxy endpoint — set after deploying backend/ocr-proxy
+  const OCR_PROXY_URL = ''; // e.g. 'https://perq-ocr-proxy.yourname.workers.dev'
+
   async function runOcr(dataUrl, apiKey) {
     const match = dataUrl.match(/^data:(image\/[a-z]+);base64,(.+)$/);
     if (!match) throw new Error('Invalid image format');
     const mediaType = match[1];
     const b64 = match[2];
+
+    // Try proxy first (no API key needed on client)
+    if (OCR_PROXY_URL) {
+      try {
+        const proxyResp = await fetch(OCR_PROXY_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: b64, mediaType })
+        });
+        const proxyData = await proxyResp.json();
+        if (proxyData.ok && proxyData.result) return proxyData.result;
+        if (!proxyResp.ok && proxyResp.status === 429) throw new Error('Too many scans — try again in a minute');
+        // If proxy failed but we have a local key, fall through
+        if (!apiKey) throw new Error(proxyData.error || 'OCR service unavailable');
+      } catch (e) {
+        if (!apiKey) throw e;
+        // Fall through to direct API call with user's key
+      }
+    }
+
+    // Fallback: direct API call with user's own key
+    if (!apiKey) throw new Error('No OCR service available. Set your API key in Settings.');
     const prompt = `Extract coupon/deal details from this image. Return ONLY a JSON object:
 {
   "merchant": "store/brand name",
@@ -890,6 +999,39 @@ Return only the JSON, no other text.`;
       const url = inferUrl(r.merchant);
       if (url) document.getElementById('f-url').value = url;
     }
+  }
+
+  function showQuickSave(ocrResult) {
+    if (!ocrResult || !ocrResult.merchant) return;
+    const el = document.getElementById('ocr-status');
+    const expiryLabel = ocrResult.expiry ? ` · expires ${ocrResult.expiry}` : '';
+    el.innerHTML = `
+      <div style="width:100%;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+          <i class="ti ti-check" style="font-size:16px;color:var(--text-success);"></i>
+          <span style="font-size:13px;color:var(--text-primary);">
+            <strong>${escapeHtml(ocrResult.merchant)}</strong> — ${escapeHtml(ocrResult.discount || 'Deal')}${expiryLabel}
+          </span>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button id="quick-save-btn" style="flex:1;background:var(--brand);color:white;border:none;border-radius:8px;padding:10px;font-weight:600;font-size:14px;">
+            <i class="ti ti-check"></i> Save & Set Reminder
+          </button>
+          <button id="quick-edit-btn" style="flex:0 0 auto;background:var(--bg-secondary);border:1px solid var(--border-secondary);border-radius:8px;padding:10px 14px;font-size:13px;">
+            Edit
+          </button>
+        </div>
+      </div>
+    `;
+    el.className = 'ocr-status success';
+    el.style.display = 'flex';
+    document.getElementById('quick-save-btn').addEventListener('click', () => {
+      saveModalForm();
+      showToast('✨ Deal saved with reminders set!');
+    });
+    document.getElementById('quick-edit-btn').addEventListener('click', () => {
+      el.innerHTML = `<i class="ti ti-check" style="font-size:16px;"></i><span>Edit the details below and save.</span>`;
+    });
   }
 
   // ---------- Wheel ----------
@@ -1712,6 +1854,7 @@ Return only the JSON, no other text.`;
   function markRedeemed(id) {
     const d = deals.find(x=>x.id===id); if (!d) return;
     d.redeemed = true;
+    cancelExpiryReminders(id);
     if (d.shared) { rewards.points += 25; rewards.claimed += 1; save(KEYS.rewards, rewards); }
     bumpQuest('q_redeem');
     save(KEYS.deals, deals);
@@ -1747,6 +1890,7 @@ Return only the JSON, no other text.`;
   }
   function deleteDeal(id) {
     if (!confirm('Delete this deal?')) return;
+    cancelExpiryReminders(id);
     deals = deals.filter(x=>x.id!==id);
     save(KEYS.deals, deals);
     showToast('Deleted');
@@ -1817,10 +1961,13 @@ Return only the JSON, no other text.`;
     if (editingId) {
       const d = deals.find(x=>x.id===editingId);
       Object.assign(d, payload);
+      cancelExpiryReminders(editingId);
+      scheduleExpiryReminders(d);
     } else {
       const newDeal = { id: uid(), ...payload, redeemed:false, shared:false, createdAt: Date.now() };
       if (pendingImage) newDeal.image = pendingImage;
       deals.push(newDeal);
+      scheduleExpiryReminders(newDeal);
       bumpQuest('q_add');
     }
     save(KEYS.deals, deals);
@@ -1939,11 +2086,6 @@ Return only the JSON, no other text.`;
 
     // Auto-grant daily spin if not yet claimed today (no need for user to tap Claim)
     const dailyResult = autoGrantDailySpin();
-    if (dailyResult) {
-      setTimeout(() => {
-        showToast(`🎉 +${dailyResult.bonus} daily spin${dailyResult.bonus===1?'':'s'} (day ${dailyResult.streak} streak)`);
-      }, 1400);
-    }
 
     document.getElementById('btn-add').addEventListener('click', () => openModal(null));
     document.getElementById('btn-snap').addEventListener('click', async () => {
@@ -2009,11 +2151,11 @@ Return only the JSON, no other text.`;
 
     // Run reminder check on load and every time the app comes back to foreground
     checkAndSendReminders();
+    scheduleAllDealReminders();
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
         refreshDailyQuests();
         const r = autoGrantDailySpin();
-        if (r) showToast(`🎉 +${r.bonus} daily spin${r.bonus===1?'':'s'} (day ${r.streak} streak)`);
         checkAndSendReminders();
         if (settings.nearbyOn) {
           startBeaconWatch();
