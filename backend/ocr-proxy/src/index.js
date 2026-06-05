@@ -70,52 +70,19 @@ export default {
       return handleCors(request, env, jsonError(413, 'Image too large (max ~4MB)'));
     }
 
-    // Call Anthropic
-    const apiKey = env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      return handleCors(request, env, jsonError(500, 'OCR service not configured'));
+    // Call AI provider — auto-select based on which key is configured
+    const anthropicKey = env.ANTHROPIC_API_KEY;
+    const openaiKey = env.OPENAI_API_KEY;
+    if (!anthropicKey && !openaiKey) {
+      return handleCors(request, env, jsonError(500, 'OCR service not configured — set ANTHROPIC_API_KEY or OPENAI_API_KEY'));
     }
 
     try {
-      const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01'
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-5',
-          max_tokens: 500,
-          messages: [{
-            role: 'user',
-            content: [
-              { type: 'image', source: { type: 'base64', media_type: mediaType, data: image } },
-              { type: 'text', text: OCR_PROMPT }
-            ]
-          }]
-        })
-      });
-
-      if (!anthropicResponse.ok) {
-        const errText = await anthropicResponse.text();
-        let errMsg = `Upstream error ${anthropicResponse.status}`;
-        try {
-          const errJson = JSON.parse(errText);
-          if (errJson.error && errJson.error.message) errMsg = errJson.error.message;
-        } catch (e) {}
-        return handleCors(request, env, jsonError(502, errMsg));
-      }
-
-      const data = await anthropicResponse.json();
-      const text = (data.content || []).map(b => b.text || '').join('').trim();
-      const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
-
       let result;
-      try {
-        result = JSON.parse(cleaned);
-      } catch (e) {
-        return handleCors(request, env, jsonError(502, 'AI returned non-JSON response'));
+      if (openaiKey) {
+        result = await callOpenAI(openaiKey, mediaType, image);
+      } else {
+        result = await callAnthropic(anthropicKey, mediaType, image);
       }
 
       return handleCors(request, env, new Response(JSON.stringify({ ok: true, result }), {
@@ -124,10 +91,82 @@ export default {
       }));
 
     } catch (e) {
-      return handleCors(request, env, jsonError(500, `OCR processing failed: ${e.message}`));
+      return handleCors(request, env, jsonError(502, e.message || 'OCR processing failed'));
     }
   }
 };
+
+async function callAnthropic(apiKey, mediaType, b64) {
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 600,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
+          { type: 'text', text: OCR_PROMPT }
+        ]
+      }]
+    })
+  });
+  if (!response.ok) {
+    const errText = await response.text();
+    let errMsg = `Anthropic ${response.status}`;
+    try { const j = JSON.parse(errText); if (j.error?.message) errMsg = j.error.message; } catch(e){}
+    throw new Error(errMsg);
+  }
+  const data = await response.json();
+  const text = (data.content || []).map(b => b.text || '').join('').trim();
+  return parseJsonReply(text);
+}
+
+async function callOpenAI(apiKey, mediaType, b64) {
+  const dataUrl = `data:${mediaType};base64,${b64}`;
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o',
+      max_tokens: 600,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'text', text: OCR_PROMPT },
+          { type: 'image_url', image_url: { url: dataUrl } }
+        ]
+      }]
+    })
+  });
+  if (!response.ok) {
+    const errText = await response.text();
+    let errMsg = `OpenAI ${response.status}`;
+    try { const j = JSON.parse(errText); if (j.error?.message) errMsg = j.error.message; } catch(e){}
+    throw new Error(errMsg);
+  }
+  const data = await response.json();
+  const text = data.choices?.[0]?.message?.content || '';
+  return parseJsonReply(text);
+}
+
+function parseJsonReply(text) {
+  const cleaned = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+  try { return JSON.parse(cleaned); }
+  catch (e) {
+    const m = cleaned.match(/\{[\s\S]*\}/);
+    if (m) { try { return JSON.parse(m[0]); } catch(ee){} }
+    throw new Error('AI returned non-JSON response');
+  }
+}
 
 function jsonError(status, message) {
   return new Response(JSON.stringify({ ok: false, error: message }), {
