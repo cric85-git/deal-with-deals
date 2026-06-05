@@ -3,12 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-<meta name="theme-color" content="#1A1A1A">
+<meta name="theme-color" content="#FFE16B">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Perq">
-<title>Perq · MVP</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.0.0/tabler-icons.min.css">
+<title>Perq</title>
 <style>
 :root{
   --bg:#FAF8F3;--surface:#FFF;--text:#1A1A1A;--text-dim:#6B6A64;--text-faint:#9C9AA8;
@@ -16,97 +15,98 @@
   --warm-1:#FF6B6B;--warm-2:#FFA06B;--green-1:#00C9A7;--green-2:#4FACFE;
   --purple-1:#6366F1;--purple-2:#C084FC;--pink-1:#F472B6;--pink-2:#FB923C;
   --border:rgba(0,0,0,0.08);
-  --safe-top:env(safe-area-inset-top,0px);
+  --safe-top:env(safe-area-inset-top,20px);
   --safe-bottom:env(safe-area-inset-bottom,0px);
 }
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;padding:0;font-family:-apple-system,"SF Pro Display",BlinkMacSystemFont,system-ui,sans-serif;background:var(--bg);color:var(--text);overscroll-behavior:none;-webkit-font-smoothing:antialiased;height:100%;overflow:hidden}
-body{padding-top:var(--safe-top)}
-button,input,select,textarea{font-family:inherit;font-size:16px;color:var(--text)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+html,body{font-family:-apple-system,"SF Pro Display",BlinkMacSystemFont,system-ui,sans-serif;background:var(--bg);color:var(--text);overscroll-behavior:none;-webkit-font-smoothing:antialiased;height:100vh;height:100dvh;overflow:hidden;width:100%}
+button,input,select,textarea{font-family:inherit;color:var(--text);font-size:15px}
+button{border:none;background:none;cursor:pointer;color:inherit}
+
 .gradient-warm{background:linear-gradient(135deg,#FF6B6B,#FFA06B)}
 .gradient-green{background:linear-gradient(135deg,#00C9A7,#4FACFE)}
 .gradient-purple{background:linear-gradient(135deg,#6366F1,#C084FC)}
 .gradient-pink{background:linear-gradient(135deg,#F472B6,#FB923C)}
+.gradient-yellow{background:linear-gradient(135deg,#FFD700,#FFA500)}
 
-.app{position:fixed;inset:0;display:flex;flex-direction:column}
-.page{flex:1;overflow-y:auto;padding-bottom:calc(90px + var(--safe-bottom));-webkit-overflow-scrolling:touch;display:none}
+.app{position:fixed;inset:0;display:flex;flex-direction:column;width:100%;height:100%}
+.page{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;display:none;padding-top:var(--safe-top)}
 .page.active{display:block;animation:fadeIn .25s}
 .page::-webkit-scrollbar{display:none}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
-.tabbar{position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,0.96);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;padding:8px 0 calc(20px + var(--safe-bottom));z-index:100}
-.tabbar-btn{background:transparent;border:none;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 8px;cursor:pointer;color:var(--text-faint);flex:1;position:relative}
-.tabbar-btn i{font-size:22px}
+/* ---- Tab Bar ---- */
+.tabbar{flex-shrink:0;background:white;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;padding:8px 0 calc(8px + var(--safe-bottom));position:relative;box-shadow:0 -4px 16px rgba(0,0,0,0.04)}
+.tabbar-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 8px;color:var(--text-faint);flex:1;position:relative}
+.tabbar-btn .ico{width:22px;height:22px;display:flex;align-items:center;justify-content:center}
 .tabbar-btn span{font-size:10px;font-weight:600}
 .tabbar-btn.active{color:var(--text)}
 .tabbar-btn.active::before{content:'';position:absolute;top:-1px;width:28px;height:3px;border-radius:0 0 3px 3px;background:var(--accent-dark)}
-.tabbar-snap{background:linear-gradient(135deg,#1a1a1a,#2a2a3e);border:4px solid white;border-radius:50%;width:60px;height:60px;display:flex;align-items:center;justify-content:center;margin-top:-28px;box-shadow:0 6px 20px rgba(0,0,0,0.3);cursor:pointer}
-.tabbar-snap i{color:white;font-size:26px}
+.tabbar-snap{background:#1A1A1A;border-radius:50%;width:60px;height:60px;display:flex;align-items:center;justify-content:center;margin-top:-24px;box-shadow:0 6px 20px rgba(0,0,0,0.3);border:4px solid white}
+.tabbar-snap svg{width:28px;height:28px;fill:none;stroke:white;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
-/* HOME */
-.home-screen{background:linear-gradient(180deg,#FFE16B 0%,#FAF8F3 25%);min-height:100%}
-.home-header{padding:14px 20px 16px;display:flex;justify-content:space-between;align-items:center}
-.home-logo{font-size:24px;font-weight:800}
-.home-logo span{color:var(--accent-dark)}
-.home-actions{display:flex;gap:8px}
-.icon-btn{background:white;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.06);border:none}
-.icon-btn i{color:#1a1a1a;font-size:18px}
-.icon-btn.has-badge::after{content:'';position:absolute;top:8px;right:10px;width:8px;height:8px;border-radius:50%;background:var(--warm-1)}
-.savings-card{margin:0 20px 16px;background:linear-gradient(135deg,#1a1a1a,#2a2a3e);border-radius:24px;padding:22px;color:white;position:relative;overflow:hidden}
-.savings-card::before{content:'💰';position:absolute;top:-20px;right:-10px;font-size:110px;opacity:0.12}
-.savings-lbl{font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;opacity:0.7;margin:0}
-.savings-amt{font-size:44px;font-weight:900;margin:4px 0;letter-spacing:-1.5px}
-.savings-trend{font-size:12px;opacity:0.85;display:flex;align-items:center;gap:4px}
-.savings-trend i{color:var(--accent)}
-.quick-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:0 20px 16px}
-.quick-action{background:white;border-radius:16px;padding:12px 6px;text-align:center;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.04);transition:transform .15s;border:none}
-.quick-action:active{transform:scale(0.95)}
-.qa-icon{width:36px;height:36px;border-radius:12px;margin:0 auto 6px;display:flex;align-items:center;justify-content:center;font-size:20px;color:white}
-.qa-snap{background:linear-gradient(135deg,#FF6B6B,#FFA06B)}
-.qa-upload{background:linear-gradient(135deg,#6366F1,#C084FC)}
-.qa-rewards{background:linear-gradient(135deg,#FFD700,#FFA500)}
-.qa-loyalty{background:linear-gradient(135deg,#00C9A7,#4FACFE)}
-.quick-action p{font-size:11px;font-weight:600;margin:0;color:#333}
-.section-title{font-size:14px;font-weight:700;padding:8px 20px;margin:0;display:flex;justify-content:space-between;align-items:center;color:var(--text)}
-.section-title a{font-size:11px;color:var(--accent-dark);font-weight:600;text-decoration:none;cursor:pointer}
-.empty-state{margin:0 20px 16px;background:white;border-radius:18px;padding:32px 20px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.04)}
-.empty-state-icon{font-size:48px;margin:0 0 8px;opacity:0.4}
-.empty-state-title{font-size:15px;font-weight:700;margin:0 0 4px;color:var(--text)}
-.empty-state-sub{font-size:12px;color:var(--text-dim);margin:0 0 14px;line-height:1.5}
-.empty-state-cta{background:#1a1a1a;color:white;border:none;border-radius:999px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer}
+/* SVG icons (inline so always render) */
+.svg-icon{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---- HOME ---- */
+.home-screen{background:linear-gradient(180deg,#FFE16B 0%,#FAF8F3 220px);min-height:100%;padding-bottom:24px}
+.home-header{padding:14px 20px 16px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.home-logo{display:flex;align-items:center;gap:8px}
+.home-logo-mark{width:36px;height:36px;border-radius:10px;background:#1A1A1A;display:flex;align-items:center;justify-content:center;color:#FFE16B;font-weight:900;font-size:18px;letter-spacing:-0.5px;flex-shrink:0}
+.home-logo-text{font-size:22px;font-weight:800;letter-spacing:-0.4px;color:#1A1A1A}
+.home-actions{display:flex;gap:8px;flex-shrink:0}
+.icon-btn{background:white;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;position:relative;box-shadow:0 2px 6px rgba(0,0,0,0.08)}
+.icon-btn svg{width:20px;height:20px;fill:none;stroke:#1A1A1A;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.icon-btn.has-badge::after{content:'';position:absolute;top:8px;right:10px;width:8px;height:8px;border-radius:50%;background:var(--warm-1);border:1.5px solid white}
+
+.savings-card{margin:0 20px 16px;background:linear-gradient(135deg,#1A1A1A,#2A2A3E);border-radius:24px;padding:22px;color:white;position:relative;overflow:hidden}
+.savings-card-bg{position:absolute;top:-30px;right:-20px;font-size:140px;opacity:0.08;line-height:1}
+.savings-lbl{font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;opacity:0.7;margin:0;position:relative}
+.savings-amt{font-size:44px;font-weight:900;margin:4px 0;letter-spacing:-1.5px;position:relative}
+.savings-trend{font-size:12px;opacity:0.85;display:flex;align-items:center;gap:6px;position:relative}
+
+.section-title{font-size:14px;font-weight:700;padding:8px 20px;display:flex;justify-content:space-between;align-items:center;color:var(--text);margin-top:8px}
+.section-title .see-all{font-size:11px;color:var(--accent-dark);font-weight:600;cursor:pointer}
+
+.empty-state{margin:0 20px;background:white;border-radius:20px;padding:36px 24px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,0.04)}
+.empty-icon{font-size:42px;margin-bottom:10px;opacity:0.5;line-height:1}
+.empty-title{font-size:16px;font-weight:700;margin:0 0 4px}
+.empty-sub{font-size:13px;color:var(--text-dim);margin:0 0 18px;line-height:1.5}
+.empty-cta{background:#1A1A1A;color:white;padding:12px 22px;border-radius:999px;font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:6px}
+.empty-cta svg{width:16px;height:16px;stroke:white}
+
 .h-carousel{display:flex;gap:12px;overflow-x:auto;padding:8px 20px 16px;scrollbar-width:none}
 .h-carousel::-webkit-scrollbar{display:none}
-.h-deal{flex-shrink:0;width:200px;background:white;border-radius:18px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.05);cursor:pointer;transition:transform .15s;border:none;padding:0;text-align:left}
-.h-deal:active{transform:scale(0.97)}
+.h-deal{flex-shrink:0;width:200px;background:white;border-radius:18px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.05);text-align:left}
 .h-hero{height:110px;position:relative;padding:12px}
-.h-pct{position:absolute;top:12px;right:12px;background:white;color:#1a1a1a;padding:4px 10px;border-radius:999px;font-size:13px;font-weight:800}
-.h-merchant-overlay{position:absolute;bottom:12px;left:12px;color:white;font-size:16px;font-weight:800;text-shadow:0 1px 3px rgba(0,0,0,0.3)}
+.h-pct{position:absolute;top:12px;right:12px;background:white;color:#1A1A1A;padding:4px 10px;border-radius:999px;font-size:13px;font-weight:800}
+.h-merch-overlay{position:absolute;bottom:12px;left:12px;color:white;font-size:16px;font-weight:800;text-shadow:0 1px 3px rgba(0,0,0,0.3)}
 .h-body{padding:12px}
 .h-discount{font-size:14px;font-weight:700;margin:0 0 2px}
 .h-expiry{font-size:11px;color:#777;margin:0}
-.h-cta{display:block;width:100%;margin-top:10px;background:var(--accent);color:#1a1a1a;border:none;border-radius:12px;padding:10px;font-size:12px;font-weight:700;cursor:pointer;text-align:center}
+.h-cta{display:block;width:100%;margin-top:10px;background:var(--accent);color:#1A1A1A;border-radius:12px;padding:10px;font-size:12px;font-weight:700;text-align:center}
 
-/* Onboarding */
+/* ---- Onboarding ---- */
 .onboarding{position:fixed;inset:0;background:linear-gradient(180deg,#FFE16B 0%,#FAF8F3 60%);z-index:1000;display:flex;flex-direction:column;padding:calc(40px + var(--safe-top)) 24px calc(20px + var(--safe-bottom))}
 .onboarding.hidden{display:none}
 .ob-step{display:none;flex:1;flex-direction:column;justify-content:center;text-align:center;animation:fadeIn .3s}
 .ob-step.active{display:flex}
-.ob-emoji{font-size:80px;margin-bottom:24px}
-.ob-title{font-size:32px;font-weight:900;letter-spacing:-0.6px;margin:0 0 12px;line-height:1.1}
+.ob-emoji{font-size:80px;margin-bottom:24px;line-height:1}
+.ob-title{font-size:30px;font-weight:900;letter-spacing:-0.6px;margin:0 0 12px;line-height:1.1}
 .ob-sub{font-size:15px;color:var(--text-dim);line-height:1.5;margin:0 0 32px;max-width:300px;align-self:center}
 .ob-input{width:100%;background:white;border:2px solid transparent;border-radius:14px;padding:14px 16px;font-size:15px;outline:none;margin-bottom:12px;text-align:center}
-.ob-input:focus{border-color:#1a1a1a}
+.ob-input:focus{border-color:#1A1A1A}
 .ob-prefs{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:0 0 24px}
-.ob-pref{background:white;border:2px solid transparent;border-radius:999px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;color:var(--text-dim)}
-.ob-pref.active{background:#1a1a1a;color:white;border-color:#1a1a1a}
+.ob-pref{background:white;border:2px solid transparent;border-radius:999px;padding:10px 16px;font-size:13px;font-weight:700;color:var(--text-dim)}
+.ob-pref.active{background:#1A1A1A;color:white;border-color:#1A1A1A}
 .ob-actions{display:flex;flex-direction:column;gap:8px;margin-top:auto}
-.ob-btn{width:100%;background:#1a1a1a;color:white;border:none;border-radius:14px;padding:16px;font-size:15px;font-weight:800;cursor:pointer}
+.ob-btn{width:100%;background:#1A1A1A;color:white;border-radius:14px;padding:16px;font-size:15px;font-weight:800}
 .ob-btn.secondary{background:transparent;color:var(--text-dim);font-weight:600}
 .ob-progress{display:flex;gap:6px;justify-content:center;margin-bottom:24px}
 .ob-dot{width:6px;height:6px;border-radius:50%;background:rgba(0,0,0,0.15)}
-.ob-dot.active{background:#1a1a1a;width:20px;border-radius:6px;transition:all .3s}
+.ob-dot.active{background:#1A1A1A;width:20px;border-radius:6px;transition:all .3s}
 
-/* Modal forms */
+/* ---- Modal ---- */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:300;display:none;align-items:flex-end}
 .modal-overlay.active{display:flex;animation:fadeIn .2s}
 .modal{background:white;width:100%;border-radius:28px 28px 0 0;padding:12px 20px calc(24px + var(--safe-bottom));max-height:90vh;overflow-y:auto;animation:slideUp .25s}
@@ -115,68 +115,76 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:var(--text
 .modal-title{font-size:18px;font-weight:700;margin:0 0 16px;text-align:center}
 .form-row{margin-bottom:12px}
 .form-row label{display:block;font-size:12px;color:var(--text-dim);margin-bottom:4px;font-weight:600}
-.form-row input,.form-row select,.form-row textarea{width:100%;background:#f8f8f8;border:1px solid transparent;border-radius:12px;padding:12px 14px;font-size:15px;outline:none}
-.form-row input:focus,.form-row select:focus,.form-row textarea:focus{border-color:#1a1a1a;background:white}
+.form-row input,.form-row select,.form-row textarea{width:100%;background:#F8F8F8;border:1px solid transparent;border-radius:12px;padding:12px 14px;font-size:15px;outline:none;font-family:inherit}
+.form-row input:focus,.form-row select:focus,.form-row textarea:focus{border-color:#1A1A1A;background:white}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .form-actions{display:flex;gap:8px;margin-top:16px}
-.form-actions button{flex:1;border:none;padding:14px;border-radius:14px;font-size:14px;font-weight:700;cursor:pointer}
-.form-actions .btn-primary{background:#1a1a1a;color:white}
-.form-actions .btn-secondary{background:#f0f0f0;color:#333}
+.form-actions button{flex:1;padding:14px;border-radius:14px;font-size:14px;font-weight:700}
+.btn-primary{background:#1A1A1A;color:white}
+.btn-secondary{background:#F0F0F0;color:#333}
+
+/* Snap sheet options */
+.snap-option{display:flex;align-items:center;gap:14px;padding:16px;border-radius:14px;background:#F8F8F8;margin-bottom:8px;width:100%;text-align:left}
+.snap-option:active{background:#EBEBEB}
+.snap-option-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:white;flex-shrink:0}
+.snap-option-icon svg{width:22px;height:22px;stroke:white}
+.snap-option-info{flex:1}
+.snap-option-title{font-size:15px;font-weight:700;margin:0}
+.snap-option-sub{font-size:12px;color:var(--text-dim);margin:2px 0 0}
 
 /* Settings */
 .settings-list{padding:0 20px}
 .settings-group{background:white;border-radius:16px;padding:0 16px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,0.04)}
 .settings-row{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--border)}
 .settings-row:last-child{border-bottom:none}
-.settings-icon-sm{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px}
+.settings-icon-sm{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.settings-icon-sm svg{width:16px;height:16px;stroke-width:2}
 .settings-info{flex:1;min-width:0}
 .settings-row-title{font-size:14px;font-weight:600;margin:0}
 .settings-row-sub{font-size:11px;color:var(--text-dim);margin:2px 0 0}
-.toggle{width:44px;height:26px;border-radius:999px;background:#ddd;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;border:none}
+.toggle{width:44px;height:26px;border-radius:999px;background:#ddd;position:relative;flex-shrink:0;transition:background .2s}
 .toggle.on{background:var(--accent)}
 .toggle::after{content:'';position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:50%;background:white;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,0.2)}
 .toggle.on::after{left:20px}
 
 /* Toast */
-#toast{position:fixed;bottom:120px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:white;padding:12px 20px;border-radius:999px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 8px 20px rgba(0,0,0,0.3);max-width:90%;text-align:center;display:none;animation:slideUpToast .25s}
+#toast{position:fixed;bottom:120px;left:50%;transform:translateX(-50%);background:#1A1A1A;color:white;padding:12px 20px;border-radius:999px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 8px 20px rgba(0,0,0,0.3);max-width:90%;text-align:center;display:none;animation:slideUpToast .25s}
 #toast.show{display:block}
 @keyframes slideUpToast{from{opacity:0;transform:translateX(-50%) translateY(20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 
-/* Programs/loyalty */
-.programs-row,.loyalty-row{display:flex;gap:10px;overflow-x:auto;padding:8px 20px 16px;scrollbar-width:none}
-.programs-row::-webkit-scrollbar,.loyalty-row::-webkit-scrollbar{display:none}
-.program-tile{flex-shrink:0;min-width:140px;background:white;border-radius:16px;padding:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04);cursor:pointer;border:none;text-align:left}
-.program-icon{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:white;font-size:16px;margin-bottom:8px}
-.program-name{font-size:13px;font-weight:700;margin:0 0 2px}
-.program-balance{font-size:11px;color:var(--text-dim);margin:0}
-.add-tile{background:rgba(255,255,255,0.5);border:2px dashed rgba(0,0,0,0.15);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--text-dim);font-size:12px;font-weight:600;min-height:74px}
-.add-tile i{font-size:22px}
-.loyalty-card{flex-shrink:0;width:160px;height:100px;border-radius:14px;padding:12px;color:white;cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,0.1);border:none;text-align:left}
-.loyalty-name{font-size:13px;font-weight:700;margin:0}
-.loyalty-num{font-family:ui-monospace,monospace;font-size:11px;letter-spacing:1px;opacity:0.9;margin:0}
+/* Wallet */
+.wallet-screen{background:#0A0A14;min-height:100%;padding-bottom:24px}
+.wallet-header{padding:0 20px 16px;display:flex;align-items:center;gap:12px;color:white}
+.wallet-back{background:rgba(255,255,255,0.15)!important}
+.wallet-back svg{stroke:white!important}
+.wallet-title{flex:1}
+.wallet-title h2{color:white;font-size:24px;font-weight:800;margin:0}
+.wallet-title p{color:rgba(255,255,255,0.7);font-size:13px;margin:2px 0 0}
+.wallet-tabs{display:flex;gap:6px;padding:0 20px 12px;overflow-x:auto;scrollbar-width:none}
+.wallet-tabs::-webkit-scrollbar{display:none}
+.wallet-tab{flex-shrink:0;background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.8);padding:8px 14px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.wallet-tab.active{background:var(--accent);color:#1A1A1A}
 </style>
 </head>
 <body>
 
-<!-- ONBOARDING -->
+<!-- Onboarding -->
 <div class="onboarding" id="onboarding">
   <div class="ob-progress">
-    <div class="ob-dot active" data-d="1"></div>
-    <div class="ob-dot" data-d="2"></div>
-    <div class="ob-dot" data-d="3"></div>
+    <div class="ob-dot active"></div>
+    <div class="ob-dot"></div>
+    <div class="ob-dot"></div>
   </div>
   <div class="ob-step active" data-step="1">
     <div class="ob-emoji">🎟️</div>
     <h1 class="ob-title">Welcome to Perq</h1>
     <p class="ob-sub">Snap a coupon, forget about it. We'll remind you before it expires and alert you when you're nearby.</p>
-    <div class="ob-actions">
-      <button class="ob-btn" onclick="nextStep()">Get started</button>
-    </div>
+    <div class="ob-actions"><button class="ob-btn" onclick="nextStep()">Get started</button></div>
   </div>
   <div class="ob-step" data-step="2">
     <div class="ob-emoji">👋</div>
     <h1 class="ob-title">What's your name?</h1>
-    <p class="ob-sub">Just first name is fine — keeps things personal.</p>
+    <p class="ob-sub">Just first name is fine.</p>
     <input type="text" class="ob-input" id="ob-name" placeholder="Your name" autocomplete="given-name">
     <div class="ob-actions">
       <button class="ob-btn" onclick="nextStep()">Continue</button>
@@ -187,7 +195,7 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:var(--text
     <div class="ob-emoji">🛍️</div>
     <h1 class="ob-title">What do you shop for?</h1>
     <p class="ob-sub">We'll personalize your deal feed.</p>
-    <div class="ob-prefs" id="ob-prefs">
+    <div class="ob-prefs">
       <button class="ob-pref" data-pref="Groceries">🛒 Groceries</button>
       <button class="ob-pref" data-pref="Dining">☕ Dining</button>
       <button class="ob-pref" data-pref="Apparel">👕 Apparel</button>
@@ -196,9 +204,7 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:var(--text
       <button class="ob-pref" data-pref="Home">🏠 Home</button>
       <button class="ob-pref" data-pref="Electronics">📱 Tech</button>
     </div>
-    <div class="ob-actions">
-      <button class="ob-btn" onclick="finishOnboarding()">Start using Perq</button>
-    </div>
+    <div class="ob-actions"><button class="ob-btn" onclick="finishOnboarding()">Start using Perq</button></div>
   </div>
 </div>
 
@@ -207,221 +213,209 @@ button,input,select,textarea{font-family:inherit;font-size:16px;color:var(--text
 <!-- HOME -->
 <div class="page active" data-page="home">
 <div class="home-screen">
-<div class="home-header">
-  <div class="home-logo">Per<span>q</span></div>
-  <div class="home-actions">
-    <button class="icon-btn" id="bell-btn" onclick="checkReminders()"><i class="ti ti-bell"></i></button>
-    <button class="icon-btn" onclick="goPage('settings')"><i class="ti ti-settings"></i></button>
+  <div class="home-header">
+    <div class="home-logo">
+      <div class="home-logo-mark">P</div>
+      <span class="home-logo-text">Perq</span>
+    </div>
+    <div class="home-actions">
+      <button class="icon-btn has-badge" onclick="checkReminders()" aria-label="Notifications"><svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg></button>
+      <button class="icon-btn" onclick="goPage('settings')" aria-label="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+    </div>
   </div>
-</div>
-<div class="savings-card">
-  <p class="savings-lbl">Total saved this year</p>
-  <h2 class="savings-amt" id="total-saved">$0</h2>
-  <p class="savings-trend"><i class="ti ti-trending-up"></i> <span id="streak-text">Save your first deal to start a streak</span></p>
-</div>
-<div class="quick-actions">
-  <button class="quick-action" onclick="openSnapSheet()"><div class="qa-icon qa-snap">📷</div><p>Snap</p></button>
-  <button class="quick-action" onclick="openImportModal()"><div class="qa-icon qa-upload"><i class="ti ti-upload"></i></div><p>Upload</p></button>
-  <button class="quick-action" onclick="goPage('rewards')"><div class="qa-icon qa-rewards">⭐</div><p>Rewards</p></button>
-  <button class="quick-action" onclick="goPage('loyalty')"><div class="qa-icon qa-loyalty">💳</div><p>Loyalty</p></button>
-</div>
 
-<h3 class="section-title">Your deals <a id="see-all-deals" onclick="goPage('wallet')" style="display:none">See all →</a></h3>
-<div id="deals-section"></div>
+  <div class="savings-card">
+    <span class="savings-card-bg">💰</span>
+    <p class="savings-lbl">Total saved this year</p>
+    <h2 class="savings-amt" id="total-saved">$0</h2>
+    <p class="savings-trend"><span id="streak-text">Save your first deal to start a streak</span></p>
+  </div>
 
-<h3 class="section-title">Reward programs <a onclick="openAddProgram()">+ Add</a></h3>
-<div class="programs-row" id="programs-row"></div>
+  <h3 class="section-title">Your deals <span class="see-all" id="see-all-deals" onclick="goPage('wallet')" style="display:none">See all →</span></h3>
+  <div id="deals-section"></div>
 
-<h3 class="section-title">Loyalty cards <a onclick="openAddLoyalty()">+ Add</a></h3>
-<div class="loyalty-row" id="loyalty-row"></div>
+  <h3 class="section-title">Reward programs <span class="see-all" onclick="goPage('wallet');setWalletFilter('programs')">View all →</span></h3>
+  <div id="programs-preview"></div>
 
+  <h3 class="section-title">Loyalty cards <span class="see-all" onclick="goPage('wallet');setWalletFilter('loyalty')">View all →</span></h3>
+  <div id="loyalty-preview"></div>
 </div>
 </div>
 
 <!-- WALLET -->
 <div class="page" data-page="wallet">
-<div style="background:#000;min-height:100%;padding:14px 0 0">
-<div style="padding:0 20px 20px;display:flex;align-items:center;gap:12px">
-  <button class="icon-btn" onclick="goPage('home')" style="background:rgba(255,255,255,0.15)"><i class="ti ti-arrow-left" style="color:white !important"></i></button>
-  <div style="flex:1">
-    <h2 style="color:white;font-size:24px;font-weight:800;margin:0">My Wallet</h2>
-    <p id="wallet-sub" style="color:rgba(255,255,255,0.7);font-size:13px;margin:2px 0 0">No deals yet</p>
+<div class="wallet-screen">
+  <div style="padding-top:14px"></div>
+  <div class="wallet-header">
+    <button class="icon-btn wallet-back" onclick="goPage('home')"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <div class="wallet-title">
+      <h2>My Wallet</h2>
+      <p id="wallet-sub">Everything you've saved</p>
+    </div>
   </div>
-</div>
-<div id="wallet-content" style="padding:0 20px"></div>
+  <div class="wallet-tabs">
+    <button class="wallet-tab active" data-wfilter="all" onclick="setWalletFilter('all')">All</button>
+    <button class="wallet-tab" data-wfilter="deals" onclick="setWalletFilter('deals')">🎟️ Deals</button>
+    <button class="wallet-tab" data-wfilter="programs" onclick="setWalletFilter('programs')">⭐ Rewards</button>
+    <button class="wallet-tab" data-wfilter="loyalty" onclick="setWalletFilter('loyalty')">💳 Loyalty</button>
+  </div>
+  <div id="wallet-content" style="padding:0 20px"></div>
 </div>
 </div>
 
 <!-- BROWSE -->
 <div class="page" data-page="browse">
-<div style="background:var(--bg);min-height:100%;padding-top:14px">
-<div style="padding:0 20px 12px">
-  <h2 style="font-size:24px;font-weight:800;margin:0">Browse Deals</h2>
-  <p style="font-size:13px;color:var(--text-dim);margin:2px 0 0">Local + online + shared by friends</p>
-</div>
-<div style="display:flex;gap:6px;padding:0 20px 12px">
-  <button class="btab" data-btab="local" onclick="setBrowseTab('local')" style="flex:1;background:#1a1a1a;color:white;border:1px solid #1a1a1a;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer">📍 Local</button>
-  <button class="btab" data-btab="online" onclick="setBrowseTab('online')" style="flex:1;background:white;color:var(--text-dim);border:1px solid var(--border);border-radius:999px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer">🌐 Online</button>
-  <button class="btab" data-btab="friends" onclick="setBrowseTab('friends')" style="flex:1;background:white;color:var(--text-dim);border:1px solid var(--border);border-radius:999px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer">👥 Friends</button>
-</div>
-
-<div class="bsection" data-bsection="local">
-<div style="margin:0 20px 16px;background:white;border-radius:16px;padding:14px 16px;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-    <p style="font-size:12px;font-weight:700;margin:0">Distance radius</p>
-    <span id="radius-val" style="font-size:13px;font-weight:800;color:var(--accent-dark)">5 mi</span>
+<div style="background:var(--bg);min-height:100%;padding-bottom:24px;padding-top:14px">
+  <div style="padding:0 20px 12px">
+    <h2 style="font-size:24px;font-weight:800;margin:0">Browse Deals</h2>
+    <p style="font-size:13px;color:var(--text-dim);margin:2px 0 0">Local + online + shared by friends</p>
   </div>
-  <input type="range" min="1" max="25" value="5" oninput="document.getElementById('radius-val').textContent=this.value+' mi'" style="width:100%;height:4px;appearance:none;-webkit-appearance:none;background:#e5e5e5;border-radius:999px;outline:none">
+  <div style="display:flex;gap:6px;padding:0 20px 12px">
+    <button class="btab" data-btab="local" onclick="setBrowseTab('local')" style="flex:1;background:#1A1A1A;color:white;border:1px solid #1A1A1A;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:700">📍 Local</button>
+    <button class="btab" data-btab="online" onclick="setBrowseTab('online')" style="flex:1;background:white;color:var(--text-dim);border:1px solid var(--border);border-radius:999px;padding:8px 12px;font-size:12px;font-weight:700">🌐 Online</button>
+    <button class="btab" data-btab="friends" onclick="setBrowseTab('friends')" style="flex:1;background:white;color:var(--text-dim);border:1px solid var(--border);border-radius:999px;padding:8px 12px;font-size:12px;font-weight:700">👥 Friends</button>
+  </div>
+  <div class="bsection" data-bsection="local">
+    <div style="margin:0 20px 16px;background:white;border-radius:16px;padding:14px 16px;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <p style="font-size:12px;font-weight:700;margin:0">Distance radius</p>
+        <span id="radius-val" style="font-size:13px;font-weight:800;color:var(--accent-dark)">5 mi</span>
+      </div>
+      <input type="range" min="1" max="25" value="5" oninput="document.getElementById('radius-val').textContent=this.value+' mi'" style="width:100%;height:4px;appearance:none;-webkit-appearance:none;background:#e5e5e5;border-radius:999px;outline:none">
+    </div>
+    <div id="local-deals-list" style="padding:0 20px 16px"></div>
+  </div>
+  <div class="bsection" data-bsection="online" style="display:none"><div id="online-deals-list" style="padding:8px 20px 16px"></div></div>
+  <div class="bsection" data-bsection="friends" style="display:none"><div id="friends-deals-list" style="padding:8px 20px 16px"></div></div>
 </div>
-<div id="local-deals-list" style="padding:0 20px 16px"></div>
 </div>
 
-<div class="bsection" data-bsection="online" style="display:none">
-<div id="online-deals-list" style="padding:8px 20px 16px"></div>
-</div>
-
-<div class="bsection" data-bsection="friends" style="display:none">
-<div id="friends-deals-list" style="padding:8px 20px 16px"></div>
-</div>
-</div>
-</div>
-
-<!-- REWARDS -->
+<!-- REWARDS (Spin/Points only — programs moved to Wallet) -->
 <div class="page" data-page="rewards">
-<div style="background:linear-gradient(180deg,#FF6B6B 0%,#FAF8F3 30%);min-height:100%;padding-top:14px">
-<div style="padding:0 20px 16px;display:flex;align-items:center;gap:12px">
-  <button class="icon-btn" onclick="goPage('home')"><i class="ti ti-arrow-left"></i></button>
-  <h2 style="color:white;font-size:24px;font-weight:800;margin:0;flex:1">Rewards</h2>
-  <div id="streak-pill" style="background:rgba(255,255,255,0.2);backdrop-filter:blur(10px);padding:6px 12px;border-radius:999px;color:white;font-size:13px;font-weight:700">🔥 0 day streak</div>
-</div>
-
-<div style="margin:0 20px 20px;background:white;border-radius:28px;padding:28px 20px;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,0.06)">
-  <p style="font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin:0">Your points</p>
-  <h2 id="points-display" style="font-size:56px;font-weight:900;margin:4px 0 8px;letter-spacing:-2px;line-height:1">0</h2>
-  <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:16px">
-    <span id="tier-badge" style="background:linear-gradient(135deg,#A07248,#8B5A2B);color:white;font-size:11px;font-weight:800;padding:4px 12px;border-radius:999px">🥉 BRONZE</span>
-    <span id="next-tier-text" style="font-size:11px;color:var(--text-dim)">100 to Silver</span>
+<div style="background:linear-gradient(180deg,#FF6B6B 0%,#FAF8F3 30%);min-height:100%;padding-top:14px;padding-bottom:24px">
+  <div style="padding:0 20px 16px;display:flex;align-items:center;gap:12px">
+    <button class="icon-btn" onclick="goPage('home')"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <h2 style="color:white;font-size:24px;font-weight:800;margin:0;flex:1">Rewards</h2>
+    <div id="streak-pill" style="background:rgba(255,255,255,0.2);backdrop-filter:blur(10px);padding:6px 12px;border-radius:999px;color:white;font-size:13px;font-weight:700">🔥 0 day streak</div>
   </div>
-  <div style="background:#f0f0f0;border-radius:999px;height:8px;overflow:hidden;margin-bottom:6px"><div id="progress-fill" style="background:linear-gradient(90deg,#A07248,#8B5A2B);height:100%;width:0%;border-radius:999px;transition:width .5s"></div></div>
-  <p style="font-size:11px;color:var(--text-dim)">Earn points by saving and sharing deals</p>
-</div>
-
-<div style="margin:0 20px 20px;background:white;border-radius:28px;padding:20px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.06)">
-  <div style="position:relative;width:220px;height:220px;margin:8px auto 16px">
-    <div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:12px solid transparent;border-right:12px solid transparent;border-top:18px solid #1a1a1a;z-index:2;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3))"></div>
-    <svg id="wheel" viewBox="0 0 220 220" style="width:100%;height:100%;transition:transform 4.5s cubic-bezier(0.17,0.67,0.21,0.99);transform-origin:50% 50%">
-      <path d="M110 110 L110 0 A110 110 0 0 1 187.78 32.22 Z" fill="#FF6B6B"/>
-      <path d="M110 110 L187.78 32.22 A110 110 0 0 1 220 110 Z" fill="#FFA06B"/>
-      <path d="M110 110 L220 110 A110 110 0 0 1 187.78 187.78 Z" fill="#FFE16B"/>
-      <path d="M110 110 L187.78 187.78 A110 110 0 0 1 110 220 Z" fill="#4FACFE"/>
-      <path d="M110 110 L110 220 A110 110 0 0 1 32.22 187.78 Z" fill="#C084FC"/>
-      <path d="M110 110 L32.22 187.78 A110 110 0 0 1 0 110 Z" fill="#F472B6"/>
-      <path d="M110 110 L0 110 A110 110 0 0 1 32.22 32.22 Z" fill="#34D399"/>
-      <path d="M110 110 L32.22 32.22 A110 110 0 0 1 110 0 Z" fill="#FBBF24"/>
-      <text x="110" y="35" text-anchor="middle" font-size="11" font-weight="700" fill="white">+10</text>
-      <text x="170" y="65" text-anchor="middle" font-size="11" font-weight="700" fill="white">DEAL</text>
-      <text x="195" y="115" text-anchor="middle" font-size="11" font-weight="700" fill="white">+25</text>
-      <text x="170" y="160" text-anchor="middle" font-size="11" font-weight="700" fill="white">?</text>
-      <text x="110" y="195" text-anchor="middle" font-size="11" font-weight="700" fill="white">+5</text>
-      <text x="50" y="160" text-anchor="middle" font-size="11" font-weight="700" fill="white">JACK</text>
-      <text x="25" y="115" text-anchor="middle" font-size="11" font-weight="700" fill="white">+15</text>
-      <text x="50" y="65" text-anchor="middle" font-size="11" font-weight="700" fill="white">SPIN</text>
-    </svg>
-    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:50px;height:50px;border-radius:50%;background:white;border:3px solid #1a1a1a;display:flex;align-items:center;justify-content:center;font-size:20px;z-index:1">🎰</div>
+  <div style="margin:0 20px 20px;background:white;border-radius:28px;padding:28px 20px;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,0.06)">
+    <p style="font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin:0">Your points</p>
+    <h2 id="points-display" style="font-size:56px;font-weight:900;margin:4px 0 8px;letter-spacing:-2px;line-height:1">0</h2>
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:16px">
+      <span id="tier-badge" style="background:linear-gradient(135deg,#A07248,#8B5A2B);color:white;font-size:11px;font-weight:800;padding:4px 12px;border-radius:999px">🥉 BRONZE</span>
+      <span id="next-tier-text" style="font-size:11px;color:var(--text-dim)">100 to Silver</span>
+    </div>
+    <div style="background:#f0f0f0;border-radius:999px;height:8px;overflow:hidden;margin-bottom:6px"><div id="progress-fill" style="background:linear-gradient(90deg,#A07248,#8B5A2B);height:100%;width:0%;border-radius:999px;transition:width .5s"></div></div>
+    <p style="font-size:11px;color:var(--text-dim)">Earn points by saving and sharing deals</p>
   </div>
-  <p id="spins-available" style="font-size:13px;color:var(--text-dim);margin:0 0 12px">Save a deal to earn your first spin</p>
-  <button id="spin-btn" onclick="doSpin()" disabled style="background:linear-gradient(135deg,#1a1a1a,#2a2a3e);color:white;border:none;padding:14px 32px;border-radius:999px;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:0.5px;box-shadow:0 4px 12px rgba(0,0,0,0.2);opacity:0.5">⚡ SPIN NOW</button>
-  <p id="spin-result" style="margin-top:12px;font-size:14px;font-weight:700;color:var(--accent-dark);min-height:18px"></p>
-</div>
-</div>
-</div>
-
-<!-- LOYALTY -->
-<div class="page" data-page="loyalty">
-<div style="min-height:100%;padding-top:14px">
-<div style="padding:0 20px 16px;display:flex;align-items:center;gap:12px">
-  <button class="icon-btn" onclick="goPage('home')"><i class="ti ti-arrow-left"></i></button>
-  <h2 style="font-size:24px;font-weight:800;margin:0;flex:1">Loyalty cards</h2>
-  <button class="icon-btn" style="background:#1a1a1a" onclick="openAddLoyalty()"><i class="ti ti-plus" style="color:white !important"></i></button>
-</div>
-<p style="font-size:13px;color:var(--text-dim);padding:0 20px 16px;margin:0">Tap any card to show barcode at checkout</p>
-<div id="loyalty-list" style="padding:0 20px"></div>
+  <div style="margin:0 20px;background:white;border-radius:28px;padding:20px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.06)">
+    <div style="position:relative;width:220px;height:220px;margin:8px auto 16px">
+      <div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:12px solid transparent;border-right:12px solid transparent;border-top:18px solid #1A1A1A;z-index:2;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3))"></div>
+      <svg id="wheel" viewBox="0 0 220 220" style="width:100%;height:100%;transition:transform 4.5s cubic-bezier(0.17,0.67,0.21,0.99);transform-origin:50% 50%">
+        <path d="M110 110 L110 0 A110 110 0 0 1 187.78 32.22 Z" fill="#FF6B6B"/>
+        <path d="M110 110 L187.78 32.22 A110 110 0 0 1 220 110 Z" fill="#FFA06B"/>
+        <path d="M110 110 L220 110 A110 110 0 0 1 187.78 187.78 Z" fill="#FFE16B"/>
+        <path d="M110 110 L187.78 187.78 A110 110 0 0 1 110 220 Z" fill="#4FACFE"/>
+        <path d="M110 110 L110 220 A110 110 0 0 1 32.22 187.78 Z" fill="#C084FC"/>
+        <path d="M110 110 L32.22 187.78 A110 110 0 0 1 0 110 Z" fill="#F472B6"/>
+        <path d="M110 110 L0 110 A110 110 0 0 1 32.22 32.22 Z" fill="#34D399"/>
+        <path d="M110 110 L32.22 32.22 A110 110 0 0 1 110 0 Z" fill="#FBBF24"/>
+        <text x="110" y="35" text-anchor="middle" font-size="11" font-weight="700" fill="white">+10</text>
+        <text x="170" y="65" text-anchor="middle" font-size="11" font-weight="700" fill="white">DEAL</text>
+        <text x="195" y="115" text-anchor="middle" font-size="11" font-weight="700" fill="white">+25</text>
+        <text x="170" y="160" text-anchor="middle" font-size="11" font-weight="700" fill="white">?</text>
+        <text x="110" y="195" text-anchor="middle" font-size="11" font-weight="700" fill="white">+5</text>
+        <text x="50" y="160" text-anchor="middle" font-size="11" font-weight="700" fill="white">JACK</text>
+        <text x="25" y="115" text-anchor="middle" font-size="11" font-weight="700" fill="white">+15</text>
+        <text x="50" y="65" text-anchor="middle" font-size="11" font-weight="700" fill="white">SPIN</text>
+      </svg>
+      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:50px;height:50px;border-radius:50%;background:white;border:3px solid #1A1A1A;display:flex;align-items:center;justify-content:center;font-size:20px;z-index:1">🎰</div>
+    </div>
+    <p id="spins-available" style="font-size:13px;color:var(--text-dim);margin:0 0 12px">Save a deal to earn your first spin</p>
+    <button id="spin-btn" onclick="doSpin()" disabled style="background:linear-gradient(135deg,#1A1A1A,#2A2A3E);color:white;padding:14px 32px;border-radius:999px;font-size:14px;font-weight:800;letter-spacing:0.5px;box-shadow:0 4px 12px rgba(0,0,0,0.2);opacity:0.5">⚡ SPIN NOW</button>
+    <p id="spin-result" style="margin-top:12px;font-size:14px;font-weight:700;color:var(--accent-dark);min-height:18px"></p>
+  </div>
 </div>
 </div>
 
 <!-- SETTINGS -->
 <div class="page" data-page="settings">
-<div style="min-height:100%;padding-top:14px">
-<div style="padding:0 20px 16px;display:flex;align-items:center;gap:12px">
-  <button class="icon-btn" onclick="goPage('home')"><i class="ti ti-arrow-left"></i></button>
-  <h2 style="font-size:24px;font-weight:800;margin:0">Settings</h2>
-</div>
-<div class="settings-list">
-  <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:8px 0">Profile</p>
-  <div class="settings-group">
-    <div class="settings-row" onclick="editProfile()" style="cursor:pointer">
-      <div id="profile-avatar" style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#FF6B6B,#FFA06B);display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:20px">?</div>
-      <div class="settings-info"><p class="settings-row-title" id="profile-name-display">Set up profile</p><p class="settings-row-sub" id="profile-email-display">Tap to edit</p></div>
-      <i class="ti ti-chevron-right" style="color:var(--text-dim)"></i>
-    </div>
+<div style="min-height:100%;padding-top:14px;padding-bottom:24px">
+  <div style="padding:0 20px 16px;display:flex;align-items:center;gap:12px">
+    <button class="icon-btn" onclick="goPage('home')"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <h2 style="font-size:24px;font-weight:800;margin:0">Settings</h2>
   </div>
-
-  <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:8px 0">Notifications</p>
-  <div class="settings-group">
-    <div class="settings-row">
-      <div class="settings-icon-sm" style="background:#FEF3C7;color:#D97706"><i class="ti ti-bell"></i></div>
-      <div class="settings-info"><p class="settings-row-title">Expiry reminders</p><p class="settings-row-sub">3 days before · evening · day-of</p></div>
-      <button class="toggle on" data-setting="reminders" onclick="toggleSetting(this,'reminders')"></button>
+  <div class="settings-list">
+    <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:8px 0">Profile</p>
+    <div class="settings-group">
+      <div class="settings-row" onclick="editProfile()">
+        <div id="profile-avatar" style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#FF6B6B,#FFA06B);display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:20px">?</div>
+        <div class="settings-info"><p class="settings-row-title" id="profile-name-display">Set up profile</p><p class="settings-row-sub" id="profile-email-display">Tap to edit</p></div>
+        <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--text-dim);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
     </div>
-    <div class="settings-row">
-      <div class="settings-icon-sm" style="background:#DBEAFE;color:#2563EB"><i class="ti ti-map-pin"></i></div>
-      <div class="settings-info"><p class="settings-row-title">Proximity alerts</p><p class="settings-row-sub">Notify when near a store with deal</p></div>
-      <button class="toggle on" data-setting="proximity" onclick="toggleSetting(this,'proximity')"></button>
+    <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:8px 0">Notifications</p>
+    <div class="settings-group">
+      <div class="settings-row">
+        <div class="settings-icon-sm" style="background:#FEF3C7;color:#D97706"><svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg></div>
+        <div class="settings-info"><p class="settings-row-title">Expiry reminders</p><p class="settings-row-sub">3 days before · evening · day-of</p></div>
+        <button class="toggle on" data-setting="reminders" onclick="toggleSetting(this,'reminders')"></button>
+      </div>
+      <div class="settings-row">
+        <div class="settings-icon-sm" style="background:#DBEAFE;color:#2563EB"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+        <div class="settings-info"><p class="settings-row-title">Proximity alerts</p><p class="settings-row-sub">Notify when near a store</p></div>
+        <button class="toggle on" data-setting="proximity" onclick="toggleSetting(this,'proximity')"></button>
+      </div>
+      <div class="settings-row">
+        <div class="settings-icon-sm" style="background:#FCE7F3;color:#BE185D"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></div>
+        <div class="settings-info"><p class="settings-row-title">Friends activity</p><p class="settings-row-sub">When friends share deals</p></div>
+        <button class="toggle" data-setting="social" onclick="toggleSetting(this,'social')"></button>
+      </div>
     </div>
-    <div class="settings-row">
-      <div class="settings-icon-sm" style="background:#FCE7F3;color:#BE185D"><i class="ti ti-share"></i></div>
-      <div class="settings-info"><p class="settings-row-title">Friends activity</p><p class="settings-row-sub">When friends share deals with you</p></div>
-      <button class="toggle" data-setting="social" onclick="toggleSetting(this,'social')"></button>
+    <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:8px 0">Data</p>
+    <div class="settings-group">
+      <div class="settings-row" onclick="resetApp()">
+        <div class="settings-icon-sm" style="background:#FEE2E2;color:#DC2626"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg></div>
+        <div class="settings-info"><p class="settings-row-title" style="color:#DC2626">Reset everything</p><p class="settings-row-sub">Clear all data and start over</p></div>
+        <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--text-dim);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
     </div>
-  </div>
-
-  <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:8px 0">Data</p>
-  <div class="settings-group">
-    <div class="settings-row" onclick="resetApp()" style="cursor:pointer">
-      <div class="settings-icon-sm" style="background:#FEE2E2;color:#DC2626"><i class="ti ti-trash"></i></div>
-      <div class="settings-info"><p class="settings-row-title" style="color:#DC2626">Reset everything</p><p class="settings-row-sub">Clear all deals, points, and start over</p></div>
-      <i class="ti ti-chevron-right" style="color:var(--text-dim)"></i>
-    </div>
-  </div>
-
-  <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:8px 0">About</p>
-  <div class="settings-group">
-    <div class="settings-row">
-      <div class="settings-icon-sm" style="background:#F1F5F9;color:#475569"><i class="ti ti-info-circle"></i></div>
-      <div class="settings-info"><p class="settings-row-title">Perq · MVP Preview</p><p class="settings-row-sub">v0.1 · Test build</p></div>
+    <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:8px 0">About</p>
+    <div class="settings-group">
+      <div class="settings-row">
+        <div class="settings-icon-sm" style="background:#F1F5F9;color:#475569"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></div>
+        <div class="settings-info"><p class="settings-row-title">Perq · MVP Preview</p><p class="settings-row-sub">v0.2 · Test build</p></div>
+      </div>
     </div>
   </div>
 </div>
 </div>
-</div>
 
-<!-- TAB BAR -->
+<!-- TAB BAR (sticky bottom) -->
 <div class="tabbar">
-  <button class="tabbar-btn active" data-tab="home" onclick="goPage('home')"><i class="ti ti-home"></i><span>Home</span></button>
-  <button class="tabbar-btn" data-tab="wallet" onclick="goPage('wallet')"><i class="ti ti-wallet"></i><span>Wallet</span></button>
-  <button class="tabbar-snap" onclick="openSnapSheet()"><i class="ti ti-camera"></i></button>
-  <button class="tabbar-btn" data-tab="browse" onclick="goPage('browse')"><i class="ti ti-compass"></i><span>Browse</span></button>
-  <button class="tabbar-btn" data-tab="rewards" onclick="goPage('rewards')"><i class="ti ti-trophy"></i><span>Rewards</span></button>
+  <button class="tabbar-btn active" data-tab="home" onclick="goPage('home')">
+    <span class="ico"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span><span>Home</span>
+  </button>
+  <button class="tabbar-btn" data-tab="wallet" onclick="goPage('wallet')">
+    <span class="ico"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg></span><span>Wallet</span>
+  </button>
+  <button class="tabbar-snap" onclick="openSnapSheet()" aria-label="Add">
+    <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+  </button>
+  <button class="tabbar-btn" data-tab="browse" onclick="goPage('browse')">
+    <span class="ico"><svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg></span><span>Browse</span>
+  </button>
+  <button class="tabbar-btn" data-tab="rewards" onclick="goPage('rewards')">
+    <span class="ico"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0z"/></svg></span><span>Rewards</span>
+  </button>
 </div>
 
 </div>
 
-<!-- MODALS -->
 <div class="modal-overlay" id="modal-overlay"></div>
 <div id="toast"></div>
-
 <input type="file" id="capture-input" accept="image/*" capture="environment" style="display:none">
 
-<script src="preview-app.js"></script>
+<script src="preview-app.js?v=2"></script>
 </body>
 </html>
