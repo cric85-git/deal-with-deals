@@ -210,53 +210,45 @@ button{border:none;background:none;cursor:pointer;color:inherit}
 
 <div class="app">
 
-<!-- HOME -->
-<div class="page active" data-page="home">
-<div class="home-screen">
-  <div class="home-header">
-    <div class="home-logo">
-      <div class="home-logo-mark">P</div>
-      <span class="home-logo-text">Perq</span>
-    </div>
-    <div class="home-actions">
-      <button class="icon-btn has-badge" onclick="checkReminders()" aria-label="Notifications"><svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg></button>
-      <button class="icon-btn" onclick="goPage('settings')" aria-label="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
-    </div>
-  </div>
-
-  <div class="savings-card">
-    <span class="savings-card-bg">💰</span>
-    <p class="savings-lbl" id="savings-label">Potential savings</p>
-    <h2 class="savings-amt" id="total-saved">$0</h2>
-    <p class="savings-trend"><span id="streak-text">Save your first deal to start a streak</span></p>
-  </div>
-
-  <h3 class="section-title">Your deals <span class="see-all" id="see-all-deals" onclick="goPage('wallet')" style="display:none">See all →</span></h3>
-  <div id="deals-section"></div>
-
-  <div id="home-extras"></div>
-</div>
-</div>
-
-<!-- WALLET -->
-<div class="page" data-page="wallet">
+<!-- WALLET (now the home/landing page) -->
+<div class="page active" data-page="wallet">
 <div class="wallet-screen">
   <div style="padding-top:14px"></div>
   <div class="wallet-header">
-    <button class="icon-btn wallet-back" onclick="goPage('home')"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <div class="wallet-title">
-      <h2>My Wallet</h2>
-      <p id="wallet-sub">Everything you've saved</p>
-    </div>
+    <div class="home-logo" style="flex:1"><div class="home-logo-mark" style="background:rgba(255,255,255,0.15);color:#FFE16B">P</div><span class="home-logo-text" style="color:white">Perq</span></div>
+    <button class="icon-btn" onclick="checkReminders()" aria-label="Notifications" style="background:rgba(255,255,255,0.15)"><svg viewBox="0 0 24 24" style="stroke:white !important"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg></button>
+    <button class="icon-btn" onclick="goPage('settings')" aria-label="Settings" style="background:rgba(255,255,255,0.15)"><svg viewBox="0 0 24 24" style="stroke:white !important"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
   </div>
+
+  <!-- Savings hero card (was on Home) -->
+  <div style="margin:0 20px 16px;background:linear-gradient(135deg,#FFE16B,#FFA06B);border-radius:24px;padding:18px 22px;color:#1A1A1A;position:relative;overflow:hidden">
+    <span style="position:absolute;top:-20px;right:-10px;font-size:100px;opacity:0.15;line-height:1">💰</span>
+    <p id="savings-label" style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;opacity:0.7;margin:0;position:relative">Potential savings</p>
+    <h2 id="total-saved" style="font-size:38px;font-weight:900;margin:4px 0;letter-spacing:-1.2px;position:relative">$0</h2>
+    <p style="font-size:11px;opacity:0.75;display:flex;align-items:center;gap:6px;position:relative" id="streak-text">Save your first deal to start a streak</p>
+  </div>
+
   <div class="wallet-tabs">
     <button class="wallet-tab active" data-wfilter="all" onclick="setWalletFilter('all')">All</button>
     <button class="wallet-tab" data-wfilter="deals" onclick="setWalletFilter('deals')">🎟️ Deals</button>
-    <button class="wallet-tab" data-wfilter="shared" onclick="setWalletFilter('shared')">📤 Shared</button>
     <button class="wallet-tab" data-wfilter="programs" onclick="setWalletFilter('programs')">⭐ Rewards</button>
     <button class="wallet-tab" data-wfilter="loyalty" onclick="setWalletFilter('loyalty')">💳 Loyalty</button>
   </div>
   <div id="wallet-content" style="padding:0 20px"></div>
+</div>
+</div>
+
+<!-- COMMUNITY (new top-level tab — was Wallet → Shared) -->
+<div class="page" data-page="community">
+<div class="wallet-screen">
+  <div style="padding-top:14px"></div>
+  <div class="wallet-header">
+    <div style="flex:1">
+      <h2 style="color:white;font-size:24px;font-weight:800;margin:0">Community</h2>
+      <p style="color:rgba(255,255,255,0.7);font-size:13px;margin:2px 0 0">Share deals · claim from others</p>
+    </div>
+  </div>
+  <div id="community-content" style="padding:0 20px"></div>
 </div>
 </div>
 
@@ -393,20 +385,20 @@ button{border:none;background:none;cursor:pointer;color:inherit}
 
 <!-- TAB BAR (sticky bottom) -->
 <div class="tabbar">
-  <button class="tabbar-btn active" data-tab="home" onclick="goPage('home')">
-    <span class="ico"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span><span>Home</span>
-  </button>
-  <button class="tabbar-btn" data-tab="wallet" onclick="goPage('wallet')">
+  <button class="tabbar-btn active" data-tab="wallet" onclick="goPage('wallet')">
     <span class="ico"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg></span><span>Wallet</span>
-  </button>
-  <button class="tabbar-snap" onclick="openSnapSheet()" aria-label="Add">
-    <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
   </button>
   <button class="tabbar-btn" data-tab="browse" onclick="goPage('browse')">
     <span class="ico"><svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg></span><span>Browse</span>
   </button>
+  <button class="tabbar-snap" onclick="openSnapSheet()" aria-label="Add">
+    <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+  </button>
   <button class="tabbar-btn" data-tab="rewards" onclick="goPage('rewards')">
     <span class="ico"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0z"/></svg></span><span>Rewards</span>
+  </button>
+  <button class="tabbar-btn" data-tab="community" onclick="goPage('community')">
+    <span class="ico"><svg class="svg-icon" viewBox="0 0 24 24"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><circle cx="17" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg></span><span>Community</span>
   </button>
 </div>
 
@@ -461,6 +453,6 @@ button{border:none;background:none;cursor:pointer;color:inherit}
 <div id="toast"></div>
 <input type="file" id="capture-input" accept="image/*" capture="environment" style="display:none">
 
-<script src="preview-app.js?v=12"></script>
+<script src="preview-app.js?v=13"></script>
 </body>
 </html>
