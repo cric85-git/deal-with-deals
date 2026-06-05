@@ -1159,7 +1159,26 @@ window.saveProfile=function(){
 window.resetApp=function(){
   if(!confirm('Reset everything? This will delete all your deals, points, programs, and cards. This cannot be undone.'))return;
   Object.values(K).forEach(k=>localStorage.removeItem(k));
+  localStorage.removeItem('perq-mvp:communityPool');
   location.reload();
+};
+
+window.seedCommunityPool=function(){
+  const now=Date.now();
+  const fut=days=>{const d=new Date();d.setDate(d.getDate()+days);return d.toISOString().slice(0,10);};
+  const demos=[
+    {id:'demo_'+now+'_1',sharedBy:'Maya Chen',sharedAt:now-3600000,merchant:"Trader Joe's",discount:'$5 off $30',category:'Groceries',code:'',expiry:fut(14),value:5,claimCount:12,address:''},
+    {id:'demo_'+now+'_2',sharedBy:'Alex Park',sharedAt:now-7200000,merchant:'AMC Theatres',discount:'$3 off any ticket',category:'Other',code:'AMC3',expiry:fut(21),value:3,claimCount:47,address:''},
+    {id:'demo_'+now+'_3',sharedBy:'Jen Tanaka',sharedAt:now-14400000,merchant:'Panera',discount:'Free pastry with entrée',category:'Dining',code:'',expiry:fut(7),value:5,claimCount:23,address:''},
+    {id:'demo_'+now+'_4',sharedBy:"Coupon Dad",sharedAt:now-86400000,merchant:"Lowe's",discount:'10% off paint',category:'Home',code:'PAINT10',expiry:fut(10),value:25,claimCount:8,address:''}
+  ];
+  const existing=load('perq-mvp:communityPool',[]);
+  // Merge — don't duplicate
+  const merged=[...existing,...demos.filter(d=>!existing.find(e=>e.id===d.id))];
+  save('perq-mvp:communityPool',merged);
+  toast('✓ Added 4 demo deals · check Wallet → Shared');
+  walletFilter='shared';
+  goPage('wallet');
 };
 
 window.checkReminders=function(){
