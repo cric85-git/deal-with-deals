@@ -125,12 +125,24 @@ window.setWalletFilter=function(f){
 
 // -------- Home --------
 function renderHome(){
-  const totalSaved=state.deals.filter(d=>d.redeemed).reduce((s,d)=>s+(parseFloat(d.value)||0),0);
-  document.getElementById('total-saved').textContent='$'+totalSaved.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  const redeemedDeals=state.deals.filter(d=>d.redeemed);
+  const totalRedeemed=redeemedDeals.reduce((s,d)=>s+(parseFloat(d.value)||0),0);
+  const potentialFromActive=state.deals.filter(d=>!d.redeemed).reduce((s,d)=>s+(parseFloat(d.value)||0),0);
+
+  const lblEl=document.getElementById('savings-label');
+  const amtEl=document.getElementById('total-saved');
+  if(redeemedDeals.length>0){
+    lblEl.textContent='Total saved this year';
+    amtEl.textContent='$'+totalRedeemed.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  } else {
+    lblEl.textContent='Potential savings';
+    amtEl.textContent='$'+potentialFromActive.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  }
+
   document.getElementById('streak-text').textContent=
     state.rewards.streak>0
-      ?'+$'+totalSaved+' total · '+state.rewards.streak+' day streak 🔥'
-      :'Save your first deal to start a streak';
+      ?'+$'+totalRedeemed+' saved · '+state.rewards.streak+' day streak 🔥'
+      :(state.deals.length>0?'Tap a deal and mark it redeemed to bank the savings':'Save your first deal to start a streak');
 
   // Deals
   const dealsSection=document.getElementById('deals-section');
@@ -146,8 +158,8 @@ function renderHome(){
     showList.forEach(d=>{
       const grad=getGradient(d.category);
       const du=daysUntil(d.expiry);
-      const pct=d.discount.match(/(\d+%|FREE|\$\d+)/i);
-      const pctText=pct?pct[1]:d.discount.slice(0,8);
+      const pct=d.discount.match(/\$\d{1,3}(?:,\d{3})*(?:\.\d+)?|\d+%|FREE/i);
+      const pctText=pct?pct[0].toUpperCase():d.discount.slice(0,8);
       const expiryText=du===null?'No expiry':du===0?'⏰ Today!':du===1?'⏰ Tomorrow':du<0?'Expired':'⏰ '+du+'d left';
       html+='<button class="h-deal" onclick="openDealCard(\''+d.id+'\')"><div class="h-hero gradient-'+grad+'"><span class="h-pct">'+escapeHtml(pctText)+'</span><span class="h-merch-overlay">'+escapeHtml(d.merchant)+'</span></div><div class="h-body"><p class="h-discount">'+escapeHtml(d.discount)+'</p><p class="h-expiry">'+expiryText+'</p><span class="h-cta">View</span></div></button>';
     });
@@ -165,7 +177,7 @@ window.openDealCard=function(id){
   goPage('wallet');
   setTimeout(()=>{
     const el=document.querySelector('[data-deal-id="'+id+'"]');
-    if(el){el.click();el.scrollIntoView({behavior:'smooth',block:'center'});}
+    if(el)el.scrollIntoView({behavior:'smooth',block:'center'});
   },200);
 };
 
@@ -185,6 +197,15 @@ function renderWallet(){
       html+=renderDealsList(active);
     } else if(walletFilter==='deals'){
       html+=emptyWalletSection('🎟️','No deals yet','Snap a coupon to add your first deal','openSnapSheet');
+    }
+  }
+
+  if(walletFilter==='shared'){
+    const sharedDeals=state.deals.filter(d=>d.shared);
+    if(sharedDeals.length>0){
+      html+=renderDealsList(sharedDeals);
+    } else {
+      html+=emptyWalletSection('📤','No shared deals yet','Tap the share icon on any deal to share it with friends','closeModal');
     }
   }
 
@@ -232,7 +253,8 @@ function renderDealsList(active){
     const isLast=i===active.length-1;
     html+='<div class="wpass" data-deal-id="'+d.id+'" onclick="togglePass(this)" class-grad="'+grad+'" style="border-radius:18px;padding:18px 20px;'+(isLast?'margin-bottom:14px':'margin-bottom:-90px')+';position:relative;box-shadow:0 8px 24px rgba(0,0,0,0.4);color:white;cursor:pointer">';
     html+='<div class="pcoll" style="display:flex;flex-direction:column;gap:60px">';
-    html+='<div style="display:flex;justify-content:space-between;align-items:flex-start"><div><p style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;opacity:0.9;margin:0">'+escapeHtml(d.category||'Deal')+'</p><h3 style="font-size:16px;font-weight:700;margin:2px 0 0">'+escapeHtml(d.merchant)+'</h3></div></div>';
+    const sharedBadge=d.shared?'<span style="background:rgba(0,0,0,0.3);padding:3px 8px;border-radius:6px;font-size:9px;font-weight:700;letter-spacing:0.5px">SHARED</span>':'';
+    html+='<div style="display:flex;justify-content:space-between;align-items:flex-start"><div><p style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;opacity:0.9;margin:0">'+escapeHtml(d.category||'Deal')+'</p><h3 style="font-size:16px;font-weight:700;margin:2px 0 0">'+escapeHtml(d.merchant)+'</h3></div>'+sharedBadge+'</div>';
     html+='<div style="display:flex;justify-content:space-between;align-items:flex-end"><div><p style="font-size:22px;font-weight:800;margin:0">'+escapeHtml(d.discount)+'</p><p style="font-size:11px;opacity:0.9;margin:2px 0 0">'+expText+'</p></div>';
     if(d.code)html+='<span style="background:rgba(0,0,0,0.25);padding:4px 10px;border-radius:6px;font-family:ui-monospace,monospace;font-size:11px;font-weight:600">'+escapeHtml(d.code)+'</span>';
     html+='</div></div>';
@@ -240,22 +262,24 @@ function renderDealsList(active){
     html+='<div class="pexp" style="display:none">';
     html+='<div class="gradient-'+grad+'" style="height:140px;padding:18px;display:flex;flex-direction:column;justify-content:space-between;margin:-18px -20px 0">';
     html+='<span style="background:rgba(255,255,255,0.95);color:#1A1A1A;font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;padding:5px 10px;border-radius:999px;align-self:flex-start">'+escapeHtml(d.category)+' · '+expText+'</span>';
-    html+='<h2 style="color:white;font-size:36px;font-weight:900;margin:0;letter-spacing:-1px;line-height:1">'+escapeHtml(d.discount)+'</h2></div>';
-    html+='<div style="padding:16px 18px 18px;background:white;color:#1A1A1A;margin:0 -20px -18px">';
-    html+='<h3 style="font-size:22px;font-weight:800;margin:0">'+escapeHtml(d.merchant)+'</h3>';
-    if(d.notes)html+='<p style="font-size:13px;color:#777;margin:4px 0 14px">'+escapeHtml(d.notes)+'</p>';
+    html+='<h2 style="color:white;font-size:32px;font-weight:900;margin:0;letter-spacing:-1px;line-height:1">'+escapeHtml(d.discount)+'</h2></div>';
+    html+='<div style="padding:14px 18px 18px;background:white;color:#1A1A1A;margin:0 -20px -18px">';
+    html+='<h3 style="font-size:18px;font-weight:800;margin:0">'+escapeHtml(d.merchant)+'</h3>';
+    if(d.notes)html+='<p style="font-size:12px;color:#777;margin:4px 0 10px">'+escapeHtml(d.notes)+'</p>';
     if(d.address){
       const mapsUrl='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(d.address);
-      html+='<a href="'+escapeHtml(mapsUrl)+'" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="background:#f5f5f5;border-radius:12px;padding:12px;margin-bottom:14px;display:flex;align-items:center;gap:10px;text-decoration:none;color:#1A1A1A"><div style="width:36px;height:36px;border-radius:8px;background:#4FACFE;display:flex;align-items:center;justify-content:center;color:white;flex-shrink:0"><svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:white;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div><div style="flex:1"><p style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#777;margin:0">Tap for directions</p><p style="font-size:13px;font-weight:600;margin:2px 0 0">'+escapeHtml(d.address)+'</p></div></a>';
+      html+='<a href="'+escapeHtml(mapsUrl)+'" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="background:#f5f5f5;border-radius:10px;padding:8px 10px;margin:8px 0 12px;display:flex;align-items:center;gap:8px;text-decoration:none;color:#1A1A1A"><svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:#4FACFE;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span style="flex:1;font-size:12px;font-weight:600;color:#1A1A1A">'+escapeHtml(d.address)+'</span><span style="font-size:10px;color:#4FACFE;font-weight:700">Directions</span></a>';
     }
     if(d.code){
-      html+='<div style="background:white;border:1px solid rgba(0,0,0,0.08);border-radius:12px;padding:14px;text-align:center;margin-bottom:14px">';
-      html+='<div style="height:60px;background-image:repeating-linear-gradient(90deg,#1A1A1A 0px,#1A1A1A 2px,transparent 2px,transparent 4px,#1A1A1A 4px,#1A1A1A 8px,transparent 8px,transparent 10px,#1A1A1A 10px,#1A1A1A 12px,transparent 12px,transparent 16px);margin-bottom:8px"></div>';
-      html+='<p style="font-family:ui-monospace,monospace;font-size:14px;font-weight:700;letter-spacing:2px;margin:0">'+escapeHtml(d.code)+'</p></div>';
+      html+='<div style="background:white;border:1px solid rgba(0,0,0,0.08);border-radius:10px;padding:10px;text-align:center;margin-bottom:10px">';
+      html+='<div style="height:40px;background-image:repeating-linear-gradient(90deg,#1A1A1A 0px,#1A1A1A 2px,transparent 2px,transparent 4px,#1A1A1A 4px,#1A1A1A 8px,transparent 8px,transparent 10px,#1A1A1A 10px,#1A1A1A 12px,transparent 12px,transparent 16px);margin-bottom:6px"></div>';
+      html+='<p style="font-family:ui-monospace,monospace;font-size:13px;font-weight:700;letter-spacing:2px;margin:0">'+escapeHtml(d.code)+'</p></div>';
     }
-    html+='<div style="display:flex;gap:8px"><button onclick="event.stopPropagation();redeemDeal(\''+d.id+'\')" style="flex:1;padding:12px;border-radius:12px;font-size:13px;font-weight:700;background:#1A1A1A;color:white">✓ Mark redeemed</button>';
-    html+='<button onclick="event.stopPropagation();shareDeal(\''+d.id+'\')" style="flex:0 0 50px;padding:12px;border-radius:12px;background:#f5f5f5;color:#1A1A1A">↗</button>';
-    html+='<button onclick="event.stopPropagation();deleteDeal(\''+d.id+'\')" style="flex:0 0 50px;padding:12px;border-radius:12px;background:#FFE5E5;color:#DC2626">🗑</button></div>';
+    html+='<div style="display:flex;gap:6px">';
+    html+='<button onclick="event.stopPropagation();redeemDeal(\''+d.id+'\')" style="flex:1;padding:11px;border-radius:10px;font-size:13px;font-weight:700;background:#1A1A1A;color:white;border:none">✓ Mark redeemed</button>';
+    html+='<button onclick="event.stopPropagation();shareDeal(\''+d.id+'\')" title="Share" style="flex:0 0 44px;padding:0;border-radius:10px;background:#F0F9FF;color:#2563EB;border:none;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button>';
+    html+='<button onclick="event.stopPropagation();deleteDeal(\''+d.id+'\')" title="Delete" style="flex:0 0 44px;padding:0;border-radius:10px;background:#FFE5E5;color:#DC2626;border:none;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg></button>';
+    html+='</div>';
     html+='</div></div></div>';
   });
   return html;
@@ -332,13 +356,24 @@ window.shareDeal=function(id){
   if(!d)return;
   const text=d.merchant+': '+d.discount+(d.code?' (code '+d.code+')':'')+(d.expiry?' — expires '+fmtDate(d.expiry):'');
   if(navigator.share){
-    navigator.share({title:'Perq deal: '+d.merchant,text}).catch(()=>{});
+    navigator.share({title:'Perq deal: '+d.merchant,text}).then(()=>{
+      d.shared=true;
+      d.sharedAt=Date.now();
+      state.rewards.points+=5;
+      save(K.deals,state.deals);save(K.rewards,state.rewards);
+      toast('✓ Shared · +5 pts');
+      renderAll();
+    }).catch(()=>{});
   } else if(navigator.clipboard){
-    navigator.clipboard.writeText(text).then(()=>toast('Copied to clipboard'));
+    navigator.clipboard.writeText(text).then(()=>{
+      d.shared=true;
+      d.sharedAt=Date.now();
+      state.rewards.points+=5;
+      save(K.deals,state.deals);save(K.rewards,state.rewards);
+      toast('Copied to clipboard · +5 pts');
+      renderAll();
+    });
   }
-  state.rewards.points+=5;
-  save(K.rewards,state.rewards);
-  renderAll();
 };
 
 window.deleteDeal=function(id){
