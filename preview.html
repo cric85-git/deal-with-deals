@@ -234,11 +234,7 @@ button{border:none;background:none;cursor:pointer;color:inherit}
   <h3 class="section-title">Your deals <span class="see-all" id="see-all-deals" onclick="goPage('wallet')" style="display:none">See all →</span></h3>
   <div id="deals-section"></div>
 
-  <h3 class="section-title">Reward programs <span class="see-all" onclick="goPage('wallet');setWalletFilter('programs')">View all →</span></h3>
-  <div id="programs-preview"></div>
-
-  <h3 class="section-title">Loyalty cards <span class="see-all" onclick="goPage('wallet');setWalletFilter('loyalty')">View all →</span></h3>
-  <div id="loyalty-preview"></div>
+  <div id="home-extras"></div>
 </div>
 </div>
 
@@ -413,9 +409,54 @@ button{border:none;background:none;cursor:pointer;color:inherit}
 </div>
 
 <div class="modal-overlay" id="modal-overlay"></div>
+
+<!-- Scanning Animation Overlay -->
+<div id="scan-overlay" style="position:fixed;inset:0;z-index:500;display:none;background:linear-gradient(135deg,#0F0E13,#1A1A22);align-items:center;justify-content:center;flex-direction:column;padding:24px">
+  <div id="scan-image-wrap" style="width:240px;height:200px;border-radius:20px;overflow:hidden;background:#000;margin-bottom:32px;position:relative;box-shadow:0 20px 60px rgba(0,0,0,0.5)">
+    <img id="scan-image" style="width:100%;height:100%;object-fit:cover">
+    <div id="scan-line" style="position:absolute;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,#FFE16B 30%,#FFE16B 70%,transparent);box-shadow:0 0 20px #FFE16B,0 0 40px rgba(255,225,107,0.4);top:0;animation:scanSweep 1.6s ease-in-out infinite"></div>
+    <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,225,107,0.05),transparent 30%,transparent 70%,rgba(255,225,107,0.05));pointer-events:none"></div>
+  </div>
+
+  <div style="text-align:center;max-width:300px">
+    <h2 id="scan-title" style="color:white;font-size:22px;font-weight:800;margin:0 0 8px;letter-spacing:-0.4px">Analyzing image…</h2>
+    <p id="scan-sub" style="color:rgba(255,255,255,0.6);font-size:13px;margin:0;line-height:1.5">Reading deal details with AI</p>
+  </div>
+
+  <div style="margin-top:32px;width:100%;max-width:280px">
+    <div id="scan-step-1" class="scan-step" data-active="true">
+      <div class="scan-check">⚡</div>
+      <span>Analyzing image</span>
+    </div>
+    <div id="scan-step-2" class="scan-step">
+      <div class="scan-check">📝</div>
+      <span>Extracting details</span>
+    </div>
+    <div id="scan-step-3" class="scan-step">
+      <div class="scan-check">✨</div>
+      <span>Polishing</span>
+    </div>
+    <div id="scan-step-4" class="scan-step">
+      <div class="scan-check">🎉</div>
+      <span>Ready to save!</span>
+    </div>
+  </div>
+</div>
+
+<style>
+@keyframes scanSweep{0%{top:0;opacity:1}50%{top:calc(100% - 3px);opacity:1}51%{opacity:0}52%{top:0;opacity:0}53%{opacity:1}100%{top:0;opacity:1}}
+.scan-step{display:flex;align-items:center;gap:12px;padding:8px 14px;margin-bottom:6px;border-radius:12px;background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.4);font-size:13px;font-weight:600;transition:all .3s;opacity:0.4}
+.scan-step[data-active="true"]{background:rgba(255,225,107,0.15);color:white;opacity:1}
+.scan-step[data-done="true"]{color:rgba(255,255,255,0.7);opacity:1;background:rgba(0,201,167,0.15)}
+.scan-check{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.scan-step[data-active="true"] .scan-check{background:#FFE16B;color:#1A1A1A;animation:pulseScan 1s ease-in-out infinite}
+.scan-step[data-done="true"] .scan-check{background:#00C9A7;color:white}
+@keyframes pulseScan{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+</style>
+
 <div id="toast"></div>
 <input type="file" id="capture-input" accept="image/*" capture="environment" style="display:none">
 
-<script src="preview-app.js?v=2"></script>
+<script src="preview-app.js?v=4"></script>
 </body>
 </html>

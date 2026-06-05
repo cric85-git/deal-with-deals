@@ -155,33 +155,9 @@ function renderHome(){
     dealsSection.innerHTML=html;
   }
 
-  // Programs preview (max 3)
-  const ppEl=document.getElementById('programs-preview');
-  if(state.programs.length===0){
-    ppEl.innerHTML='<div class="empty-state" style="padding:24px 20px"><p class="empty-sub" style="margin:0 0 12px">Track airline miles, hotel points, credit card rewards.</p><button class="empty-cta" onclick="openAddProgram()" style="background:#1A1A1A">+ Add reward program</button></div>';
-  } else {
-    let h='<div class="h-carousel">';
-    state.programs.slice(0,3).forEach((p,i)=>{
-      const grads=['linear-gradient(135deg,#6366F1,#C084FC)','linear-gradient(135deg,#F472B6,#FB923C)','linear-gradient(135deg,#1E40AF,#3B82F6)','linear-gradient(135deg,#00C9A7,#4FACFE)'];
-      h+='<div class="h-deal" onclick="setWalletFilter(\'programs\')" style="cursor:pointer"><div style="height:80px;padding:12px;background:'+grads[i%4]+';color:white;display:flex;flex-direction:column;justify-content:space-between"><div style="font-size:22px">'+(p.icon||'⭐')+'</div><p style="font-size:14px;font-weight:700;margin:0">'+escapeHtml(p.name)+'</p></div><div class="h-body"><p class="h-discount">'+escapeHtml(p.balance)+' '+escapeHtml(p.unit)+'</p><p class="h-expiry">'+(p.expiry?'Expires '+fmtDate(p.expiry):'No expiry')+'</p></div></div>';
-    });
-    h+='</div>';
-    ppEl.innerHTML=h;
-  }
-
-  // Loyalty preview
-  const lpEl=document.getElementById('loyalty-preview');
-  if(state.loyalty.length===0){
-    lpEl.innerHTML='<div class="empty-state" style="padding:24px 20px"><p class="empty-sub" style="margin:0 0 12px">Add Costco, CVS, or any membership card.</p><button class="empty-cta" onclick="openAddLoyalty()" style="background:#1A1A1A">+ Add loyalty card</button></div>';
-  } else {
-    let h='<div class="h-carousel">';
-    state.loyalty.slice(0,4).forEach(c=>{
-      const masked=c.number.length>4?'**** '+c.number.slice(-4):c.number;
-      h+='<button onclick="showLoyaltyBarcode(\''+c.id+'\')" style="flex-shrink:0;width:170px;height:108px;border-radius:14px;padding:14px;color:white;display:flex;flex-direction:column;justify-content:space-between;background:'+c.color+';box-shadow:0 4px 12px rgba(0,0,0,0.15);text-align:left"><p style="font-size:14px;font-weight:700;margin:0">'+escapeHtml(c.name)+'</p><p style="font-family:ui-monospace,monospace;font-size:12px;letter-spacing:2px;opacity:0.9;margin:0">'+escapeHtml(masked)+'</p></button>';
-    });
-    h+='</div>';
-    lpEl.innerHTML=h;
-  }
+  // Home no longer shows reward programs / loyalty cards inline
+  // (entry only via center "+" button)
+  document.getElementById('home-extras').innerHTML='';
 }
 
 window.openDealCard=function(id){
@@ -569,23 +545,97 @@ document.getElementById('capture-input').addEventListener('change',(e)=>{
   const f=e.target.files&&e.target.files[0];
   if(!f)return;
   const r=new FileReader();
-  r.onload=()=>{pendingDealImage=r.result;openAddManual(pendingDealImage);};
+  r.onload=()=>{
+    pendingDealImage=r.result;
+    runScanFlow(pendingDealImage);
+  };
   r.readAsDataURL(f);
   e.target.value='';
 });
 
-window.openAddManual=function(image){
-  const cats=CATEGORIES.map(c=>'<option value="'+c+'">'+c+'</option>').join('');
-  let html='<div class="modal-handle"></div><h3 class="modal-title">Add deal</h3>';
-  if(image)html+='<div style="width:100%;aspect-ratio:4/3;background:#f5f5f5;border-radius:12px;margin-bottom:12px;overflow:hidden"><img src="'+image+'" style="width:100%;height:100%;object-fit:cover"></div>';
-  html+='<div class="form-row"><label>Merchant *</label><input id="f-merchant" placeholder="e.g. Target, Whole Foods"></div>';
-  html+='<div class="form-row"><label>Discount *</label><input id="f-discount" placeholder="e.g. 20% off, $10 off"></div>';
-  html+='<div class="form-grid"><div class="form-row"><label>Category</label><select id="f-category">'+cats+'</select></div><div class="form-row"><label>Value ($)</label><input id="f-value" type="number" inputmode="numeric" placeholder="10"></div></div>';
-  html+='<div class="form-grid"><div class="form-row"><label>Code</label><input id="f-code" placeholder="SAVE20"></div><div class="form-row"><label>Expires</label><input id="f-expiry" type="date"></div></div>';
-  html+='<div class="form-row"><label>Address (optional)</label><input id="f-address" placeholder="For directions"></div>';
-  html+='<div class="form-row"><label>Notes (optional)</label><textarea id="f-notes" rows="2" placeholder="Min purchase, etc."></textarea></div>';
-  html+='<div class="form-actions"><button class="btn-secondary" onclick="closeModal()">Cancel</button><button class="btn-primary" onclick="saveDealForm()">Save deal</button></div>';
+// -------- Scan Flow Animation + AI Extract --------
+async function runScanFlow(imageDataUrl){
+  const overlay=document.getElementById('scan-overlay');
+  document.getElementById('scan-image').src=imageDataUrl;
+  overlay.style.display='flex';
+
+  const steps=[
+    {id:'scan-step-1',title:'Analyzing image…',sub:'Detecting deal structure'},
+    {id:'scan-step-2',title:'Extracting details…',sub:'Reading merchant, discount, code, expiry'},
+    {id:'scan-step-3',title:'Polishing data…',sub:'Categorizing and normalizing'},
+    {id:'scan-step-4',title:'Ready to save!',sub:'Tap below to review and save'}
+  ];
+
+  // Reset all steps
+  for(let i=1;i<=4;i++){
+    const el=document.getElementById('scan-step-'+i);
+    el.removeAttribute('data-active');
+    el.removeAttribute('data-done');
+  }
+
+  // Start extraction in parallel with animation
+  const extractPromise=extractDealFromImage(imageDataUrl);
+
+  // Animate steps
+  for(let i=0;i<steps.length-1;i++){
+    document.getElementById('scan-title').textContent=steps[i].title;
+    document.getElementById('scan-sub').textContent=steps[i].sub;
+    document.getElementById(steps[i].id).setAttribute('data-active','true');
+    await sleep(900);
+    document.getElementById(steps[i].id).removeAttribute('data-active');
+    document.getElementById(steps[i].id).setAttribute('data-done','true');
+  }
+
+  // Wait for extraction to complete
+  let extracted=null;
+  try{extracted=await extractPromise;}catch(e){}
+
+  // Final step
+  document.getElementById('scan-title').textContent=steps[3].title;
+  document.getElementById('scan-sub').textContent=steps[3].sub;
+  document.getElementById('scan-step-4').setAttribute('data-active','true');
+  await sleep(700);
+
+  // Hide scan overlay, show compact preview
+  overlay.style.display='none';
+  openDealPreview(extracted||{},imageDataUrl);
+}
+
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+
+// Mock AI extraction — for MVP demo. Real: call OCR proxy or Claude API
+async function extractDealFromImage(imageDataUrl){
+  // Simulated extraction — for demo / MVP test purposes
+  // Real implementation would POST imageDataUrl to /backend/ocr-proxy
+  await sleep(1800); // Simulate API latency
+  // Smart heuristic mock based on common patterns
+  const samples=[
+    {merchant:'Houk Air Conditioning',discount:'Up to $2,000 off new system',value:2000,category:'Home',code:'',expiry:'2026-08-31',address:'',url:'https://houkac.com/about/specials'},
+    {merchant:'Whole Foods',discount:'20% off produce',value:15,category:'Groceries',code:'FRESH20',expiry:futureDate(14),address:'',url:''},
+    {merchant:'Target',discount:'$10 off $50',value:10,category:'Home',code:'SAVE10',expiry:futureDate(21),address:'',url:''},
+    {merchant:'Starbucks',discount:'Free grande drink',value:6,category:'Dining',code:'',expiry:futureDate(7),address:'',url:''}
+  ];
+  // Pick random sample to demonstrate AI working
+  return samples[Math.floor(Math.random()*samples.length)];
+}
+
+window.openDealPreview=function(data,image){
+  const cats=CATEGORIES.map(c=>'<option value="'+c+'"'+(c===data.category?' selected':'')+'>'+c+'</option>').join('');
+  let html='<div class="modal-handle"></div><h3 class="modal-title">Review & save</h3>';
+  if(image)html+='<div style="width:100%;height:100px;background:#f5f5f5;border-radius:12px;margin-bottom:12px;overflow:hidden"><img src="'+image+'" style="width:100%;height:100%;object-fit:cover"></div>';
+  html+='<div style="background:#EAFBF4;border:1px solid #00C9A7;border-radius:12px;padding:10px 12px;margin-bottom:12px;display:flex;align-items:center;gap:8px;font-size:12px;color:#065F46;font-weight:600"><span style="font-size:16px">✨</span>AI extracted these details — review below</div>';
+  html+='<div class="form-row"><label>Merchant *</label><input id="f-merchant" placeholder="Store name" value="'+escapeHtml(data.merchant||'')+'"></div>';
+  html+='<div class="form-row"><label>Discount *</label><input id="f-discount" placeholder="20% off" value="'+escapeHtml(data.discount||'')+'"></div>';
+  html+='<div class="form-grid"><div class="form-row"><label>Category</label><select id="f-category">'+cats+'</select></div><div class="form-row"><label>Value ($)</label><input id="f-value" type="number" inputmode="numeric" placeholder="10" value="'+escapeHtml(String(data.value||''))+'"></div></div>';
+  html+='<div class="form-grid"><div class="form-row"><label>Code</label><input id="f-code" placeholder="SAVE20" value="'+escapeHtml(data.code||'')+'"></div><div class="form-row"><label>Expires</label><input id="f-expiry" type="date" value="'+escapeHtml(data.expiry||'')+'"></div></div>';
+  html+='<div class="form-row"><label>Address (optional)</label><input id="f-address" placeholder="For directions" value="'+escapeHtml(data.address||'')+'"></div>';
+  html+='<div class="form-actions"><button class="btn-secondary" onclick="closeModal();pendingDealImage=null">Cancel</button><button class="btn-primary" onclick="saveDealForm()">Save deal</button></div>';
   openModal(html);
+};
+
+// Replaces the old openAddManual — for "Type a deal" mode (no scan)
+window.openAddManual=function(image){
+  openDealPreview({},image||null);
 };
 
 window.saveDealForm=function(){
@@ -599,7 +649,7 @@ window.saveDealForm=function(){
     code:document.getElementById('f-code').value.trim(),
     expiry:document.getElementById('f-expiry').value||'',
     address:document.getElementById('f-address').value.trim(),
-    notes:document.getElementById('f-notes').value.trim(),
+    notes:'',
     image:pendingDealImage||null,
     redeemed:false,createdAt:Date.now()
   });
