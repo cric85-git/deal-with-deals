@@ -1,41 +1,35 @@
-/* Perq MVP — Ground-zero working app */
+/* Perq MVP — Ground-zero working app v0.2 */
 (function(){
 'use strict';
 
-const KEY = 'perq-mvp:';
-const K = {
-  profile: KEY+'profile',
-  deals: KEY+'deals',
-  programs: KEY+'programs',
-  loyalty: KEY+'loyalty',
-  rewards: KEY+'rewards',
-  settings: KEY+'settings',
-  onboarded: KEY+'onboarded'
+const KEY='perq-mvp:';
+const K={
+  profile:KEY+'profile',deals:KEY+'deals',programs:KEY+'programs',loyalty:KEY+'loyalty',
+  rewards:KEY+'rewards',settings:KEY+'settings',onboarded:KEY+'onboarded'
 };
 
-const TIERS = [
+const TIERS=[
   {name:'BRONZE',min:0,emoji:'🥉',colors:['#A07248','#8B5A2B'],next:100},
   {name:'SILVER',min:100,emoji:'🥈',colors:['#9CA3AF','#6B7280'],next:300},
   {name:'GOLD',min:300,emoji:'🥇',colors:['#FFD700','#FFA500'],next:750},
   {name:'PLATINUM',min:750,emoji:'💎',colors:['#6366F1','#3B82F6'],next:Infinity}
 ];
+const CATEGORIES=['Groceries','Dining','Apparel','Travel','Beauty','Home','Electronics','Other'];
 
-const GRADIENTS = ['warm','green','purple','pink'];
-const CATEGORIES = ['Groceries','Dining','Apparel','Travel','Beauty','Home','Electronics','Other'];
-
-let state = {
-  profile: load(K.profile, null),
-  deals: load(K.deals, []),
-  programs: load(K.programs, []),
-  loyalty: load(K.loyalty, []),
-  rewards: load(K.rewards, {points:0,spins:0,streak:0,saved:0,lastClaim:null}),
-  settings: load(K.settings, {reminders:true,proximity:true,social:false}),
-  selectedPrefs: []
+let state={
+  profile:load(K.profile,null),
+  deals:load(K.deals,[]),
+  programs:load(K.programs,[]),
+  loyalty:load(K.loyalty,[]),
+  rewards:load(K.rewards,{points:0,spins:0,streak:0,saved:0,lastClaim:null}),
+  settings:load(K.settings,{reminders:true,proximity:true,social:false}),
+  selectedPrefs:[]
 };
 
-let currentBrowseTab = 'local';
-let onboardStep = 1;
-let pendingDealImage = null;
+let onboardStep=1;
+let pendingDealImage=null;
+let walletFilter='all';
+let currentBrowseTab='local';
 
 function load(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}}
 function save(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
@@ -48,6 +42,10 @@ function getGradient(cat){
   const map={Groceries:'green',Dining:'warm',Apparel:'pink',Travel:'purple',Beauty:'pink',Home:'warm',Electronics:'purple',Other:'green'};
   return map[cat]||'warm';
 }
+function getGradStyle(g){
+  return {warm:'linear-gradient(135deg,#FF6B6B,#FFA06B)',green:'linear-gradient(135deg,#00C9A7,#4FACFE)',purple:'linear-gradient(135deg,#6366F1,#C084FC)',pink:'linear-gradient(135deg,#F472B6,#FB923C)',yellow:'linear-gradient(135deg,#FFD700,#FFA500)'}[g]||'linear-gradient(135deg,#FF6B6B,#FFA06B)';
+}
+function futureDate(days){const d=new Date();d.setDate(d.getDate()+days);return d.toISOString().slice(0,10);}
 
 function toast(msg){
   const t=document.getElementById('toast');
@@ -58,7 +56,7 @@ function toast(msg){
 }
 
 // -------- Onboarding --------
-function nextStep(){
+window.nextStep=function(){
   if(onboardStep===2){
     const name=document.getElementById('ob-name').value.trim();
     if(!name){toast('Enter your name or skip');return;}
@@ -68,13 +66,11 @@ function nextStep(){
   onboardStep++;
   document.querySelectorAll('.ob-step').forEach(s=>s.classList.remove('active'));
   document.querySelector('.ob-step[data-step="'+onboardStep+'"]').classList.add('active');
-  document.querySelectorAll('.ob-dot').forEach((d,i)=>{
-    d.classList.toggle('active',(i+1)<=onboardStep);
-  });
-}
+  document.querySelectorAll('.ob-dot').forEach((d,i)=>{d.classList.toggle('active',(i+1)<=onboardStep);});
+};
 
-function finishOnboarding(){
-  if(state.selectedPrefs.length>0 && state.profile){
+window.finishOnboarding=function(){
+  if(state.selectedPrefs.length>0&&state.profile){
     state.profile.preferences=state.selectedPrefs;
     save(K.profile,state.profile);
   }
@@ -85,26 +81,19 @@ function finishOnboarding(){
   save(K.onboarded,true);
   document.getElementById('onboarding').classList.add('hidden');
   renderAll();
-}
+};
 
 function checkOnboarding(){
   const onboarded=load(K.onboarded,false);
-  if(!onboarded){
-    document.getElementById('onboarding').classList.remove('hidden');
-  } else {
-    document.getElementById('onboarding').classList.add('hidden');
-  }
+  document.getElementById('onboarding').classList.toggle('hidden',onboarded);
 }
 
 document.querySelectorAll('.ob-pref').forEach(btn=>{
   btn.addEventListener('click',()=>{
     const pref=btn.getAttribute('data-pref');
     btn.classList.toggle('active');
-    if(state.selectedPrefs.includes(pref)){
-      state.selectedPrefs=state.selectedPrefs.filter(p=>p!==pref);
-    } else {
-      state.selectedPrefs.push(pref);
-    }
+    if(state.selectedPrefs.includes(pref))state.selectedPrefs=state.selectedPrefs.filter(p=>p!==pref);
+    else state.selectedPrefs.push(pref);
   });
 });
 
@@ -119,35 +108,39 @@ window.goPage=function(page){
   if(page==='wallet')renderWallet();
   if(page==='browse')renderBrowse();
   if(page==='rewards')renderRewards();
-  if(page==='loyalty')renderLoyalty();
   if(page==='settings')renderSettings();
   if(page==='home')renderHome();
 };
 
-window.nextStep=nextStep;
-window.finishOnboarding=finishOnboarding;
+window.setWalletFilter=function(f){
+  walletFilter=f;
+  goPage('wallet');
+  setTimeout(()=>{
+    document.querySelectorAll('.wallet-tab').forEach(t=>t.classList.remove('active'));
+    const a=document.querySelector('.wallet-tab[data-wfilter="'+f+'"]');
+    if(a)a.classList.add('active');
+    renderWallet();
+  },50);
+};
 
 // -------- Home --------
 function renderHome(){
   const totalSaved=state.deals.filter(d=>d.redeemed).reduce((s,d)=>s+(parseFloat(d.value)||0),0);
   document.getElementById('total-saved').textContent='$'+totalSaved.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',');
-  document.getElementById('streak-text').innerHTML=
+  document.getElementById('streak-text').textContent=
     state.rewards.streak>0
       ?'+$'+totalSaved+' total · '+state.rewards.streak+' day streak 🔥'
       :'Save your first deal to start a streak';
 
+  // Deals
   const dealsSection=document.getElementById('deals-section');
   const active=state.deals.filter(d=>!d.redeemed);
-  const expiring=active.filter(d=>{
-    const du=daysUntil(d.expiry);
-    return du!==null && du>=0 && du<=7;
-  });
-
   if(active.length===0){
     document.getElementById('see-all-deals').style.display='none';
-    dealsSection.innerHTML='<div class="empty-state"><div class="empty-state-icon">🎟️</div><p class="empty-state-title">No deals yet</p><p class="empty-state-sub">Snap a coupon photo or upload a screenshot to add your first deal.</p><button class="empty-state-cta" onclick="openSnapSheet()">📷 Snap your first deal</button></div>';
+    dealsSection.innerHTML='<div class="empty-state"><div class="empty-icon">🎟️</div><p class="empty-title">No deals yet</p><p class="empty-sub">Snap a coupon or upload a screenshot to add your first deal.</p><button class="empty-cta" onclick="openSnapSheet()"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Snap your first deal</button></div>';
   } else {
-    document.getElementById('see-all-deals').style.display='block';
+    document.getElementById('see-all-deals').style.display='inline-block';
+    const expiring=active.filter(d=>{const du=daysUntil(d.expiry);return du!==null&&du>=0&&du<=7;});
     const showList=expiring.length?expiring:active.slice(0,3);
     let html='<div class="h-carousel">';
     showList.forEach(d=>{
@@ -156,42 +149,43 @@ function renderHome(){
       const pct=d.discount.match(/(\d+%|FREE|\$\d+)/i);
       const pctText=pct?pct[1]:d.discount.slice(0,8);
       const expiryText=du===null?'No expiry':du===0?'⏰ Today!':du===1?'⏰ Tomorrow':du<0?'Expired':'⏰ '+du+'d left';
-      html+='<button class="h-deal" onclick="openDealCard(\''+d.id+'\')"><div class="h-hero gradient-'+grad+'"><span class="h-pct">'+escapeHtml(pctText)+'</span><span class="h-merchant-overlay">'+escapeHtml(d.merchant)+'</span></div><div class="h-body"><p class="h-discount">'+escapeHtml(d.discount)+'</p><p class="h-expiry">'+expiryText+'</p><span class="h-cta">View</span></div></button>';
+      html+='<button class="h-deal" onclick="openDealCard(\''+d.id+'\')"><div class="h-hero gradient-'+grad+'"><span class="h-pct">'+escapeHtml(pctText)+'</span><span class="h-merch-overlay">'+escapeHtml(d.merchant)+'</span></div><div class="h-body"><p class="h-discount">'+escapeHtml(d.discount)+'</p><p class="h-expiry">'+expiryText+'</p><span class="h-cta">View</span></div></button>';
     });
     html+='</div>';
     dealsSection.innerHTML=html;
   }
 
-  // Programs row
-  const progRow=document.getElementById('programs-row');
-  let pHtml='';
+  // Programs preview (max 3)
+  const ppEl=document.getElementById('programs-preview');
   if(state.programs.length===0){
-    pHtml='<button class="program-tile add-tile" style="min-width:200px;min-height:90px" onclick="openAddProgram()"><i class="ti ti-plus"></i><span>Add airline miles, hotel points, or credit card rewards</span></button>';
+    ppEl.innerHTML='<div class="empty-state" style="padding:24px 20px"><p class="empty-sub" style="margin:0 0 12px">Track airline miles, hotel points, credit card rewards.</p><button class="empty-cta" onclick="openAddProgram()" style="background:#1A1A1A">+ Add reward program</button></div>';
   } else {
-    state.programs.forEach((p,i)=>{
-      const grad=['linear-gradient(135deg,#6366F1,#C084FC)','linear-gradient(135deg,#F472B6,#FB923C)','linear-gradient(135deg,#1E40AF,#3B82F6)','linear-gradient(135deg,#00C9A7,#4FACFE)'][i%4];
-      pHtml+='<button class="program-tile" onclick="viewProgram(\''+p.id+'\')"><div class="program-icon" style="background:'+grad+'">'+(p.icon||'⭐')+'</div><p class="program-name">'+escapeHtml(p.name)+'</p><p class="program-balance">'+escapeHtml(p.balance)+' '+escapeHtml(p.unit)+'</p></button>';
+    let h='<div class="h-carousel">';
+    state.programs.slice(0,3).forEach((p,i)=>{
+      const grads=['linear-gradient(135deg,#6366F1,#C084FC)','linear-gradient(135deg,#F472B6,#FB923C)','linear-gradient(135deg,#1E40AF,#3B82F6)','linear-gradient(135deg,#00C9A7,#4FACFE)'];
+      h+='<div class="h-deal" onclick="setWalletFilter(\'programs\')" style="cursor:pointer"><div style="height:80px;padding:12px;background:'+grads[i%4]+';color:white;display:flex;flex-direction:column;justify-content:space-between"><div style="font-size:22px">'+(p.icon||'⭐')+'</div><p style="font-size:14px;font-weight:700;margin:0">'+escapeHtml(p.name)+'</p></div><div class="h-body"><p class="h-discount">'+escapeHtml(p.balance)+' '+escapeHtml(p.unit)+'</p><p class="h-expiry">'+(p.expiry?'Expires '+fmtDate(p.expiry):'No expiry')+'</p></div></div>';
     });
-    pHtml+='<button class="program-tile add-tile" onclick="openAddProgram()"><i class="ti ti-plus"></i><span>Add</span></button>';
+    h+='</div>';
+    ppEl.innerHTML=h;
   }
-  progRow.innerHTML=pHtml;
 
-  // Loyalty row
-  const lRow=document.getElementById('loyalty-row');
-  let lHtml='';
+  // Loyalty preview
+  const lpEl=document.getElementById('loyalty-preview');
   if(state.loyalty.length===0){
-    lHtml='<button class="loyalty-card add-tile" style="background:rgba(0,0,0,0.05);color:#1a1a1a;border:2px dashed rgba(0,0,0,0.15);box-shadow:none;width:auto;min-width:240px" onclick="openAddLoyalty()"><i class="ti ti-plus"></i><span style="font-size:12px;font-weight:600;margin-top:4px">Add Costco, CVS, or any loyalty card</span></button>';
+    lpEl.innerHTML='<div class="empty-state" style="padding:24px 20px"><p class="empty-sub" style="margin:0 0 12px">Add Costco, CVS, or any membership card.</p><button class="empty-cta" onclick="openAddLoyalty()" style="background:#1A1A1A">+ Add loyalty card</button></div>';
   } else {
-    state.loyalty.forEach(c=>{
+    let h='<div class="h-carousel">';
+    state.loyalty.slice(0,4).forEach(c=>{
       const masked=c.number.length>4?'**** '+c.number.slice(-4):c.number;
-      lHtml+='<button class="loyalty-card" style="background:'+c.color+'" onclick="showLoyaltyBarcode(\''+c.id+'\')"><p class="loyalty-name">'+escapeHtml(c.name)+'</p><p class="loyalty-num">'+escapeHtml(masked)+'</p></button>';
+      h+='<button onclick="showLoyaltyBarcode(\''+c.id+'\')" style="flex-shrink:0;width:170px;height:108px;border-radius:14px;padding:14px;color:white;display:flex;flex-direction:column;justify-content:space-between;background:'+c.color+';box-shadow:0 4px 12px rgba(0,0,0,0.15);text-align:left"><p style="font-size:14px;font-weight:700;margin:0">'+escapeHtml(c.name)+'</p><p style="font-family:ui-monospace,monospace;font-size:12px;letter-spacing:2px;opacity:0.9;margin:0">'+escapeHtml(masked)+'</p></button>';
     });
-    lHtml+='<button class="loyalty-card add-tile" style="background:rgba(0,0,0,0.05);color:#1a1a1a;border:2px dashed rgba(0,0,0,0.15);box-shadow:none" onclick="openAddLoyalty()"><i class="ti ti-plus"></i><span style="font-size:12px;font-weight:600;margin-top:4px">Add</span></button>';
+    h+='</div>';
+    lpEl.innerHTML=h;
   }
-  lRow.innerHTML=lHtml;
 }
 
 window.openDealCard=function(id){
+  walletFilter='deals';
   goPage('wallet');
   setTimeout(()=>{
     const el=document.querySelector('[data-deal-id="'+id+'"]');
@@ -199,25 +193,68 @@ window.openDealCard=function(id){
   },200);
 };
 
-// -------- Wallet --------
+// -------- Wallet (unified — deals + programs + loyalty) --------
 function renderWallet(){
-  const active=state.deals.filter(d=>!d.redeemed);
-  const sub=document.getElementById('wallet-sub');
-  sub.textContent=active.length===0?'No deals yet':active.length+' active · saved $'+state.deals.filter(d=>d.redeemed).reduce((s,d)=>s+(parseFloat(d.value)||0),0);
-
+  document.querySelectorAll('.wallet-tab').forEach(t=>t.classList.toggle('active',t.getAttribute('data-wfilter')===walletFilter));
   const c=document.getElementById('wallet-content');
-  if(active.length===0){
-    c.innerHTML='<div style="background:white;border-radius:18px;padding:40px 24px;text-align:center"><div style="font-size:56px;opacity:0.4;margin-bottom:8px">📭</div><p style="font-size:16px;font-weight:700;margin:0 0 4px;color:#1a1a1a">Your wallet is empty</p><p style="font-size:13px;color:#777;margin:0 0 16px">Snap a coupon to add your first deal.</p><button class="empty-state-cta" onclick="openSnapSheet()">📷 Snap a deal</button></div>';
-    return;
+  const dealsCount=state.deals.filter(d=>!d.redeemed).length;
+  const totalCount=dealsCount+state.programs.length+state.loyalty.length;
+  document.getElementById('wallet-sub').textContent=totalCount===0?'Empty wallet':totalCount+' item'+(totalCount===1?'':'s')+' saved';
+
+  let html='';
+  if(walletFilter==='all'||walletFilter==='deals'){
+    const active=state.deals.filter(d=>!d.redeemed);
+    if(active.length>0){
+      if(walletFilter==='all')html+='<p style="color:rgba(255,255,255,0.6);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin:8px 0 12px">🎟️ Deals · '+active.length+'</p>';
+      html+=renderDealsList(active);
+    } else if(walletFilter==='deals'){
+      html+=emptyWalletSection('🎟️','No deals yet','Snap a coupon to add your first deal','openSnapSheet');
+    }
   }
 
+  if(walletFilter==='all'||walletFilter==='programs'){
+    if(state.programs.length>0){
+      if(walletFilter==='all')html+='<p style="color:rgba(255,255,255,0.6);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin:24px 0 12px">⭐ Reward programs · '+state.programs.length+'</p>';
+      html+=renderProgramsList();
+    } else if(walletFilter==='programs'){
+      html+=emptyWalletSection('⭐','No reward programs','Track airline miles, hotel points, credit card rewards','openAddProgram');
+    }
+  }
+
+  if(walletFilter==='all'||walletFilter==='loyalty'){
+    if(state.loyalty.length>0){
+      if(walletFilter==='all')html+='<p style="color:rgba(255,255,255,0.6);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin:24px 0 12px">💳 Loyalty cards · '+state.loyalty.length+'</p>';
+      html+=renderLoyaltyList();
+    } else if(walletFilter==='loyalty'){
+      html+=emptyWalletSection('💳','No loyalty cards','Skip the physical cards at checkout','openAddLoyalty');
+    }
+  }
+
+  if(walletFilter==='all'&&totalCount===0){
+    html=emptyWalletSection('📭','Your wallet is empty','Snap a deal, add a card, or track points','openSnapSheet');
+  }
+
+  c.innerHTML=html;
+
+  // Hook up wallet pass interactions
+  document.querySelectorAll('.wpass').forEach(p=>{
+    const g=p.getAttribute('class-grad');
+    p.style.background=getGradStyle(g);
+  });
+}
+
+function emptyWalletSection(emoji,title,sub,cta){
+  return '<div style="background:white;border-radius:18px;padding:40px 24px;text-align:center;margin-top:14px"><div style="font-size:48px;opacity:0.4;margin-bottom:8px">'+emoji+'</div><p style="font-size:15px;font-weight:700;margin:0 0 4px;color:#1A1A1A">'+title+'</p><p style="font-size:12px;color:#777;margin:0 0 16px">'+sub+'</p><button class="empty-cta" onclick="'+cta+'()">+ Add</button></div>';
+}
+
+function renderDealsList(active){
   let html='';
   active.forEach((d,i)=>{
     const grad=getGradient(d.category);
     const du=daysUntil(d.expiry);
     const expText=du===null?'No expiry':du===0?'Expires TODAY':du===1?'Expires tomorrow':du<0?'Expired':'Expires in '+du+' days';
     const isLast=i===active.length-1;
-    html+='<div class="wpass" data-deal-id="'+d.id+'" onclick="togglePass(this)" style="border-radius:18px;padding:18px 20px;'+(isLast?'margin-bottom:14px':'margin-bottom:-90px')+';position:relative;box-shadow:0 8px 24px rgba(0,0,0,0.4);cursor:pointer;color:white" class-grad="'+grad+'">';
+    html+='<div class="wpass" data-deal-id="'+d.id+'" onclick="togglePass(this)" class-grad="'+grad+'" style="border-radius:18px;padding:18px 20px;'+(isLast?'margin-bottom:14px':'margin-bottom:-90px')+';position:relative;box-shadow:0 8px 24px rgba(0,0,0,0.4);color:white;cursor:pointer">';
     html+='<div class="pcoll" style="display:flex;flex-direction:column;gap:60px">';
     html+='<div style="display:flex;justify-content:space-between;align-items:flex-start"><div><p style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;opacity:0.9;margin:0">'+escapeHtml(d.category||'Deal')+'</p><h3 style="font-size:16px;font-weight:700;margin:2px 0 0">'+escapeHtml(d.merchant)+'</h3></div></div>';
     html+='<div style="display:flex;justify-content:space-between;align-items:flex-end"><div><p style="font-size:22px;font-weight:800;margin:0">'+escapeHtml(d.discount)+'</p><p style="font-size:11px;opacity:0.9;margin:2px 0 0">'+expText+'</p></div>';
@@ -226,41 +263,40 @@ function renderWallet(){
     // Expanded
     html+='<div class="pexp" style="display:none">';
     html+='<div class="gradient-'+grad+'" style="height:140px;padding:18px;display:flex;flex-direction:column;justify-content:space-between;margin:-18px -20px 0">';
-    html+='<span style="background:rgba(255,255,255,0.95);color:#1a1a1a;font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;padding:5px 10px;border-radius:999px;align-self:flex-start">'+escapeHtml(d.category)+' · '+expText+'</span>';
+    html+='<span style="background:rgba(255,255,255,0.95);color:#1A1A1A;font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;padding:5px 10px;border-radius:999px;align-self:flex-start">'+escapeHtml(d.category)+' · '+expText+'</span>';
     html+='<h2 style="color:white;font-size:36px;font-weight:900;margin:0;letter-spacing:-1px;line-height:1">'+escapeHtml(d.discount)+'</h2></div>';
-    html+='<div style="padding:16px 18px 18px;background:white;color:#1a1a1a;margin:0 -20px -18px">';
+    html+='<div style="padding:16px 18px 18px;background:white;color:#1A1A1A;margin:0 -20px -18px">';
     html+='<h3 style="font-size:22px;font-weight:800;margin:0">'+escapeHtml(d.merchant)+'</h3>';
     if(d.notes)html+='<p style="font-size:13px;color:#777;margin:4px 0 14px">'+escapeHtml(d.notes)+'</p>';
     if(d.address){
       const mapsUrl='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(d.address);
-      html+='<a href="'+escapeHtml(mapsUrl)+'" target="_blank" onclick="event.stopPropagation()" style="background:#f5f5f5;border-radius:12px;padding:12px;margin-bottom:14px;display:flex;align-items:center;gap:10px;text-decoration:none;color:#1a1a1a"><div style="width:36px;height:36px;border-radius:8px;background:#4FACFE;display:flex;align-items:center;justify-content:center;color:white;flex-shrink:0"><i class="ti ti-map-pin"></i></div><div style="flex:1"><p style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#777;margin:0">Tap for directions</p><p style="font-size:13px;font-weight:600;margin:2px 0 0">'+escapeHtml(d.address)+'</p></div><i class="ti ti-chevron-right" style="color:#999;font-size:18px"></i></a>';
+      html+='<a href="'+escapeHtml(mapsUrl)+'" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="background:#f5f5f5;border-radius:12px;padding:12px;margin-bottom:14px;display:flex;align-items:center;gap:10px;text-decoration:none;color:#1A1A1A"><div style="width:36px;height:36px;border-radius:8px;background:#4FACFE;display:flex;align-items:center;justify-content:center;color:white;flex-shrink:0"><svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:white;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div><div style="flex:1"><p style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#777;margin:0">Tap for directions</p><p style="font-size:13px;font-weight:600;margin:2px 0 0">'+escapeHtml(d.address)+'</p></div></a>';
     }
     if(d.code){
       html+='<div style="background:white;border:1px solid rgba(0,0,0,0.08);border-radius:12px;padding:14px;text-align:center;margin-bottom:14px">';
-      html+='<div style="height:60px;background-image:repeating-linear-gradient(90deg,#1a1a1a 0px,#1a1a1a 2px,transparent 2px,transparent 4px,#1a1a1a 4px,#1a1a1a 8px,transparent 8px,transparent 10px,#1a1a1a 10px,#1a1a1a 12px,transparent 12px,transparent 16px);margin-bottom:8px"></div>';
+      html+='<div style="height:60px;background-image:repeating-linear-gradient(90deg,#1A1A1A 0px,#1A1A1A 2px,transparent 2px,transparent 4px,#1A1A1A 4px,#1A1A1A 8px,transparent 8px,transparent 10px,#1A1A1A 10px,#1A1A1A 12px,transparent 12px,transparent 16px);margin-bottom:8px"></div>';
       html+='<p style="font-family:ui-monospace,monospace;font-size:14px;font-weight:700;letter-spacing:2px;margin:0">'+escapeHtml(d.code)+'</p></div>';
     }
-    html+='<div style="display:flex;gap:8px"><button onclick="event.stopPropagation();redeemDeal(\''+d.id+'\')" style="flex:1;border:none;padding:12px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;background:#1a1a1a;color:white">✓ Mark redeemed</button>';
-    html+='<button onclick="event.stopPropagation();shareDeal(\''+d.id+'\')" style="flex:0 0 50px;border:none;padding:12px;border-radius:12px;cursor:pointer;background:#f5f5f5;color:#1a1a1a"><i class="ti ti-share"></i></button>';
-    html+='<button onclick="event.stopPropagation();deleteDeal(\''+d.id+'\')" style="flex:0 0 50px;border:none;padding:12px;border-radius:12px;cursor:pointer;background:#FFE5E5;color:#DC2626"><i class="ti ti-trash"></i></button></div>';
+    html+='<div style="display:flex;gap:8px"><button onclick="event.stopPropagation();redeemDeal(\''+d.id+'\')" style="flex:1;padding:12px;border-radius:12px;font-size:13px;font-weight:700;background:#1A1A1A;color:white">✓ Mark redeemed</button>';
+    html+='<button onclick="event.stopPropagation();shareDeal(\''+d.id+'\')" style="flex:0 0 50px;padding:12px;border-radius:12px;background:#f5f5f5;color:#1A1A1A">↗</button>';
+    html+='<button onclick="event.stopPropagation();deleteDeal(\''+d.id+'\')" style="flex:0 0 50px;padding:12px;border-radius:12px;background:#FFE5E5;color:#DC2626">🗑</button></div>';
     html+='</div></div></div>';
   });
-  c.innerHTML=html;
-  // Set gradients
-  document.querySelectorAll('.wpass').forEach(p=>{
-    const g=p.getAttribute('class-grad');
-    p.style.background=getGradStyle(g);
-  });
+  return html;
 }
 
-function getGradStyle(g){
-  const map={
-    warm:'linear-gradient(135deg,#FF6B6B,#FFA06B)',
-    green:'linear-gradient(135deg,#00C9A7,#4FACFE)',
-    purple:'linear-gradient(135deg,#6366F1,#C084FC)',
-    pink:'linear-gradient(135deg,#F472B6,#FB923C)'
-  };
-  return map[g]||map.warm;
+function renderProgramsList(){
+  return state.programs.map((p,i)=>{
+    const grads=['linear-gradient(135deg,#6366F1,#C084FC)','linear-gradient(135deg,#F472B6,#FB923C)','linear-gradient(135deg,#1E40AF,#3B82F6)','linear-gradient(135deg,#00C9A7,#4FACFE)'];
+    return '<div onclick="viewProgram(\''+p.id+'\')" style="background:'+grads[i%4]+';border-radius:18px;padding:20px;color:white;margin-bottom:12px;box-shadow:0 4px 12px rgba(0,0,0,0.2);cursor:pointer"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px"><div><p style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;opacity:0.9;margin:0">Reward Program</p><h3 style="font-size:18px;font-weight:800;margin:4px 0 0">'+escapeHtml(p.name)+'</h3></div><span style="font-size:28px">'+(p.icon||'⭐')+'</span></div><div style="display:flex;justify-content:space-between;align-items:flex-end"><div><p style="font-size:24px;font-weight:900;margin:0">'+escapeHtml(p.balance)+'</p><p style="font-size:11px;opacity:0.9;margin:2px 0 0">'+escapeHtml(p.unit)+(p.expiry?' · expires '+fmtDate(p.expiry):' · no expiry')+'</p></div></div></div>';
+  }).join('');
+}
+
+function renderLoyaltyList(){
+  return state.loyalty.map(c=>{
+    const masked=c.number.length>4?'**** '+c.number.slice(-4):c.number;
+    return '<div onclick="showLoyaltyBarcode(\''+c.id+'\')" style="background:'+c.color+';border-radius:18px;padding:20px;color:white;margin-bottom:12px;box-shadow:0 4px 12px rgba(0,0,0,0.2);cursor:pointer"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:30px"><div><p style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;opacity:0.9;margin:0">Loyalty Card</p><h3 style="font-size:18px;font-weight:800;margin:4px 0 0">'+escapeHtml(c.name)+'</h3></div><svg viewBox="0 0 24 24" style="width:24px;height:24px;fill:none;stroke:white;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;opacity:0.7"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="6" y1="10" x2="6" y2="14"/><line x1="10" y1="10" x2="10" y2="14"/><line x1="14" y1="10" x2="14" y2="14"/><line x1="18" y1="10" x2="18" y2="14"/></svg></div><p style="font-family:ui-monospace,monospace;font-size:14px;letter-spacing:3px;margin:0;opacity:0.95">'+escapeHtml(masked)+'</p></div>';
+  }).join('');
 }
 
 window.togglePass=function(el){
@@ -275,7 +311,7 @@ function expandPass(el){
   el.querySelector('.pexp').style.display='block';
   el.style.padding='18px 20px';
   el.style.background='white';
-  el.style.color='#1a1a1a';
+  el.style.color='#1A1A1A';
   el.style.marginBottom='14px';
   el.style.borderRadius='24px';
   el.style.overflow='hidden';
@@ -291,7 +327,6 @@ function collapsePass(el){
   el.style.color='white';
   el.style.borderRadius='18px';
   el.style.overflow='visible';
-  // marginBottom logic — last item different
   const all=document.querySelectorAll('.wpass');
   const last=all[all.length-1];
   el.style.marginBottom=el===last?'14px':'-90px';
@@ -304,9 +339,7 @@ window.redeemDeal=function(id){
   d.redeemedAt=Date.now();
   state.rewards.points+=10;
   state.rewards.saved+=parseFloat(d.value)||0;
-  // Streak
-  if(state.rewards.lastClaim===todayStr()){/* same day */}
-  else {
+  if(state.rewards.lastClaim!==todayStr()){
     const yest=new Date();yest.setDate(yest.getDate()-1);
     if(state.rewards.lastClaim===yest.toISOString().slice(0,10))state.rewards.streak+=1;
     else state.rewards.streak=1;
@@ -340,80 +373,72 @@ window.deleteDeal=function(id){
   renderAll();
 };
 
+window.viewProgram=function(id){
+  const p=state.programs.find(x=>x.id===id);
+  if(!p)return;
+  if(confirm(p.name+'\nBalance: '+p.balance+' '+p.unit+(p.expiry?'\nExpires: '+p.expiry:'')+'\n\nDelete this program?')){
+    state.programs=state.programs.filter(x=>x.id!==id);
+    save(K.programs,state.programs);
+    toast('Deleted');
+    renderAll();
+  }
+};
+
 // -------- Browse --------
 function renderBrowse(){
-  // Local
   const local=document.getElementById('local-deals-list');
   const sample=getSampleLocalDeals();
   local.innerHTML='<p style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:0 0 12px">📍 '+sample.length+' deals nearby</p>'+sample.map(d=>{
     const grad=getGradient(d.category);
-    return '<button onclick="claimBrowseDeal(\''+d.merchant+'\',\''+d.discount+'\',\''+d.category+'\',\''+(d.code||'')+'\',\''+d.expiry+'\')" style="width:100%;background:white;border:none;border-radius:16px;padding:12px;margin-bottom:10px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04);cursor:pointer;text-align:left"><div class="gradient-'+grad+'" style="width:56px;height:56px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:14px;flex-shrink:0">'+escapeHtml(d.discount.split(' ')[0])+'</div><div style="flex:1;min-width:0"><p style="font-size:14px;font-weight:700;margin:0">'+escapeHtml(d.merchant)+'</p><p style="font-size:12px;color:var(--text-dim);margin:2px 0 0">'+escapeHtml(d.discount)+'</p><p style="font-size:11px;color:var(--accent-dark);font-weight:700;margin:4px 0 0">📍 '+d.distance+' mi · '+d.time+'</p></div><span style="background:var(--accent);color:#1a1a1a;border:none;padding:8px 14px;border-radius:999px;font-size:12px;font-weight:700">Claim</span></button>';
+    return '<button onclick="claimBrowseDeal(\''+d.merchant+'\',\''+d.discount+'\',\''+d.category+'\',\''+(d.code||'')+'\',\''+d.expiry+'\')" style="width:100%;background:white;border-radius:16px;padding:12px;margin-bottom:10px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04);text-align:left"><div class="gradient-'+grad+'" style="width:56px;height:56px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:14px;flex-shrink:0">'+escapeHtml(d.discount.split(' ')[0])+'</div><div style="flex:1;min-width:0"><p style="font-size:14px;font-weight:700;margin:0">'+escapeHtml(d.merchant)+'</p><p style="font-size:12px;color:var(--text-dim);margin:2px 0 0">'+escapeHtml(d.discount)+'</p><p style="font-size:11px;color:var(--accent-dark);font-weight:700;margin:4px 0 0">📍 '+d.distance+' mi · '+d.time+'</p></div><span style="background:var(--accent);color:#1A1A1A;padding:8px 14px;border-radius:999px;font-size:12px;font-weight:700">Claim</span></button>';
   }).join('');
 
-  // Online — Pinterest grid
   const onl=document.getElementById('online-deals-list');
-  const onlineDeals=getSampleOnlineDeals();
-  onl.innerHTML='<p style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:0 0 12px">🌐 Top online deals</p><div style="columns:2;column-gap:8px">'+onlineDeals.map(d=>{
+  const od=getSampleOnlineDeals();
+  onl.innerHTML='<p style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:0 0 12px">🌐 Top online deals</p><div style="columns:2;column-gap:8px">'+od.map(d=>{
     const grad=getGradient(d.category);
-    return '<button onclick="claimBrowseDeal(\''+d.merchant+'\',\''+d.discount+'\',\''+d.category+'\',\''+(d.code||'')+'\',\''+d.expiry+'\')" style="break-inside:avoid;margin-bottom:8px;border-radius:16px;overflow:hidden;position:relative;cursor:pointer;width:100%;border:none;padding:0;display:block"><div class="gradient-'+grad+'" style="height:'+d.h+'px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:30px">'+escapeHtml(d.short)+'</div><div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(180deg,transparent,rgba(0,0,0,0.85));padding:24px 12px 12px;color:white;text-align:left"><p style="font-size:13px;font-weight:700;margin:0">'+escapeHtml(d.merchant)+'</p><p style="font-size:11px;opacity:0.9;margin:0">'+escapeHtml(d.subtitle)+'</p></div></button>';
+    return '<button onclick="claimBrowseDeal(\''+d.merchant+'\',\''+d.discount+'\',\''+d.category+'\',\''+(d.code||'')+'\',\''+d.expiry+'\')" style="break-inside:avoid;margin-bottom:8px;border-radius:16px;overflow:hidden;position:relative;width:100%;padding:0;display:block;text-align:left"><div class="gradient-'+grad+'" style="height:'+d.h+'px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:30px">'+escapeHtml(d.short)+'</div><div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(180deg,transparent,rgba(0,0,0,0.85));padding:24px 12px 12px;color:white"><p style="font-size:13px;font-weight:700;margin:0">'+escapeHtml(d.merchant)+'</p><p style="font-size:11px;opacity:0.9;margin:0">'+escapeHtml(d.subtitle)+'</p></div></button>';
   }).join('')+'</div>';
 
-  // Friends
   const fr=document.getElementById('friends-deals-list');
-  fr.innerHTML='<p style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:0 0 12px">👥 Shared by friends</p><div style="background:white;border-radius:16px;padding:24px;text-align:center;color:var(--text-dim)"><div style="font-size:40px;margin-bottom:8px;opacity:0.4">👥</div><p style="font-size:14px;font-weight:700;margin:0 0 4px;color:#1a1a1a">No friends yet</p><p style="font-size:12px;margin:0">Connect with friends to see their shared deals here.</p></div>';
+  fr.innerHTML='<p style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:0 0 12px">👥 Shared by friends</p><div style="background:white;border-radius:16px;padding:24px;text-align:center;color:var(--text-dim)"><div style="font-size:40px;margin-bottom:8px;opacity:0.4">👥</div><p style="font-size:14px;font-weight:700;margin:0 0 4px;color:#1A1A1A">No friends yet</p><p style="font-size:12px;margin:0">Connect with friends to see their shared deals here.</p></div>';
 }
 
 function getSampleLocalDeals(){
-  // Generate stable sample data — no random per render
   return [
     {merchant:'Starbucks',discount:'FREE grande drink',category:'Dining',code:'BD2026',expiry:futureDate(7),distance:'0.3',time:'5 min walk'},
     {merchant:'Whole Foods',discount:'20% off produce',category:'Groceries',code:'FRESH20',expiry:futureDate(10),distance:'0.8',time:'3 min drive'},
     {merchant:'Target',discount:'$10 off $50',category:'Home',code:'SAVE10',expiry:futureDate(14),distance:'1.2',time:'5 min drive'},
     {merchant:'Nike',discount:'25% off sale',category:'Apparel',code:'EXTRA25',expiry:futureDate(5),distance:'2.1',time:'8 min drive'},
-    {merchant:'Sephora',discount:'Free shipping + samples',category:'Beauty',code:'BEAUTY3',expiry:futureDate(8),distance:'2.8',time:'10 min drive'},
+    {merchant:'Sephora',discount:'Free shipping',category:'Beauty',code:'BEAUTY3',expiry:futureDate(8),distance:'2.8',time:'10 min drive'},
     {merchant:'Old Navy',discount:'40% off everything',category:'Apparel',code:'FORTY',expiry:futureDate(3),distance:'3.4',time:'12 min drive'}
   ];
 }
-
 function getSampleOnlineDeals(){
   return [
-    {merchant:'Amazon',discount:'15% off household',category:'Home',code:'HOME15',expiry:futureDate(7),short:'15%',subtitle:'Household items',h:200},
-    {merchant:'Best Buy',discount:'$50 off laptops',category:'Electronics',code:'LAP50',expiry:futureDate(10),short:'$50',subtitle:'Laptops $500+',h:240},
-    {merchant:'Marriott',discount:'$50 off weekends',category:'Travel',code:'WKND50',expiry:futureDate(14),short:'$50',subtitle:'Weekend stays',h:180},
-    {merchant:'Sephora',discount:'30% off beauty',category:'Beauty',code:'GLOW30',expiry:futureDate(5),short:'30%',subtitle:'Skincare sale',h:220},
-    {merchant:'Costco',discount:'$25 off online',category:'Groceries',code:'SAVE25',expiry:futureDate(12),short:'$25',subtitle:'$250+ orders',h:160},
-    {merchant:'Nike',discount:'25% off sale',category:'Apparel',code:'EXTRA25',expiry:futureDate(8),short:'25%',subtitle:'Sale items',h:200}
+    {merchant:'Amazon',discount:'15% off',category:'Home',code:'HOME15',expiry:futureDate(7),short:'15%',subtitle:'Household items',h:200},
+    {merchant:'Best Buy',discount:'$50 off',category:'Electronics',code:'LAP50',expiry:futureDate(10),short:'$50',subtitle:'Laptops $500+',h:240},
+    {merchant:'Marriott',discount:'$50 off',category:'Travel',code:'WKND50',expiry:futureDate(14),short:'$50',subtitle:'Weekend stays',h:180},
+    {merchant:'Sephora',discount:'30% off',category:'Beauty',code:'GLOW30',expiry:futureDate(5),short:'30%',subtitle:'Skincare sale',h:220},
+    {merchant:'Costco',discount:'$25 off',category:'Groceries',code:'SAVE25',expiry:futureDate(12),short:'$25',subtitle:'$250+ orders',h:160},
+    {merchant:'Nike',discount:'25% off',category:'Apparel',code:'EXTRA25',expiry:futureDate(8),short:'25%',subtitle:'Sale items',h:200}
   ];
 }
 
-function futureDate(days){
-  const d=new Date();
-  d.setDate(d.getDate()+days);
-  return d.toISOString().slice(0,10);
-}
-
 window.claimBrowseDeal=function(merchant,discount,category,code,expiry){
-  const newDeal={
-    id:uid(),
-    merchant,discount,category,
-    code:code||'',
-    expiry,
-    value:parseValue(discount),
-    notes:'Claimed from Browse',
-    redeemed:false,
-    createdAt:Date.now()
-  };
-  state.deals.push(newDeal);
-  save(K.deals,state.deals);
-  toast('✓ Added to wallet');
+  state.deals.push({
+    id:uid(),merchant,discount,category,code:code||'',expiry,
+    value:parseValue(discount),notes:'Claimed from Browse',redeemed:false,createdAt:Date.now()
+  });
+  state.rewards.spins+=1;
+  save(K.deals,state.deals);save(K.rewards,state.rewards);
+  toast('✓ Added to wallet · +1 spin');
   renderAll();
 };
 
 function parseValue(disc){
-  const dol=disc.match(/\$(\d+)/);
-  if(dol)return parseInt(dol[1]);
-  const pct=disc.match(/(\d+)%/);
-  if(pct)return parseInt(pct[1]);
+  const dol=disc.match(/\$(\d+)/);if(dol)return parseInt(dol[1]);
+  const pct=disc.match(/(\d+)%/);if(pct)return parseInt(pct[1]);
   if(/free/i.test(disc))return 5;
   return 5;
 }
@@ -421,46 +446,37 @@ function parseValue(disc){
 window.setBrowseTab=function(tab){
   currentBrowseTab=tab;
   document.querySelectorAll('.btab').forEach(b=>{
-    b.classList.remove('active');
-    b.style.background='white';
-    b.style.color='#6B6A64';
-    b.style.borderColor='rgba(0,0,0,0.08)';
+    b.classList.remove('active');b.style.background='white';b.style.color='#6B6A64';b.style.borderColor='rgba(0,0,0,0.08)';
   });
   const a=document.querySelector('.btab[data-btab="'+tab+'"]');
-  if(a){a.classList.add('active');a.style.background='#1a1a1a';a.style.color='white';a.style.borderColor='#1a1a1a';}
+  if(a){a.classList.add('active');a.style.background='#1A1A1A';a.style.color='white';a.style.borderColor='#1A1A1A';}
   document.querySelectorAll('.bsection').forEach(s=>s.style.display='none');
   document.querySelector('.bsection[data-bsection="'+tab+'"]').style.display='block';
 };
 
 // -------- Rewards --------
-function getCurrentTier(){
-  let cur=TIERS[0];
-  for(const t of TIERS){if(state.rewards.points>=t.min)cur=t;}
-  return cur;
-}
+function getCurrentTier(){let cur=TIERS[0];for(const t of TIERS){if(state.rewards.points>=t.min)cur=t;}return cur;}
 
 function renderRewards(){
   document.getElementById('points-display').textContent=state.rewards.points.toLocaleString();
   const tier=getCurrentTier();
-  const tierBadge=document.getElementById('tier-badge');
-  tierBadge.textContent=tier.emoji+' '+tier.name;
-  tierBadge.style.background='linear-gradient(135deg,'+tier.colors[0]+','+tier.colors[1]+')';
+  const tb=document.getElementById('tier-badge');
+  tb.textContent=tier.emoji+' '+tier.name;
+  tb.style.background='linear-gradient(135deg,'+tier.colors[0]+','+tier.colors[1]+')';
   const fill=document.getElementById('progress-fill');
   fill.style.background='linear-gradient(90deg,'+tier.colors[0]+','+tier.colors[1]+')';
-  const pctToNext=tier.next===Infinity?100:Math.min(100,((state.rewards.points-tier.min)/(tier.next-tier.min))*100);
-  fill.style.width=pctToNext+'%';
+  const pct=tier.next===Infinity?100:Math.min(100,((state.rewards.points-tier.min)/(tier.next-tier.min))*100);
+  fill.style.width=pct+'%';
   document.getElementById('next-tier-text').textContent=tier.next===Infinity?'Max tier':(tier.next-state.rewards.points)+' to '+TIERS[TIERS.indexOf(tier)+1].name;
   document.getElementById('streak-pill').textContent='🔥 '+state.rewards.streak+' day streak';
 
   const spinBtn=document.getElementById('spin-btn');
   const avail=document.getElementById('spins-available');
   if(state.rewards.spins>0){
-    spinBtn.disabled=false;
-    spinBtn.style.opacity='1';
+    spinBtn.disabled=false;spinBtn.style.opacity='1';
     avail.textContent=state.rewards.spins+' spin'+(state.rewards.spins===1?'':'s')+' available';
   } else {
-    spinBtn.disabled=true;
-    spinBtn.style.opacity='0.5';
+    spinBtn.disabled=true;spinBtn.style.opacity='0.5';
     avail.textContent='Save a deal to earn spins (+1 per save)';
   }
 }
@@ -471,14 +487,9 @@ window.doSpin=function(){
   spinning=true;
   state.rewards.spins-=1;
   const slices=[
-    {label:'+10 pts',pts:10},
-    {label:'Bonus deal!',pts:0,deal:true},
-    {label:'+25 pts',pts:25},
-    {label:'Mystery 🎁',pts:5},
-    {label:'+5 pts',pts:5},
-    {label:'JACKPOT 100 pts!',pts:100},
-    {label:'+15 pts',pts:15},
-    {label:'Spin again',pts:0,respin:true}
+    {label:'+10 pts',pts:10},{label:'Bonus deal!',pts:5},{label:'+25 pts',pts:25},
+    {label:'Mystery 🎁',pts:5},{label:'+5 pts',pts:5},{label:'JACKPOT 100 pts!',pts:100},
+    {label:'+15 pts',pts:15},{label:'Spin again',pts:0,respin:true}
   ];
   const idx=weightedPick([22,8,14,12,22,4,12,6]);
   const wheel=document.getElementById('wheel');
@@ -498,31 +509,15 @@ window.doSpin=function(){
   },4600);
 };
 
-function weightedPick(weights){
-  const total=weights.reduce((a,b)=>a+b,0);
-  let r=Math.random()*total;
-  for(let i=0;i<weights.length;i++){r-=weights[i];if(r<=0)return i;}
-  return 0;
-}
+function weightedPick(w){const t=w.reduce((a,b)=>a+b,0);let r=Math.random()*t;for(let i=0;i<w.length;i++){r-=w[i];if(r<=0)return i;}return 0;}
 
-// -------- Loyalty --------
-function renderLoyalty(){
-  const c=document.getElementById('loyalty-list');
-  if(state.loyalty.length===0){
-    c.innerHTML='<div style="background:white;border-radius:18px;padding:40px 20px;text-align:center"><div style="font-size:48px;opacity:0.4;margin-bottom:8px">💳</div><p style="font-size:15px;font-weight:700;margin:0 0 4px">No cards yet</p><p style="font-size:12px;color:#777;margin:0 0 16px">Add your Costco, CVS, Walgreens cards to skip the physical card.</p><button class="empty-state-cta" onclick="openAddLoyalty()">+ Add card</button></div>';
-    return;
-  }
-  c.innerHTML=state.loyalty.map(card=>'<button onclick="showLoyaltyBarcode(\''+card.id+'\')" style="width:100%;background:'+card.color+';border:none;border-radius:18px;padding:20px;color:white;margin-bottom:12px;cursor:pointer;text-align:left;box-shadow:0 4px 12px rgba(0,0,0,0.15)"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:30px"><h3 style="font-size:18px;font-weight:800;margin:0">'+escapeHtml(card.name)+'</h3><i class="ti ti-id" style="font-size:24px;opacity:0.7"></i></div><p style="font-family:ui-monospace,monospace;font-size:14px;letter-spacing:2px;margin:0;opacity:0.95">'+escapeHtml(card.number)+'</p></button>').join('');
-}
-
+// -------- Loyalty barcode modal --------
 window.showLoyaltyBarcode=function(id){
   const card=state.loyalty.find(c=>c.id===id);
   if(!card)return;
   const o=document.getElementById('modal-overlay');
-  o.style.background='rgba(0,0,0,0.85)';
-  o.style.alignItems='center';
-  o.style.justifyContent='center';
-  o.innerHTML='<div onclick="event.stopPropagation()" style="background:white;border-radius:24px;padding:24px;text-align:center;max-width:340px;width:calc(100% - 40px)"><h3 style="margin:0 0 4px;font-size:20px;font-weight:800;color:#1a1a1a">'+escapeHtml(card.name)+'</h3><p style="font-family:ui-monospace,monospace;font-size:14px;color:#777;margin:0 0 16px;letter-spacing:2px">'+escapeHtml(card.number)+'</p><div style="background:white;padding:16px;border:1px solid rgba(0,0,0,0.08);border-radius:14px"><div style="height:90px;background-image:repeating-linear-gradient(90deg,#1a1a1a 0px,#1a1a1a 2px,transparent 2px,transparent 4px,#1a1a1a 4px,#1a1a1a 8px,transparent 8px,transparent 10px,#1a1a1a 10px,#1a1a1a 12px,transparent 12px,transparent 16px);margin-bottom:12px"></div><p style="font-family:ui-monospace,monospace;font-size:12px;font-weight:700;letter-spacing:2px;margin:0;color:#1a1a1a">'+escapeHtml(card.number)+'</p></div><p style="font-size:11px;color:#777;margin:12px 0 16px">Show at checkout</p><div style="display:flex;gap:8px"><button onclick="deleteLoyalty(\''+card.id+'\')" style="flex:0 0 auto;background:#FFE5E5;color:#DC2626;border:none;padding:12px 16px;border-radius:999px;font-size:13px;font-weight:700;cursor:pointer">Delete</button><button onclick="closeModal()" style="flex:1;background:'+card.color+';color:white;border:none;padding:12px 32px;border-radius:999px;font-size:14px;font-weight:700;cursor:pointer">Done</button></div></div>';
+  o.style.background='rgba(0,0,0,0.85)';o.style.alignItems='center';o.style.justifyContent='center';
+  o.innerHTML='<div onclick="event.stopPropagation()" style="background:white;border-radius:24px;padding:24px;text-align:center;max-width:340px;width:calc(100% - 40px);margin:20px"><h3 style="margin:0 0 4px;font-size:20px;font-weight:800;color:#1A1A1A">'+escapeHtml(card.name)+'</h3><p style="font-family:ui-monospace,monospace;font-size:14px;color:#777;margin:0 0 16px;letter-spacing:2px">'+escapeHtml(card.number)+'</p><div style="background:white;padding:16px;border:1px solid rgba(0,0,0,0.08);border-radius:14px"><div style="height:90px;background-image:repeating-linear-gradient(90deg,#1A1A1A 0px,#1A1A1A 2px,transparent 2px,transparent 4px,#1A1A1A 4px,#1A1A1A 8px,transparent 8px,transparent 10px,#1A1A1A 10px,#1A1A1A 12px,transparent 12px,transparent 16px);margin-bottom:12px"></div><p style="font-family:ui-monospace,monospace;font-size:12px;font-weight:700;letter-spacing:2px;margin:0;color:#1A1A1A">'+escapeHtml(card.number)+'</p></div><p style="font-size:11px;color:#777;margin:12px 0 16px">Show at checkout</p><div style="display:flex;gap:8px"><button onclick="deleteLoyalty(\''+card.id+'\')" style="flex:0 0 auto;background:#FFE5E5;color:#DC2626;padding:12px 16px;border-radius:999px;font-size:13px;font-weight:700">Delete</button><button onclick="closeModal()" style="flex:1;background:'+card.color+';color:white;padding:12px 32px;border-radius:999px;font-size:14px;font-weight:700">Done</button></div></div>';
   o.classList.add('active');
   o.onclick=closeModal;
 };
@@ -536,50 +531,46 @@ window.deleteLoyalty=function(id){
   renderAll();
 };
 
-// -------- Modals --------
+// -------- Modal infrastructure --------
 function openModal(html){
   const o=document.getElementById('modal-overlay');
-  o.style.alignItems='flex-end';
-  o.style.justifyContent='flex-start';
-  o.style.background='rgba(0,0,0,0.5)';
+  o.style.alignItems='flex-end';o.style.justifyContent='flex-start';o.style.background='rgba(0,0,0,0.5)';
   o.innerHTML='<div class="modal" onclick="event.stopPropagation()">'+html+'</div>';
   o.classList.add('active');
   o.onclick=closeModal;
 }
-
 window.closeModal=function(){
   const o=document.getElementById('modal-overlay');
-  o.classList.remove('active');
-  o.innerHTML='';
+  o.classList.remove('active');o.innerHTML='';
 };
 
+// -------- Snap Sheet (now includes ALL add types) --------
 window.openSnapSheet=function(){
-  openModal('<div class="modal-handle"></div><h3 class="modal-title">Add a deal</h3>'+
-    '<button onclick="closeModal();triggerCamera()" style="display:flex;align-items:center;gap:14px;padding:16px;border-radius:14px;background:#f8f8f8;margin-bottom:8px;cursor:pointer;width:100%;border:none;text-align:left"><div class="gradient-warm" style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:white;font-size:20px;flex-shrink:0">📷</div><div style="flex:1"><p style="font-size:15px;font-weight:700;margin:0">Take a photo</p><p style="font-size:12px;color:var(--text-dim);margin:2px 0 0">Snap a coupon to add it</p></div></button>'+
-    '<button onclick="closeModal();triggerLibrary()" style="display:flex;align-items:center;gap:14px;padding:16px;border-radius:14px;background:#f8f8f8;margin-bottom:8px;cursor:pointer;width:100%;border:none;text-align:left"><div class="gradient-purple" style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:white;font-size:20px;flex-shrink:0"><i class="ti ti-photo"></i></div><div style="flex:1"><p style="font-size:15px;font-weight:700;margin:0">Choose from library</p><p style="font-size:12px;color:var(--text-dim);margin:2px 0 0">Upload a screenshot</p></div></button>'+
-    '<button onclick="closeModal();openAddManual()" style="display:flex;align-items:center;gap:14px;padding:16px;border-radius:14px;background:#f8f8f8;cursor:pointer;width:100%;border:none;text-align:left"><div class="gradient-pink" style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:white;font-size:20px;flex-shrink:0"><i class="ti ti-edit"></i></div><div style="flex:1"><p style="font-size:15px;font-weight:700;margin:0">Type it in</p><p style="font-size:12px;color:var(--text-dim);margin:2px 0 0">Enter deal details manually</p></div></button>');
+  const html='<div class="modal-handle"></div><h3 class="modal-title">What would you like to add?</h3>'+
+    '<button class="snap-option" onclick="closeModal();triggerCamera()"><div class="snap-option-icon gradient-warm"><svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div><div class="snap-option-info"><p class="snap-option-title">Snap a deal</p><p class="snap-option-sub">Take a photo of a coupon</p></div></button>'+
+    '<button class="snap-option" onclick="closeModal();triggerLibrary()"><div class="snap-option-icon gradient-purple"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div><div class="snap-option-info"><p class="snap-option-title">Upload from library</p><p class="snap-option-sub">Pick a screenshot or saved image</p></div></button>'+
+    '<button class="snap-option" onclick="closeModal();openAddManual()"><div class="snap-option-icon gradient-pink"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div><div class="snap-option-info"><p class="snap-option-title">Type a deal</p><p class="snap-option-sub">Enter merchant and discount manually</p></div></button>'+
+    '<div style="border-top:1px solid var(--border);margin:12px 0"></div>'+
+    '<button class="snap-option" onclick="closeModal();openAddProgram()"><div class="snap-option-icon gradient-yellow"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div><div class="snap-option-info"><p class="snap-option-title">Add reward program</p><p class="snap-option-sub">Airline miles, hotel points, credit card</p></div></button>'+
+    '<button class="snap-option" onclick="closeModal();openAddLoyalty()"><div class="snap-option-icon gradient-green"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="6" y1="10" x2="6" y2="14"/><line x1="10" y1="10" x2="10" y2="14"/><line x1="14" y1="10" x2="14" y2="14"/><line x1="18" y1="10" x2="18" y2="14"/></svg></div><div class="snap-option-info"><p class="snap-option-title">Add loyalty card</p><p class="snap-option-sub">Costco, CVS, Walgreens — any card</p></div></button>';
+  openModal(html);
 };
 
 window.triggerCamera=function(){
   const i=document.getElementById('capture-input');
-  i.setAttribute('capture','environment');
-  i.click();
+  i.setAttribute('capture','environment');i.click();
 };
 window.triggerLibrary=function(){
   const i=document.getElementById('capture-input');
-  i.removeAttribute('capture');
-  i.click();
+  i.removeAttribute('capture');i.click();
 };
 
-document.getElementById('capture-input').addEventListener('change',async (e)=>{
+document.getElementById('capture-input').addEventListener('change',(e)=>{
   const f=e.target.files&&e.target.files[0];
   if(!f)return;
-  const reader=new FileReader();
-  reader.onload=()=>{
-    pendingDealImage=reader.result;
-    openAddManual(pendingDealImage);
-  };
-  reader.readAsDataURL(f);
+  const r=new FileReader();
+  r.onload=()=>{pendingDealImage=r.result;openAddManual(pendingDealImage);};
+  r.readAsDataURL(f);
   e.target.value='';
 });
 
@@ -588,11 +579,11 @@ window.openAddManual=function(image){
   let html='<div class="modal-handle"></div><h3 class="modal-title">Add deal</h3>';
   if(image)html+='<div style="width:100%;aspect-ratio:4/3;background:#f5f5f5;border-radius:12px;margin-bottom:12px;overflow:hidden"><img src="'+image+'" style="width:100%;height:100%;object-fit:cover"></div>';
   html+='<div class="form-row"><label>Merchant *</label><input id="f-merchant" placeholder="e.g. Target, Whole Foods"></div>';
-  html+='<div class="form-row"><label>Discount *</label><input id="f-discount" placeholder="e.g. 20% off, $10 off, Free drink"></div>';
-  html+='<div class="form-grid"><div class="form-row"><label>Category</label><select id="f-category">'+cats+'</select></div><div class="form-row"><label>Value ($)</label><input id="f-value" type="number" placeholder="10"></div></div>';
+  html+='<div class="form-row"><label>Discount *</label><input id="f-discount" placeholder="e.g. 20% off, $10 off"></div>';
+  html+='<div class="form-grid"><div class="form-row"><label>Category</label><select id="f-category">'+cats+'</select></div><div class="form-row"><label>Value ($)</label><input id="f-value" type="number" inputmode="numeric" placeholder="10"></div></div>';
   html+='<div class="form-grid"><div class="form-row"><label>Code</label><input id="f-code" placeholder="SAVE20"></div><div class="form-row"><label>Expires</label><input id="f-expiry" type="date"></div></div>';
-  html+='<div class="form-row"><label>Address (optional)</label><input id="f-address" placeholder="Store address for directions"></div>';
-  html+='<div class="form-row"><label>Notes (optional)</label><textarea id="f-notes" rows="2" placeholder="Min purchase, restrictions, etc."></textarea></div>';
+  html+='<div class="form-row"><label>Address (optional)</label><input id="f-address" placeholder="For directions"></div>';
+  html+='<div class="form-row"><label>Notes (optional)</label><textarea id="f-notes" rows="2" placeholder="Min purchase, etc."></textarea></div>';
   html+='<div class="form-actions"><button class="btn-secondary" onclick="closeModal()">Cancel</button><button class="btn-primary" onclick="saveDealForm()">Save deal</button></div>';
   openModal(html);
 };
@@ -601,10 +592,8 @@ window.saveDealForm=function(){
   const m=document.getElementById('f-merchant').value.trim();
   const d=document.getElementById('f-discount').value.trim();
   if(!m||!d){toast('Merchant and discount required');return;}
-  const newDeal={
-    id:uid(),
-    merchant:m,
-    discount:d,
+  state.deals.push({
+    id:uid(),merchant:m,discount:d,
     category:document.getElementById('f-category').value,
     value:parseFloat(document.getElementById('f-value').value)||parseValue(d),
     code:document.getElementById('f-code').value.trim(),
@@ -612,60 +601,20 @@ window.saveDealForm=function(){
     address:document.getElementById('f-address').value.trim(),
     notes:document.getElementById('f-notes').value.trim(),
     image:pendingDealImage||null,
-    redeemed:false,
-    createdAt:Date.now()
-  };
-  state.deals.push(newDeal);
+    redeemed:false,createdAt:Date.now()
+  });
   state.rewards.spins+=1;
-  save(K.deals,state.deals);
-  save(K.rewards,state.rewards);
+  save(K.deals,state.deals);save(K.rewards,state.rewards);
   pendingDealImage=null;
   closeModal();
   toast('✓ Deal saved · +1 spin earned');
   renderAll();
 };
 
-window.openImportModal=function(){
-  let html='<div class="modal-handle"></div><h3 class="modal-title">Upload deal</h3>';
-  html+='<div class="form-row"><label>Paste deal text or URL</label><textarea id="imp-text" rows="6" placeholder="Paste the email text, deal description, or website link..."></textarea></div>';
-  html+='<div class="form-actions"><button class="btn-secondary" onclick="closeModal()">Cancel</button><button class="btn-primary" onclick="parseImported()">Continue</button></div>';
-  openModal(html);
-};
-
-window.parseImported=function(){
-  const text=document.getElementById('imp-text').value.trim();
-  if(!text){toast('Paste something first');return;}
-  // Simple parsing
-  const merchantMatch=text.match(/(?:from|at)\s+([A-Z][\w\s'&]+?)(?:\s|[.,!])/i)||text.match(/^([A-Z][\w\s'&]+?)[:.\-]/m);
-  const discountMatch=text.match(/(\d{1,3}%\s*off[^.]{0,30}|\$\d+\s*off[^.]{0,30}|free\s+\w+|buy\s+one\s+get\s+one)/i);
-  const codeMatch=text.match(/(?:code|promo)[:\s]+([A-Z0-9]{3,15})/i);
-  const expiryMatch=text.match(/(?:expires?|valid|ends)\s+(?:by|thru|until|on)?\s*(\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4})/i);
-
-  const merchant=merchantMatch?merchantMatch[1].trim():'';
-  const discount=discountMatch?discountMatch[1].trim():'';
-
-  closeModal();
-  setTimeout(()=>{
-    openAddManual();
-    setTimeout(()=>{
-      if(merchant)document.getElementById('f-merchant').value=merchant;
-      if(discount)document.getElementById('f-discount').value=discount;
-      if(codeMatch)document.getElementById('f-code').value=codeMatch[1].toUpperCase();
-      if(expiryMatch){
-        try{
-          const d=new Date(expiryMatch[1]);
-          if(!isNaN(d))document.getElementById('f-expiry').value=d.toISOString().slice(0,10);
-        }catch(e){}
-      }
-    },300);
-  },300);
-};
-
-// -------- Add Program / Loyalty --------
 window.openAddProgram=function(){
   const html='<div class="modal-handle"></div><h3 class="modal-title">Add reward program</h3>'+
     '<div class="form-row"><label>Program name *</label><input id="rp-name" placeholder="Delta SkyMiles, Marriott Bonvoy"></div>'+
-    '<div class="form-grid"><div class="form-row"><label>Balance</label><input id="rp-balance" type="number" placeholder="50000"></div><div class="form-row"><label>Unit</label><input id="rp-unit" placeholder="miles" value="points"></div></div>'+
+    '<div class="form-grid"><div class="form-row"><label>Balance</label><input id="rp-balance" type="number" inputmode="numeric" placeholder="50000"></div><div class="form-row"><label>Unit</label><input id="rp-unit" placeholder="miles" value="points"></div></div>'+
     '<div class="form-row"><label>Type</label><select id="rp-type"><option value="✈️">Airline miles</option><option value="🏨">Hotel points</option><option value="💳">Credit card rewards</option><option value="💵">Cashback</option><option value="⭐">Other</option></select></div>'+
     '<div class="form-row"><label>Expiry (if any)</label><input id="rp-expiry" type="date"></div>'+
     '<div class="form-actions"><button class="btn-secondary" onclick="closeModal()">Cancel</button><button class="btn-primary" onclick="saveProgram()">Save</button></div>';
@@ -675,39 +624,27 @@ window.openAddProgram=function(){
 window.saveProgram=function(){
   const name=document.getElementById('rp-name').value.trim();
   if(!name){toast('Name required');return;}
-  const p={
-    id:uid(),
-    name,
+  state.programs.push({
+    id:uid(),name,
     balance:document.getElementById('rp-balance').value||'0',
     unit:document.getElementById('rp-unit').value||'points',
     icon:document.getElementById('rp-type').value,
     expiry:document.getElementById('rp-expiry').value||null,
     addedAt:Date.now()
-  };
-  state.programs.push(p);
+  });
   save(K.programs,state.programs);
   closeModal();
   toast('✓ Program added');
   renderAll();
 };
 
-window.viewProgram=function(id){
-  const p=state.programs.find(x=>x.id===id);
-  if(!p)return;
-  if(confirm(p.name+'\nBalance: '+p.balance+' '+p.unit+(p.expiry?'\nExpires: '+p.expiry:'')+'\n\nDelete this program?')){
-    state.programs=state.programs.filter(x=>x.id!==id);
-    save(K.programs,state.programs);
-    toast('Deleted');
-    renderAll();
-  }
-};
-
 window.openAddLoyalty=function(){
+  const colors=['#DC2626','#059669','#7C3AED','#2563EB','#D97706','#1F2937'];
   const html='<div class="modal-handle"></div><h3 class="modal-title">Add loyalty card</h3>'+
     '<div class="form-row"><label>Store name *</label><input id="lc-name" placeholder="Costco, CVS ExtraCare"></div>'+
     '<div class="form-row"><label>Card / member number *</label><input id="lc-number" placeholder="1234 5678 9012" inputmode="numeric"></div>'+
     '<div class="form-row"><label>Card color</label><div style="display:flex;gap:8px;flex-wrap:wrap" id="color-picker">'+
-      ['#DC2626','#059669','#7C3AED','#2563EB','#D97706','#1F2937'].map((c,i)=>'<button data-color="'+c+'" style="width:40px;height:40px;border-radius:10px;background:'+c+';cursor:pointer;border:'+(i===0?'3px solid #1a1a1a':'3px solid transparent')+'"></button>').join('')+
+      colors.map((c,i)=>'<button data-color="'+c+'" style="width:40px;height:40px;border-radius:10px;background:'+c+';border:'+(i===0?'3px solid #1A1A1A':'3px solid transparent')+'"></button>').join('')+
     '</div></div>'+
     '<div class="form-actions"><button class="btn-secondary" onclick="closeModal()">Cancel</button><button class="btn-primary" onclick="saveLoyalty()">Save</button></div>';
   openModal(html);
@@ -716,7 +653,7 @@ window.openAddLoyalty=function(){
     b.addEventListener('click',()=>{
       color=b.getAttribute('data-color');
       document.querySelectorAll('#color-picker button').forEach(x=>x.style.border='3px solid transparent');
-      b.style.border='3px solid #1a1a1a';
+      b.style.border='3px solid #1A1A1A';
     });
   });
   window._lcColor=()=>color;
@@ -726,14 +663,11 @@ window.saveLoyalty=function(){
   const name=document.getElementById('lc-name').value.trim();
   const num=document.getElementById('lc-number').value.trim();
   if(!name||!num){toast('Name and number required');return;}
-  const c={
-    id:uid(),
-    name,
-    number:num,
+  state.loyalty.push({
+    id:uid(),name,number:num,
     color:window._lcColor?window._lcColor():'#DC2626',
     addedAt:Date.now()
-  };
-  state.loyalty.push(c);
+  });
   save(K.loyalty,state.loyalty);
   closeModal();
   toast('✓ Card added');
@@ -791,11 +725,8 @@ window.checkReminders=function(){
     const du=daysUntil(d.expiry);
     return du!==null&&du>=0&&du<=3;
   });
-  if(expiring.length===0){
-    toast('No deals expiring soon — you\'re all set!');
-  } else {
-    toast(expiring.length+' deal'+(expiring.length===1?'':'s')+' expiring soon!');
-  }
+  if(expiring.length===0)toast('No deals expiring soon — you\'re all set!');
+  else toast(expiring.length+' deal'+(expiring.length===1?'':'s')+' expiring soon!');
 };
 
 // -------- Render All --------
@@ -803,7 +734,6 @@ function renderAll(){
   renderHome();
   renderWallet();
   renderRewards();
-  renderLoyalty();
   renderSettings();
 }
 
