@@ -6,7 +6,8 @@
 <meta name="theme-color" content="#1A1A1A">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Perq</title>
+<meta name="apple-mobile-web-app-title" content="Perq">
+<title>Perq · MVP</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.0.0/tabler-icons.min.css">
 <style>
 :root{
@@ -21,11 +22,11 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0;font-family:-apple-system,"SF Pro Display",BlinkMacSystemFont,system-ui,sans-serif;background:var(--bg);color:var(--text);overscroll-behavior:none;-webkit-font-smoothing:antialiased;height:100%;overflow:hidden}
 body{padding-top:var(--safe-top)}
-button,input{font-family:inherit;font-size:16px;color:var(--text)}
-.gradient-warm{background:linear-gradient(135deg,var(--warm-1),var(--warm-2))}
-.gradient-green{background:linear-gradient(135deg,var(--green-1),var(--green-2))}
-.gradient-purple{background:linear-gradient(135deg,var(--purple-1),var(--purple-2))}
-.gradient-pink{background:linear-gradient(135deg,var(--pink-1),var(--pink-2))}
+button,input,select,textarea{font-family:inherit;font-size:16px;color:var(--text)}
+.gradient-warm{background:linear-gradient(135deg,#FF6B6B,#FFA06B)}
+.gradient-green{background:linear-gradient(135deg,#00C9A7,#4FACFE)}
+.gradient-purple{background:linear-gradient(135deg,#6366F1,#C084FC)}
+.gradient-pink{background:linear-gradient(135deg,#F472B6,#FB923C)}
 
 .app{position:fixed;inset:0;display:flex;flex-direction:column}
 .page{flex:1;overflow-y:auto;padding-bottom:calc(90px + var(--safe-bottom));-webkit-overflow-scrolling:touch;display:none}
@@ -48,7 +49,7 @@ button,input{font-family:inherit;font-size:16px;color:var(--text)}
 .home-logo{font-size:24px;font-weight:800}
 .home-logo span{color:var(--accent-dark)}
 .home-actions{display:flex;gap:8px}
-.icon-btn{background:white;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.06)}
+.icon-btn{background:white;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.06);border:none}
 .icon-btn i{color:#1a1a1a;font-size:18px}
 .icon-btn.has-badge::after{content:'';position:absolute;top:8px;right:10px;width:8px;height:8px;border-radius:50%;background:var(--warm-1)}
 .savings-card{margin:0 20px 16px;background:linear-gradient(135deg,#1a1a1a,#2a2a3e);border-radius:24px;padding:22px;color:white;position:relative;overflow:hidden}
@@ -67,7 +68,12 @@ button,input{font-family:inherit;font-size:16px;color:var(--text)}
 .qa-loyalty{background:linear-gradient(135deg,#00C9A7,#4FACFE)}
 .quick-action p{font-size:11px;font-weight:600;margin:0;color:#333}
 .section-title{font-size:14px;font-weight:700;padding:8px 20px;margin:0;display:flex;justify-content:space-between;align-items:center;color:var(--text)}
-.section-title a{font-size:11px;color:var(--accent-dark);font-weight:600;text-decoration:none}
+.section-title a{font-size:11px;color:var(--accent-dark);font-weight:600;text-decoration:none;cursor:pointer}
+.empty-state{margin:0 20px 16px;background:white;border-radius:18px;padding:32px 20px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.04)}
+.empty-state-icon{font-size:48px;margin:0 0 8px;opacity:0.4}
+.empty-state-title{font-size:15px;font-weight:700;margin:0 0 4px;color:var(--text)}
+.empty-state-sub{font-size:12px;color:var(--text-dim);margin:0 0 14px;line-height:1.5}
+.empty-state-cta{background:#1a1a1a;color:white;border:none;border-radius:999px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer}
 .h-carousel{display:flex;gap:12px;overflow-x:auto;padding:8px 20px 16px;scrollbar-width:none}
 .h-carousel::-webkit-scrollbar{display:none}
 .h-deal{flex-shrink:0;width:200px;background:white;border-radius:18px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.05);cursor:pointer;transition:transform .15s;border:none;padding:0;text-align:left}
@@ -78,7 +84,65 @@ button,input{font-family:inherit;font-size:16px;color:var(--text)}
 .h-body{padding:12px}
 .h-discount{font-size:14px;font-weight:700;margin:0 0 2px}
 .h-expiry{font-size:11px;color:#777;margin:0}
-.h-cta{width:100%;margin-top:10px;background:var(--accent);color:#1a1a1a;border:none;border-radius:12px;padding:10px;font-size:12px;font-weight:700;cursor:pointer}
+.h-cta{display:block;width:100%;margin-top:10px;background:var(--accent);color:#1a1a1a;border:none;border-radius:12px;padding:10px;font-size:12px;font-weight:700;cursor:pointer;text-align:center}
+
+/* Onboarding */
+.onboarding{position:fixed;inset:0;background:linear-gradient(180deg,#FFE16B 0%,#FAF8F3 60%);z-index:1000;display:flex;flex-direction:column;padding:calc(40px + var(--safe-top)) 24px calc(20px + var(--safe-bottom))}
+.onboarding.hidden{display:none}
+.ob-step{display:none;flex:1;flex-direction:column;justify-content:center;text-align:center;animation:fadeIn .3s}
+.ob-step.active{display:flex}
+.ob-emoji{font-size:80px;margin-bottom:24px}
+.ob-title{font-size:32px;font-weight:900;letter-spacing:-0.6px;margin:0 0 12px;line-height:1.1}
+.ob-sub{font-size:15px;color:var(--text-dim);line-height:1.5;margin:0 0 32px;max-width:300px;align-self:center}
+.ob-input{width:100%;background:white;border:2px solid transparent;border-radius:14px;padding:14px 16px;font-size:15px;outline:none;margin-bottom:12px;text-align:center}
+.ob-input:focus{border-color:#1a1a1a}
+.ob-prefs{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:0 0 24px}
+.ob-pref{background:white;border:2px solid transparent;border-radius:999px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;color:var(--text-dim)}
+.ob-pref.active{background:#1a1a1a;color:white;border-color:#1a1a1a}
+.ob-actions{display:flex;flex-direction:column;gap:8px;margin-top:auto}
+.ob-btn{width:100%;background:#1a1a1a;color:white;border:none;border-radius:14px;padding:16px;font-size:15px;font-weight:800;cursor:pointer}
+.ob-btn.secondary{background:transparent;color:var(--text-dim);font-weight:600}
+.ob-progress{display:flex;gap:6px;justify-content:center;margin-bottom:24px}
+.ob-dot{width:6px;height:6px;border-radius:50%;background:rgba(0,0,0,0.15)}
+.ob-dot.active{background:#1a1a1a;width:20px;border-radius:6px;transition:all .3s}
+
+/* Modal forms */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:300;display:none;align-items:flex-end}
+.modal-overlay.active{display:flex;animation:fadeIn .2s}
+.modal{background:white;width:100%;border-radius:28px 28px 0 0;padding:12px 20px calc(24px + var(--safe-bottom));max-height:90vh;overflow-y:auto;animation:slideUp .25s}
+@keyframes slideUp{from{transform:translateY(20px)}to{transform:translateY(0)}}
+.modal-handle{width:40px;height:4px;border-radius:999px;background:#ddd;margin:0 auto 16px}
+.modal-title{font-size:18px;font-weight:700;margin:0 0 16px;text-align:center}
+.form-row{margin-bottom:12px}
+.form-row label{display:block;font-size:12px;color:var(--text-dim);margin-bottom:4px;font-weight:600}
+.form-row input,.form-row select,.form-row textarea{width:100%;background:#f8f8f8;border:1px solid transparent;border-radius:12px;padding:12px 14px;font-size:15px;outline:none}
+.form-row input:focus,.form-row select:focus,.form-row textarea:focus{border-color:#1a1a1a;background:white}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.form-actions{display:flex;gap:8px;margin-top:16px}
+.form-actions button{flex:1;border:none;padding:14px;border-radius:14px;font-size:14px;font-weight:700;cursor:pointer}
+.form-actions .btn-primary{background:#1a1a1a;color:white}
+.form-actions .btn-secondary{background:#f0f0f0;color:#333}
+
+/* Settings */
+.settings-list{padding:0 20px}
+.settings-group{background:white;border-radius:16px;padding:0 16px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,0.04)}
+.settings-row{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--border)}
+.settings-row:last-child{border-bottom:none}
+.settings-icon-sm{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px}
+.settings-info{flex:1;min-width:0}
+.settings-row-title{font-size:14px;font-weight:600;margin:0}
+.settings-row-sub{font-size:11px;color:var(--text-dim);margin:2px 0 0}
+.toggle{width:44px;height:26px;border-radius:999px;background:#ddd;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;border:none}
+.toggle.on{background:var(--accent)}
+.toggle::after{content:'';position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:50%;background:white;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,0.2)}
+.toggle.on::after{left:20px}
+
+/* Toast */
+#toast{position:fixed;bottom:120px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:white;padding:12px 20px;border-radius:999px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 8px 20px rgba(0,0,0,0.3);max-width:90%;text-align:center;display:none;animation:slideUpToast .25s}
+#toast.show{display:block}
+@keyframes slideUpToast{from{opacity:0;transform:translateX(-50%) translateY(20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+/* Programs/loyalty */
 .programs-row,.loyalty-row{display:flex;gap:10px;overflow-x:auto;padding:8px 20px 16px;scrollbar-width:none}
 .programs-row::-webkit-scrollbar,.loyalty-row::-webkit-scrollbar{display:none}
 .program-tile{flex-shrink:0;min-width:140px;background:white;border-radius:16px;padding:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04);cursor:pointer;border:none;text-align:left}
@@ -93,195 +157,114 @@ button,input{font-family:inherit;font-size:16px;color:var(--text)}
 </style>
 </head>
 <body>
+
+<!-- ONBOARDING -->
+<div class="onboarding" id="onboarding">
+  <div class="ob-progress">
+    <div class="ob-dot active" data-d="1"></div>
+    <div class="ob-dot" data-d="2"></div>
+    <div class="ob-dot" data-d="3"></div>
+  </div>
+  <div class="ob-step active" data-step="1">
+    <div class="ob-emoji">🎟️</div>
+    <h1 class="ob-title">Welcome to Perq</h1>
+    <p class="ob-sub">Snap a coupon, forget about it. We'll remind you before it expires and alert you when you're nearby.</p>
+    <div class="ob-actions">
+      <button class="ob-btn" onclick="nextStep()">Get started</button>
+    </div>
+  </div>
+  <div class="ob-step" data-step="2">
+    <div class="ob-emoji">👋</div>
+    <h1 class="ob-title">What's your name?</h1>
+    <p class="ob-sub">Just first name is fine — keeps things personal.</p>
+    <input type="text" class="ob-input" id="ob-name" placeholder="Your name" autocomplete="given-name">
+    <div class="ob-actions">
+      <button class="ob-btn" onclick="nextStep()">Continue</button>
+      <button class="ob-btn secondary" onclick="finishOnboarding()">Skip</button>
+    </div>
+  </div>
+  <div class="ob-step" data-step="3">
+    <div class="ob-emoji">🛍️</div>
+    <h1 class="ob-title">What do you shop for?</h1>
+    <p class="ob-sub">We'll personalize your deal feed.</p>
+    <div class="ob-prefs" id="ob-prefs">
+      <button class="ob-pref" data-pref="Groceries">🛒 Groceries</button>
+      <button class="ob-pref" data-pref="Dining">☕ Dining</button>
+      <button class="ob-pref" data-pref="Apparel">👕 Apparel</button>
+      <button class="ob-pref" data-pref="Travel">✈️ Travel</button>
+      <button class="ob-pref" data-pref="Beauty">💄 Beauty</button>
+      <button class="ob-pref" data-pref="Home">🏠 Home</button>
+      <button class="ob-pref" data-pref="Electronics">📱 Tech</button>
+    </div>
+    <div class="ob-actions">
+      <button class="ob-btn" onclick="finishOnboarding()">Start using Perq</button>
+    </div>
+  </div>
+</div>
+
 <div class="app">
-<!-- HOME PAGE -->
+
+<!-- HOME -->
 <div class="page active" data-page="home">
 <div class="home-screen">
 <div class="home-header">
   <div class="home-logo">Per<span>q</span></div>
   <div class="home-actions">
-    <button class="icon-btn has-badge" onclick="toast('2 deals expiring soon!')"><i class="ti ti-bell"></i></button>
+    <button class="icon-btn" id="bell-btn" onclick="checkReminders()"><i class="ti ti-bell"></i></button>
     <button class="icon-btn" onclick="goPage('settings')"><i class="ti ti-settings"></i></button>
   </div>
 </div>
 <div class="savings-card">
   <p class="savings-lbl">Total saved this year</p>
-  <h2 class="savings-amt">$1,247</h2>
-  <p class="savings-trend"><i class="ti ti-trending-up"></i> +$84 this week · 7 day streak 🔥</p>
+  <h2 class="savings-amt" id="total-saved">$0</h2>
+  <p class="savings-trend"><i class="ti ti-trending-up"></i> <span id="streak-text">Save your first deal to start a streak</span></p>
 </div>
 <div class="quick-actions">
   <button class="quick-action" onclick="openSnapSheet()"><div class="qa-icon qa-snap">📷</div><p>Snap</p></button>
-  <button class="quick-action" onclick="toast('Upload deal text or link')"><div class="qa-icon qa-upload"><i class="ti ti-upload"></i></div><p>Upload</p></button>
+  <button class="quick-action" onclick="openImportModal()"><div class="qa-icon qa-upload"><i class="ti ti-upload"></i></div><p>Upload</p></button>
   <button class="quick-action" onclick="goPage('rewards')"><div class="qa-icon qa-rewards">⭐</div><p>Rewards</p></button>
   <button class="quick-action" onclick="goPage('loyalty')"><div class="qa-icon qa-loyalty">💳</div><p>Loyalty</p></button>
 </div>
-<h3 class="section-title">Expiring soon <a href="#" onclick="goPage('wallet');return false;">See all →</a></h3>
-<div class="h-carousel">
-  <button class="h-deal" onclick="openDeal('starbucks')"><div class="h-hero gradient-warm"><span class="h-pct">FREE</span><span class="h-merchant-overlay">Starbucks</span></div><div class="h-body"><p class="h-discount">Grande drink</p><p class="h-expiry">⏰ Expires in 4 days</p><span class="h-cta">Use now</span></div></button>
-  <button class="h-deal" onclick="openDeal('wholefoods')"><div class="h-hero gradient-green"><span class="h-pct">20%</span><span class="h-merchant-overlay">Whole Foods</span></div><div class="h-body"><p class="h-discount">Organic produce</p><p class="h-expiry">Expires Jun 20</p><span class="h-cta">Use now</span></div></button>
-  <button class="h-deal" onclick="openDeal('marriott')"><div class="h-hero gradient-purple"><span class="h-pct">$50</span><span class="h-merchant-overlay">Marriott</span></div><div class="h-body"><p class="h-discount">Weekend stays</p><p class="h-expiry">Expires Jun 25</p><span class="h-cta">Use now</span></div></button>
-</div>
-<h3 class="section-title">Your reward programs <a href="#" onclick="toast('Add new program');return false;">+ Add</a></h3>
-<div class="programs-row">
-  <button class="program-tile" onclick="toast('Delta SkyMiles · 52,400 miles')"><div class="program-icon" style="background:linear-gradient(135deg,#6366F1,#C084FC)">✈️</div><p class="program-name">Delta SkyMiles</p><p class="program-balance">52,400 miles · 267d left</p></button>
-  <button class="program-tile" onclick="toast('Marriott Bonvoy · 18,200 pts')"><div class="program-icon" style="background:linear-gradient(135deg,#F472B6,#FB923C)">🏨</div><p class="program-name">Marriott Bonvoy</p><p class="program-balance">18,200 points</p></button>
-  <button class="program-tile" onclick="toast('Chase Sapphire · 34,100 pts')"><div class="program-icon" style="background:linear-gradient(135deg,#1E40AF,#3B82F6)">💳</div><p class="program-name">Chase Sapphire</p><p class="program-balance">34,100 points</p></button>
-  <button class="program-tile add-tile" onclick="toast('Add reward program')"><i class="ti ti-plus"></i><span>Add</span></button>
-</div>
-<h3 class="section-title">Loyalty cards <a href="#" onclick="toast('Add loyalty card');return false;">+ Add</a></h3>
-<div class="loyalty-row">
-  <button class="loyalty-card" style="background:#DC2626" onclick="openLoyalty('costco')"><p class="loyalty-name">Costco</p><p class="loyalty-num">**** **** 3456</p></button>
-  <button class="loyalty-card" style="background:#059669" onclick="openLoyalty('cvs')"><p class="loyalty-name">CVS ExtraCare</p><p class="loyalty-num">**** 4567</p></button>
-  <button class="loyalty-card" style="background:#7C3AED" onclick="openLoyalty('walgreens')"><p class="loyalty-name">Walgreens</p><p class="loyalty-num">**** 8901</p></button>
-  <button class="loyalty-card add-tile" style="background:rgba(0,0,0,0.05);color:#1a1a1a;border:2px dashed rgba(0,0,0,0.15);box-shadow:none;" onclick="toast('Add loyalty card')"><i class="ti ti-plus"></i><span style="font-size:12px;font-weight:600;margin-top:4px;">Add card</span></button>
-</div>
+
+<h3 class="section-title">Your deals <a id="see-all-deals" onclick="goPage('wallet')" style="display:none">See all →</a></h3>
+<div id="deals-section"></div>
+
+<h3 class="section-title">Reward programs <a onclick="openAddProgram()">+ Add</a></h3>
+<div class="programs-row" id="programs-row"></div>
+
+<h3 class="section-title">Loyalty cards <a onclick="openAddLoyalty()">+ Add</a></h3>
+<div class="loyalty-row" id="loyalty-row"></div>
+
 </div>
 </div>
 
-
-<!-- WALLET PAGE -->
+<!-- WALLET -->
 <div class="page" data-page="wallet">
-<div style="background:#000;min-height:100%;padding-top:14px">
-<div style="padding:0 20px 20px;display:flex;align-items:center;gap:12px;color:white">
-  <button class="icon-btn" onclick="goPage('home')" style="background:rgba(255,255,255,0.15)"><i class="ti ti-arrow-left" style="color:white!important"></i></button>
+<div style="background:#000;min-height:100%;padding:14px 0 0">
+<div style="padding:0 20px 20px;display:flex;align-items:center;gap:12px">
+  <button class="icon-btn" onclick="goPage('home')" style="background:rgba(255,255,255,0.15)"><i class="ti ti-arrow-left" style="color:white !important"></i></button>
   <div style="flex:1">
     <h2 style="color:white;font-size:24px;font-weight:800;margin:0">My Wallet</h2>
-    <p style="color:rgba(255,255,255,0.7);font-size:13px;margin:2px 0 0">7 active · $234 saved this month</p>
+    <p id="wallet-sub" style="color:rgba(255,255,255,0.7);font-size:13px;margin:2px 0 0">No deals yet</p>
   </div>
 </div>
-<div style="margin:0 20px 16px;background:rgba(255,255,255,0.1);border-radius:14px;padding:12px 16px;display:flex;align-items:center;gap:8px;color:rgba(255,255,255,0.6);font-size:13px">
-  <i class="ti ti-search"></i> Search merchant or category
-</div>
-<div style="display:flex;gap:6px;padding:0 20px 12px;overflow-x:auto;scrollbar-width:none">
-  <span style="flex-shrink:0;background:#FFE16B;color:#000;padding:6px 12px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap">All (7)</span>
-  <span style="flex-shrink:0;background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.8);padding:6px 12px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap">Expiring</span>
-  <span style="flex-shrink:0;background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.8);padding:6px 12px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap">Groceries</span>
-  <span style="flex-shrink:0;background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.8);padding:6px 12px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap">Dining</span>
-  <span style="flex-shrink:0;background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.8);padding:6px 12px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap">Travel</span>
-</div>
-<div style="padding:0 20px" id="wallet-cards">
-  <div class="wpass" data-deal="starbucks" onclick="togglePass(this)" style="border-radius:18px;padding:18px 20px;margin-bottom:-90px;position:relative;box-shadow:0 8px 24px rgba(0,0,0,0.4);cursor:pointer;color:white;background:linear-gradient(135deg,#FF6B6B,#FFA06B)">
-    <div class="pass-collapsed">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:60px">
-        <div><p style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;opacity:0.9;margin:0">Dining</p><h3 style="font-size:16px;font-weight:700;margin:2px 0 0">Starbucks</h3></div>
-        <div style="width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,0.25);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;font-size:18px">☕</div>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:flex-end">
-        <div><p style="font-size:22px;font-weight:800;margin:0">FREE grande</p><p style="font-size:11px;opacity:0.9;margin:2px 0 0">⏰ Expires Jun 8 · 4 days left</p></div>
-        <span style="background:rgba(0,0,0,0.25);padding:4px 10px;border-radius:6px;font-family:ui-monospace,monospace;font-size:11px;font-weight:600">SB25</span>
-      </div>
-    </div>
-    <div class="pass-expanded" style="display:none">
-      <div class="gradient-warm" style="height:140px;padding:18px;display:flex;flex-direction:column;justify-content:space-between">
-        <span style="background:rgba(255,255,255,0.95);color:#1a1a1a;font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;padding:5px 10px;border-radius:999px;align-self:flex-start">Dining · Expires in 4d</span>
-        <h2 style="color:white;font-size:40px;font-weight:900;margin:0;letter-spacing:-1px;line-height:1">FREE grande</h2>
-      </div>
-      <div style="padding:16px 18px 18px;background:white;color:#1a1a1a">
-        <h3 style="font-size:22px;font-weight:800;margin:0">Starbucks</h3>
-        <p style="font-size:13px;color:#777;margin:4px 0 14px">Any grande size · birthday reward</p>
-        <a href="https://www.google.com/maps/search/?api=1&query=Starbucks+Plano+TX" target="_blank" style="background:#f5f5f5;border-radius:12px;padding:12px;margin-bottom:14px;display:flex;align-items:center;gap:10px;text-decoration:none;color:#1a1a1a">
-          <div style="width:36px;height:36px;border-radius:8px;background:#4FACFE;display:flex;align-items:center;justify-content:center;color:white;flex-shrink:0"><i class="ti ti-map-pin"></i></div>
-          <div style="flex:1"><p style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#777;margin:0">Tap for directions</p><p style="font-size:13px;font-weight:600;margin:2px 0 0">123 Main St, Plano TX</p></div>
-          <i class="ti ti-chevron-right" style="color:#999;font-size:18px"></i>
-        </a>
-        <div style="background:white;border:1px solid rgba(0,0,0,0.08);border-radius:12px;padding:14px;text-align:center;margin-bottom:14px">
-          <div style="height:60px;background-image:repeating-linear-gradient(90deg,#1a1a1a 0px,#1a1a1a 2px,transparent 2px,transparent 4px,#1a1a1a 4px,#1a1a1a 8px,transparent 8px,transparent 10px,#1a1a1a 10px,#1a1a1a 12px,transparent 12px,transparent 16px);margin-bottom:8px"></div>
-          <p style="font-family:ui-monospace,monospace;font-size:14px;font-weight:700;letter-spacing:2px;margin:0">SB25BD2026</p>
-        </div>
-        <div style="display:flex;gap:8px">
-          <button onclick="event.stopPropagation();toast('✓ Marked redeemed +$5 saved')" style="flex:1;border:none;padding:12px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;background:#1a1a1a;color:white">✓ Mark redeemed</button>
-          <button onclick="event.stopPropagation();toast('Shared')" style="flex:0 0 50px;border:none;padding:12px;border-radius:12px;cursor:pointer;background:#f5f5f5;color:#1a1a1a"><i class="ti ti-share"></i></button>
-          <button onclick="event.stopPropagation();toast('Deleted')" style="flex:0 0 50px;border:none;padding:12px;border-radius:12px;cursor:pointer;background:#FFE5E5;color:#DC2626"><i class="ti ti-trash"></i></button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="wpass" data-deal="wholefoods" onclick="togglePass(this)" style="border-radius:18px;padding:18px 20px;margin-bottom:-90px;position:relative;box-shadow:0 8px 24px rgba(0,0,0,0.4);cursor:pointer;color:white;background:linear-gradient(135deg,#00C9A7,#4FACFE)">
-    <div class="pass-collapsed">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:60px">
-        <div><p style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;opacity:0.9;margin:0">Groceries</p><h3 style="font-size:16px;font-weight:700;margin:2px 0 0">Whole Foods</h3></div>
-        <div style="width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,0.25);display:flex;align-items:center;justify-content:center;font-size:18px">🥬</div>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:flex-end">
-        <div><p style="font-size:22px;font-weight:800;margin:0">20% off produce</p><p style="font-size:11px;opacity:0.9;margin:2px 0 0">Expires Jun 20</p></div>
-        <span style="background:rgba(0,0,0,0.25);padding:4px 10px;border-radius:6px;font-family:ui-monospace,monospace;font-size:11px;font-weight:600">FRESH20</span>
-      </div>
-    </div>
-    <div class="pass-expanded" style="display:none">
-      <div class="gradient-green" style="height:140px;padding:18px;display:flex;flex-direction:column;justify-content:space-between">
-        <span style="background:rgba(255,255,255,0.95);color:#1a1a1a;font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;padding:5px 10px;border-radius:999px;align-self:flex-start">Groceries · Expires Jun 20</span>
-        <h2 style="color:white;font-size:40px;font-weight:900;margin:0;letter-spacing:-1px;line-height:1">20% off</h2>
-      </div>
-      <div style="padding:16px 18px 18px;background:white;color:#1a1a1a">
-        <h3 style="font-size:22px;font-weight:800;margin:0">Whole Foods Market</h3>
-        <p style="font-size:13px;color:#777;margin:4px 0 14px">All organic produce · code FRESH20</p>
-        <a href="https://www.google.com/maps/search/?api=1&query=Whole+Foods+Plano+TX" target="_blank" style="background:#f5f5f5;border-radius:12px;padding:12px;margin-bottom:14px;display:flex;align-items:center;gap:10px;text-decoration:none;color:#1a1a1a">
-          <div style="width:36px;height:36px;border-radius:8px;background:#4FACFE;display:flex;align-items:center;justify-content:center;color:white;flex-shrink:0"><i class="ti ti-map-pin"></i></div>
-          <div style="flex:1"><p style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#777;margin:0">Tap for directions</p><p style="font-size:13px;font-weight:600;margin:2px 0 0">2201 Preston Rd, Plano TX</p></div>
-          <i class="ti ti-chevron-right" style="color:#999;font-size:18px"></i>
-        </a>
-        <div style="background:white;border:1px solid rgba(0,0,0,0.08);border-radius:12px;padding:14px;text-align:center;margin-bottom:14px">
-          <div style="height:60px;background-image:repeating-linear-gradient(90deg,#1a1a1a 0px,#1a1a1a 2px,transparent 2px,transparent 4px,#1a1a1a 4px,#1a1a1a 8px,transparent 8px,transparent 10px,#1a1a1a 10px,#1a1a1a 12px,transparent 12px,transparent 16px);margin-bottom:8px"></div>
-          <p style="font-family:ui-monospace,monospace;font-size:14px;font-weight:700;letter-spacing:2px;margin:0">FRESH20</p>
-        </div>
-        <div style="display:flex;gap:8px">
-          <button onclick="event.stopPropagation();toast('✓ Marked redeemed +$15 saved')" style="flex:1;border:none;padding:12px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;background:#1a1a1a;color:white">✓ Mark redeemed</button>
-          <button onclick="event.stopPropagation();toast('Shared')" style="flex:0 0 50px;border:none;padding:12px;border-radius:12px;cursor:pointer;background:#f5f5f5;color:#1a1a1a"><i class="ti ti-share"></i></button>
-          <button onclick="event.stopPropagation();toast('Deleted')" style="flex:0 0 50px;border:none;padding:12px;border-radius:12px;cursor:pointer;background:#FFE5E5;color:#DC2626"><i class="ti ti-trash"></i></button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="wpass" data-deal="marriott" onclick="togglePass(this)" style="border-radius:18px;padding:18px 20px;margin-bottom:-90px;position:relative;box-shadow:0 8px 24px rgba(0,0,0,0.4);cursor:pointer;color:white;background:linear-gradient(135deg,#6366F1,#C084FC)">
-    <div class="pass-collapsed">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:60px">
-        <div><p style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;opacity:0.9;margin:0">Travel</p><h3 style="font-size:16px;font-weight:700;margin:2px 0 0">Marriott</h3></div>
-        <div style="width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,0.25);display:flex;align-items:center;justify-content:center;font-size:18px">🏨</div>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:flex-end">
-        <div><p style="font-size:22px;font-weight:800;margin:0">$50 off weekend</p><p style="font-size:11px;opacity:0.9;margin:2px 0 0">Expires Jun 25</p></div>
-        <span style="background:rgba(0,0,0,0.25);padding:4px 10px;border-radius:6px;font-family:ui-monospace,monospace;font-size:11px;font-weight:600">WKND50</span>
-      </div>
-    </div>
-    <div class="pass-expanded" style="display:none">
-      <div class="gradient-purple" style="height:140px;padding:18px;display:flex;flex-direction:column;justify-content:space-between">
-        <span style="background:rgba(255,255,255,0.95);color:#1a1a1a;font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;padding:5px 10px;border-radius:999px;align-self:flex-start">Travel · Expires Jun 25</span>
-        <h2 style="color:white;font-size:40px;font-weight:900;margin:0;letter-spacing:-1px;line-height:1">$50 off</h2>
-      </div>
-      <div style="padding:16px 18px 18px;background:white;color:#1a1a1a">
-        <h3 style="font-size:22px;font-weight:800;margin:0">Marriott Bonvoy</h3>
-        <p style="font-size:13px;color:#777;margin:4px 0 14px">Weekend stays · min 2-night booking</p>
-        <div style="display:flex;gap:8px">
-          <button onclick="event.stopPropagation();toast('Redeemed')" style="flex:1;border:none;padding:12px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;background:#1a1a1a;color:white">✓ Mark redeemed</button>
-          <button onclick="event.stopPropagation();toast('Shared')" style="flex:0 0 50px;border:none;padding:12px;border-radius:12px;cursor:pointer;background:#f5f5f5;color:#1a1a1a"><i class="ti ti-share"></i></button>
-          <button onclick="event.stopPropagation();toast('Deleted')" style="flex:0 0 50px;border:none;padding:12px;border-radius:12px;cursor:pointer;background:#FFE5E5;color:#DC2626"><i class="ti ti-trash"></i></button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div style="margin-top:14px"></div>
-</div>
+<div id="wallet-content" style="padding:0 20px"></div>
 </div>
 </div>
 
-
-<!-- BROWSE PAGE (Discover + Social merged) -->
+<!-- BROWSE -->
 <div class="page" data-page="browse">
 <div style="background:var(--bg);min-height:100%;padding-top:14px">
 <div style="padding:0 20px 12px">
   <h2 style="font-size:24px;font-weight:800;margin:0">Browse Deals</h2>
-  <p style="font-size:13px;color:var(--text-dim);margin:2px 0 0">Local nearby + online + shared by friends</p>
+  <p style="font-size:13px;color:var(--text-dim);margin:2px 0 0">Local + online + shared by friends</p>
 </div>
 <div style="display:flex;gap:6px;padding:0 20px 12px">
-  <button class="btab active" data-btab="local" onclick="setBrowseTab('local')" style="flex:1;background:#1a1a1a;color:white;border:1px solid #1a1a1a;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer">📍 Local</button>
+  <button class="btab" data-btab="local" onclick="setBrowseTab('local')" style="flex:1;background:#1a1a1a;color:white;border:1px solid #1a1a1a;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer">📍 Local</button>
   <button class="btab" data-btab="online" onclick="setBrowseTab('online')" style="flex:1;background:white;color:var(--text-dim);border:1px solid var(--border);border-radius:999px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer">🌐 Online</button>
   <button class="btab" data-btab="friends" onclick="setBrowseTab('friends')" style="flex:1;background:white;color:var(--text-dim);border:1px solid var(--border);border-radius:999px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer">👥 Friends</button>
 </div>
 
-<!-- Local tab -->
 <div class="bsection" data-bsection="local">
 <div style="margin:0 20px 16px;background:white;border-radius:16px;padding:14px 16px;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
@@ -290,305 +273,132 @@ button,input{font-family:inherit;font-size:16px;color:var(--text)}
   </div>
   <input type="range" min="1" max="25" value="5" oninput="document.getElementById('radius-val').textContent=this.value+' mi'" style="width:100%;height:4px;appearance:none;-webkit-appearance:none;background:#e5e5e5;border-radius:999px;outline:none">
 </div>
-<p style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);padding:8px 20px;margin:0">📍 12 deals nearby</p>
-<div style="padding:0 20px 16px">
-  <button onclick="toast('Open Starbucks deal')" style="width:100%;background:white;border:none;border-radius:16px;padding:12px;margin-bottom:10px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04);cursor:pointer;text-align:left">
-    <div class="gradient-warm" style="width:56px;height:56px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:14px;flex-shrink:0">FREE</div>
-    <div style="flex:1;min-width:0"><p style="font-size:14px;font-weight:700;margin:0">Starbucks</p><p style="font-size:12px;color:var(--text-dim);margin:2px 0 0">Grande drink · expires in 4d</p><p style="font-size:11px;color:var(--accent-dark);font-weight:700;margin:4px 0 0">📍 0.3 mi · 5 min walk</p></div>
-    <span style="background:var(--accent);color:#1a1a1a;border:none;padding:8px 14px;border-radius:999px;font-size:12px;font-weight:700">Claim</span>
-  </button>
-  <button onclick="toast('Open Whole Foods deal')" style="width:100%;background:white;border:none;border-radius:16px;padding:12px;margin-bottom:10px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04);cursor:pointer;text-align:left">
-    <div class="gradient-green" style="width:56px;height:56px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:16px;flex-shrink:0">20%</div>
-    <div style="flex:1;min-width:0"><p style="font-size:14px;font-weight:700;margin:0">Whole Foods</p><p style="font-size:12px;color:var(--text-dim);margin:2px 0 0">Organic produce · code FRESH20</p><p style="font-size:11px;color:var(--accent-dark);font-weight:700;margin:4px 0 0">📍 0.8 mi away</p></div>
-    <span style="background:var(--accent);color:#1a1a1a;border:none;padding:8px 14px;border-radius:999px;font-size:12px;font-weight:700">Claim</span>
-  </button>
-  <button onclick="toast('Open Nike deal')" style="width:100%;background:white;border:none;border-radius:16px;padding:12px;margin-bottom:10px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04);cursor:pointer;text-align:left">
-    <div class="gradient-pink" style="width:56px;height:56px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:16px;flex-shrink:0">25%</div>
-    <div style="flex:1;min-width:0"><p style="font-size:14px;font-weight:700;margin:0">Nike</p><p style="font-size:12px;color:var(--text-dim);margin:2px 0 0">Sale items · in-store only</p><p style="font-size:11px;color:var(--accent-dark);font-weight:700;margin:4px 0 0">📍 1.2 mi · 6 min drive</p></div>
-    <span style="background:var(--accent);color:#1a1a1a;border:none;padding:8px 14px;border-radius:999px;font-size:12px;font-weight:700">Claim</span>
-  </button>
-  <button onclick="toast('Open Target deal')" style="width:100%;background:white;border:none;border-radius:16px;padding:12px;margin-bottom:10px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04);cursor:pointer;text-align:left">
-    <div class="gradient-warm" style="width:56px;height:56px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:14px;flex-shrink:0">$10</div>
-    <div style="flex:1;min-width:0"><p style="font-size:14px;font-weight:700;margin:0">Target</p><p style="font-size:12px;color:var(--text-dim);margin:2px 0 0">$10 off $50+ purchase</p><p style="font-size:11px;color:var(--accent-dark);font-weight:700;margin:4px 0 0">📍 2.1 mi away</p></div>
-    <span style="background:var(--accent);color:#1a1a1a;border:none;padding:8px 14px;border-radius:999px;font-size:12px;font-weight:700">Claim</span>
-  </button>
-  <button onclick="toast('Open Old Navy deal')" style="width:100%;background:white;border:none;border-radius:16px;padding:12px;margin-bottom:10px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04);cursor:pointer;text-align:left">
-    <div class="gradient-pink" style="width:56px;height:56px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:16px;flex-shrink:0">40%</div>
-    <div style="flex:1;min-width:0"><p style="font-size:14px;font-weight:700;margin:0">Old Navy</p><p style="font-size:12px;color:var(--text-dim);margin:2px 0 0">Site-wide · code FORTY</p><p style="font-size:11px;color:var(--accent-dark);font-weight:700;margin:4px 0 0">📍 3.4 mi away</p></div>
-    <span style="background:var(--accent);color:#1a1a1a;border:none;padding:8px 14px;border-radius:999px;font-size:12px;font-weight:700">Claim</span>
-  </button>
-</div>
+<div id="local-deals-list" style="padding:0 20px 16px"></div>
 </div>
 
-<!-- Online tab -->
 <div class="bsection" data-bsection="online" style="display:none">
-<p style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);padding:8px 20px;margin:0">🌐 Top online deals</p>
-<div style="columns:2;column-gap:8px;padding:0 20px 16px">
-  <button class="online-pin" onclick="toast('Whole Foods 20%')" style="break-inside:avoid;margin-bottom:8px;border-radius:16px;overflow:hidden;position:relative;cursor:pointer;width:100%;border:none;padding:0;display:block">
-    <div class="gradient-green" style="height:200px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:32px">20%</div>
-    <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(180deg,transparent,rgba(0,0,0,0.85));padding:24px 12px 12px;color:white;text-align:left">
-      <p style="font-size:13px;font-weight:700;margin:0">Whole Foods</p><p style="font-size:11px;opacity:0.9;margin:0">Organic produce</p>
-    </div>
-  </button>
-  <button onclick="toast('Starbucks FREE')" style="break-inside:avoid;margin-bottom:8px;border-radius:16px;overflow:hidden;position:relative;cursor:pointer;width:100%;border:none;padding:0;display:block">
-    <div class="gradient-warm" style="height:240px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:28px">FREE</div>
-    <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(180deg,transparent,rgba(0,0,0,0.85));padding:24px 12px 12px;color:white;text-align:left">
-      <p style="font-size:13px;font-weight:700;margin:0">Starbucks</p><p style="font-size:11px;opacity:0.9;margin:0">Grande drink</p>
-    </div>
-  </button>
-  <button onclick="toast('Marriott $50')" style="break-inside:avoid;margin-bottom:8px;border-radius:16px;overflow:hidden;position:relative;cursor:pointer;width:100%;border:none;padding:0;display:block">
-    <div class="gradient-purple" style="height:180px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:32px">$50</div>
-    <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(180deg,transparent,rgba(0,0,0,0.85));padding:24px 12px 12px;color:white;text-align:left">
-      <p style="font-size:13px;font-weight:700;margin:0">Marriott</p><p style="font-size:11px;opacity:0.9;margin:0">Weekend stays</p>
-    </div>
-  </button>
-  <button onclick="toast('Nike 25%')" style="break-inside:avoid;margin-bottom:8px;border-radius:16px;overflow:hidden;position:relative;cursor:pointer;width:100%;border:none;padding:0;display:block">
-    <div class="gradient-pink" style="height:220px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:32px">25%</div>
-    <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(180deg,transparent,rgba(0,0,0,0.85));padding:24px 12px 12px;color:white;text-align:left">
-      <p style="font-size:13px;font-weight:700;margin:0">Nike</p><p style="font-size:11px;opacity:0.9;margin:0">Sale items</p>
-    </div>
-  </button>
-  <button onclick="toast('Target $10')" style="break-inside:avoid;margin-bottom:8px;border-radius:16px;overflow:hidden;position:relative;cursor:pointer;width:100%;border:none;padding:0;display:block">
-    <div style="background:linear-gradient(135deg,#34D399,#06B6D4);height:160px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:32px">$10</div>
-    <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(180deg,transparent,rgba(0,0,0,0.85));padding:24px 12px 12px;color:white;text-align:left">
-      <p style="font-size:13px;font-weight:700;margin:0">Target</p><p style="font-size:11px;opacity:0.9;margin:0">$50 minimum</p>
-    </div>
-  </button>
-  <button onclick="toast('Old Navy 40%')" style="break-inside:avoid;margin-bottom:8px;border-radius:16px;overflow:hidden;position:relative;cursor:pointer;width:100%;border:none;padding:0;display:block">
-    <div style="background:linear-gradient(135deg,#FBBF24,#FB923C);height:200px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:32px">40%</div>
-    <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(180deg,transparent,rgba(0,0,0,0.85));padding:24px 12px 12px;color:white;text-align:left">
-      <p style="font-size:13px;font-weight:700;margin:0">Old Navy</p><p style="font-size:11px;opacity:0.9;margin:0">Site-wide</p>
-    </div>
-  </button>
-</div>
+<div id="online-deals-list" style="padding:8px 20px 16px"></div>
 </div>
 
-<!-- Friends tab -->
 <div class="bsection" data-bsection="friends" style="display:none">
-<p style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);padding:8px 20px;margin:0">👥 Shared by friends</p>
-<div style="padding:0 20px 16px">
-  <div style="background:white;border-radius:16px;padding:12px;margin-bottom:10px;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-      <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#00C9A7,#4FACFE);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:13px">M</div>
-      <div style="flex:1"><p style="font-size:13px;font-weight:700;margin:0">Maya Chen</p><p style="font-size:11px;color:var(--text-dim);margin:1px 0 0">shared a deal · 2m ago</p></div>
-    </div>
-    <button onclick="toast('Claimed Trader Joe deal +5 pts')" class="gradient-green" style="border-radius:12px;padding:12px;color:white;display:flex;justify-content:space-between;align-items:center;cursor:pointer;width:100%;border:none;text-align:left">
-      <div><p style="font-size:14px;font-weight:800;margin:0">Trader Joe's</p><p style="font-size:11px;opacity:0.95;margin:2px 0 0">$5 off $30 · expires Jun 12</p></div>
-      <span style="background:rgba(255,255,255,0.95);color:#1a1a1a;border:none;padding:6px 12px;border-radius:999px;font-size:11px;font-weight:700">Claim</span>
-    </button>
-  </div>
-  <div style="background:white;border-radius:16px;padding:12px;margin-bottom:10px;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-      <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#6366F1,#C084FC);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:13px">A</div>
-      <div style="flex:1"><p style="font-size:13px;font-weight:700;margin:0">Alex Park</p><p style="font-size:11px;color:var(--text-dim);margin:1px 0 0">saved $40 with Marriott · 1h ago</p></div>
-    </div>
-    <button onclick="toast('Find similar deals')" class="gradient-purple" style="border-radius:12px;padding:12px;color:white;display:flex;justify-content:space-between;align-items:center;cursor:pointer;width:100%;border:none;text-align:left">
-      <div><p style="font-size:14px;font-weight:800;margin:0">Marriott</p><p style="font-size:11px;opacity:0.95;margin:2px 0 0">$50 off · redeemed</p></div>
-      <span style="background:rgba(255,255,255,0.95);color:#1a1a1a;border:none;padding:6px 12px;border-radius:999px;font-size:11px;font-weight:700">Find similar</span>
-    </button>
-  </div>
-  <div style="background:white;border-radius:16px;padding:12px;margin-bottom:10px;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-      <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#FFD700,#FFA500);display:flex;align-items:center;justify-content:center;color:#1a1a1a;font-weight:700;font-size:13px">P</div>
-      <div style="flex:1"><p style="font-size:13px;font-weight:700;margin:0">@plano_deals</p><p style="font-size:11px;color:var(--text-dim);margin:1px 0 0">posted trending · 5h ago</p></div>
-    </div>
-    <button onclick="toast('Claimed AMC deal')" class="gradient-warm" style="border-radius:12px;padding:12px;color:white;display:flex;justify-content:space-between;align-items:center;cursor:pointer;width:100%;border:none;text-align:left">
-      <div><p style="font-size:14px;font-weight:800;margin:0">AMC Theatres</p><p style="font-size:11px;opacity:0.95;margin:2px 0 0">$3 off · 89 claims</p></div>
-      <span style="background:rgba(255,255,255,0.95);color:#1a1a1a;border:none;padding:6px 12px;border-radius:999px;font-size:11px;font-weight:700">Claim</span>
-    </button>
-  </div>
-</div>
+<div id="friends-deals-list" style="padding:8px 20px 16px"></div>
 </div>
 </div>
 </div>
 
-
-<!-- REWARDS PAGE -->
+<!-- REWARDS -->
 <div class="page" data-page="rewards">
 <div style="background:linear-gradient(180deg,#FF6B6B 0%,#FAF8F3 30%);min-height:100%;padding-top:14px">
 <div style="padding:0 20px 16px;display:flex;align-items:center;gap:12px">
   <button class="icon-btn" onclick="goPage('home')"><i class="ti ti-arrow-left"></i></button>
   <h2 style="color:white;font-size:24px;font-weight:800;margin:0;flex:1">Rewards</h2>
-  <div style="background:rgba(255,255,255,0.2);backdrop-filter:blur(10px);padding:6px 12px;border-radius:999px;color:white;font-size:13px;font-weight:700">🔥 7 day streak</div>
+  <div id="streak-pill" style="background:rgba(255,255,255,0.2);backdrop-filter:blur(10px);padding:6px 12px;border-radius:999px;color:white;font-size:13px;font-weight:700">🔥 0 day streak</div>
 </div>
 
-<div style="margin:0 20px 20px;background:white;border-radius:28px;padding:28px 20px;text-align:center;position:relative;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.06)">
-  <div style="position:absolute;top:-20px;right:-10px;font-size:100px;opacity:0.08">⭐</div>
+<div style="margin:0 20px 20px;background:white;border-radius:28px;padding:28px 20px;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,0.06)">
   <p style="font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin:0">Your points</p>
-  <h2 id="points-num" style="font-size:56px;font-weight:900;margin:4px 0 8px;letter-spacing:-2px;line-height:1">1,247</h2>
+  <h2 id="points-display" style="font-size:56px;font-weight:900;margin:4px 0 8px;letter-spacing:-2px;line-height:1">0</h2>
   <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:16px">
-    <span style="background:linear-gradient(135deg,#FFD700,#FFA500);color:white;font-size:11px;font-weight:800;padding:4px 12px;border-radius:999px">⭐ GOLD</span>
-    <span style="font-size:11px;color:var(--text-dim)">253 to Platinum</span>
+    <span id="tier-badge" style="background:linear-gradient(135deg,#A07248,#8B5A2B);color:white;font-size:11px;font-weight:800;padding:4px 12px;border-radius:999px">🥉 BRONZE</span>
+    <span id="next-tier-text" style="font-size:11px;color:var(--text-dim)">100 to Silver</span>
   </div>
-  <div style="background:#f0f0f0;border-radius:999px;height:8px;overflow:hidden;margin-bottom:6px"><div style="background:linear-gradient(90deg,#FFD700,#FFA500);height:100%;width:65%;border-radius:999px"></div></div>
-  <p style="font-size:11px;color:var(--text-dim)">Unlock unlimited spins + bonus deals</p>
+  <div style="background:#f0f0f0;border-radius:999px;height:8px;overflow:hidden;margin-bottom:6px"><div id="progress-fill" style="background:linear-gradient(90deg,#A07248,#8B5A2B);height:100%;width:0%;border-radius:999px;transition:width .5s"></div></div>
+  <p style="font-size:11px;color:var(--text-dim)">Earn points by saving and sharing deals</p>
 </div>
 
 <div style="margin:0 20px 20px;background:white;border-radius:28px;padding:20px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.06)">
   <div style="position:relative;width:220px;height:220px;margin:8px auto 16px">
     <div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:12px solid transparent;border-right:12px solid transparent;border-top:18px solid #1a1a1a;z-index:2;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3))"></div>
     <svg id="wheel" viewBox="0 0 220 220" style="width:100%;height:100%;transition:transform 4.5s cubic-bezier(0.17,0.67,0.21,0.99);transform-origin:50% 50%">
-      <g>
-        <path d="M110 110 L110 0 A110 110 0 0 1 187.78 32.22 Z" fill="#FF6B6B"/>
-        <path d="M110 110 L187.78 32.22 A110 110 0 0 1 220 110 Z" fill="#FFA06B"/>
-        <path d="M110 110 L220 110 A110 110 0 0 1 187.78 187.78 Z" fill="#FFE16B"/>
-        <path d="M110 110 L187.78 187.78 A110 110 0 0 1 110 220 Z" fill="#4FACFE"/>
-        <path d="M110 110 L110 220 A110 110 0 0 1 32.22 187.78 Z" fill="#C084FC"/>
-        <path d="M110 110 L32.22 187.78 A110 110 0 0 1 0 110 Z" fill="#F472B6"/>
-        <path d="M110 110 L0 110 A110 110 0 0 1 32.22 32.22 Z" fill="#34D399"/>
-        <path d="M110 110 L32.22 32.22 A110 110 0 0 1 110 0 Z" fill="#FBBF24"/>
-        <text x="110" y="35" text-anchor="middle" font-size="11" font-weight="700" fill="white">+10</text>
-        <text x="170" y="65" text-anchor="middle" font-size="11" font-weight="700" fill="white">DEAL</text>
-        <text x="195" y="115" text-anchor="middle" font-size="11" font-weight="700" fill="white">+25</text>
-        <text x="170" y="160" text-anchor="middle" font-size="11" font-weight="700" fill="white">?</text>
-        <text x="110" y="195" text-anchor="middle" font-size="11" font-weight="700" fill="white">+5</text>
-        <text x="50" y="160" text-anchor="middle" font-size="11" font-weight="700" fill="white">JACK</text>
-        <text x="25" y="115" text-anchor="middle" font-size="11" font-weight="700" fill="white">+15</text>
-        <text x="50" y="65" text-anchor="middle" font-size="11" font-weight="700" fill="white">SPIN</text>
-      </g>
+      <path d="M110 110 L110 0 A110 110 0 0 1 187.78 32.22 Z" fill="#FF6B6B"/>
+      <path d="M110 110 L187.78 32.22 A110 110 0 0 1 220 110 Z" fill="#FFA06B"/>
+      <path d="M110 110 L220 110 A110 110 0 0 1 187.78 187.78 Z" fill="#FFE16B"/>
+      <path d="M110 110 L187.78 187.78 A110 110 0 0 1 110 220 Z" fill="#4FACFE"/>
+      <path d="M110 110 L110 220 A110 110 0 0 1 32.22 187.78 Z" fill="#C084FC"/>
+      <path d="M110 110 L32.22 187.78 A110 110 0 0 1 0 110 Z" fill="#F472B6"/>
+      <path d="M110 110 L0 110 A110 110 0 0 1 32.22 32.22 Z" fill="#34D399"/>
+      <path d="M110 110 L32.22 32.22 A110 110 0 0 1 110 0 Z" fill="#FBBF24"/>
+      <text x="110" y="35" text-anchor="middle" font-size="11" font-weight="700" fill="white">+10</text>
+      <text x="170" y="65" text-anchor="middle" font-size="11" font-weight="700" fill="white">DEAL</text>
+      <text x="195" y="115" text-anchor="middle" font-size="11" font-weight="700" fill="white">+25</text>
+      <text x="170" y="160" text-anchor="middle" font-size="11" font-weight="700" fill="white">?</text>
+      <text x="110" y="195" text-anchor="middle" font-size="11" font-weight="700" fill="white">+5</text>
+      <text x="50" y="160" text-anchor="middle" font-size="11" font-weight="700" fill="white">JACK</text>
+      <text x="25" y="115" text-anchor="middle" font-size="11" font-weight="700" fill="white">+15</text>
+      <text x="50" y="65" text-anchor="middle" font-size="11" font-weight="700" fill="white">SPIN</text>
     </svg>
     <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:50px;height:50px;border-radius:50%;background:white;border:3px solid #1a1a1a;display:flex;align-items:center;justify-content:center;font-size:20px;z-index:1">🎰</div>
   </div>
-  <button id="spin-btn" onclick="doSpin()" style="background:linear-gradient(135deg,#1a1a1a,#2a2a3e);color:white;border:none;padding:14px 32px;border-radius:999px;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:0.5px;box-shadow:0 4px 12px rgba(0,0,0,0.2)">⚡ SPIN NOW</button>
+  <p id="spins-available" style="font-size:13px;color:var(--text-dim);margin:0 0 12px">Save a deal to earn your first spin</p>
+  <button id="spin-btn" onclick="doSpin()" disabled style="background:linear-gradient(135deg,#1a1a1a,#2a2a3e);color:white;border:none;padding:14px 32px;border-radius:999px;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:0.5px;box-shadow:0 4px 12px rgba(0,0,0,0.2);opacity:0.5">⚡ SPIN NOW</button>
   <p id="spin-result" style="margin-top:12px;font-size:14px;font-weight:700;color:var(--accent-dark);min-height:18px"></p>
 </div>
-
-<div style="margin:0 20px 16px">
-  <p style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:0 0 8px">🔥 7-day streak</p>
-  <div style="display:flex;gap:4px">
-    <div style="flex:1;aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:linear-gradient(135deg,#FF6B6B,#FFA06B);color:white">M</div>
-    <div style="flex:1;aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:linear-gradient(135deg,#FF6B6B,#FFA06B);color:white">T</div>
-    <div style="flex:1;aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:linear-gradient(135deg,#FF6B6B,#FFA06B);color:white">W</div>
-    <div style="flex:1;aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:linear-gradient(135deg,#FF6B6B,#FFA06B);color:white">T</div>
-    <div style="flex:1;aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:linear-gradient(135deg,#FF6B6B,#FFA06B);color:white">F</div>
-    <div style="flex:1;aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:linear-gradient(135deg,#FF6B6B,#FFA06B);color:white">S</div>
-    <div style="flex:1;aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:#FFE16B;color:#1a1a1a;box-shadow:0 0 0 3px rgba(255,225,107,0.4)">S</div>
-  </div>
-</div>
-
-<p style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);padding:8px 20px;margin:0">💎 Spend points</p>
-<div style="padding:0 20px 20px">
-  <button onclick="toast('Premium deal unlocked!')" style="width:100%;background:white;border:none;border-radius:16px;padding:16px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04);margin-bottom:8px;cursor:pointer;text-align:left">
-    <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#FFE16B,#FFA06B);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🎁</div>
-    <div style="flex:1"><p style="font-size:14px;font-weight:700;margin:0">Premium deal</p><p style="font-size:11px;color:var(--text-dim);margin:2px 0 0">Unlock a curated $25+ value deal</p></div>
-    <span style="background:#FFE16B;color:#1a1a1a;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:800">50 pts</span>
-  </button>
-  <button onclick="toast('Bonus spin granted!')" style="width:100%;background:white;border:none;border-radius:16px;padding:16px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04);margin-bottom:8px;cursor:pointer;text-align:left">
-    <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#FFE16B,#FFA06B);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🎰</div>
-    <div style="flex:1"><p style="font-size:14px;font-weight:700;margin:0">Bonus spin</p><p style="font-size:11px;color:var(--text-dim);margin:2px 0 0">Spin the wheel one more time</p></div>
-    <span style="background:#FFE16B;color:#1a1a1a;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:800">25 pts</span>
-  </button>
-  <button onclick="toast('Streak protected!')" style="width:100%;background:white;border:none;border-radius:16px;padding:16px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04);margin-bottom:8px;cursor:pointer;text-align:left">
-    <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#FFE16B,#FFA06B);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🛡️</div>
-    <div style="flex:1"><p style="font-size:14px;font-weight:700;margin:0">Streak shield</p><p style="font-size:11px;color:var(--text-dim);margin:2px 0 0">Protect your streak for 1 missed day</p></div>
-    <span style="background:#FFE16B;color:#1a1a1a;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:800">100 pts</span>
-  </button>
-</div>
 </div>
 </div>
 
-<!-- LOYALTY PAGE -->
+<!-- LOYALTY -->
 <div class="page" data-page="loyalty">
 <div style="min-height:100%;padding-top:14px">
 <div style="padding:0 20px 16px;display:flex;align-items:center;gap:12px">
   <button class="icon-btn" onclick="goPage('home')"><i class="ti ti-arrow-left"></i></button>
   <h2 style="font-size:24px;font-weight:800;margin:0;flex:1">Loyalty cards</h2>
-  <button class="icon-btn" style="background:#1a1a1a" onclick="toast('Add new loyalty card')"><i class="ti ti-plus" style="color:white!important"></i></button>
+  <button class="icon-btn" style="background:#1a1a1a" onclick="openAddLoyalty()"><i class="ti ti-plus" style="color:white !important"></i></button>
 </div>
 <p style="font-size:13px;color:var(--text-dim);padding:0 20px 16px;margin:0">Tap any card to show barcode at checkout</p>
-<div style="padding:0 20px">
-  <button onclick="showCardBarcode('Costco','1234 5678 9012 3456','#DC2626')" style="width:100%;background:#DC2626;border:none;border-radius:18px;padding:20px;color:white;margin-bottom:12px;cursor:pointer;text-align:left;box-shadow:0 4px 12px rgba(220,38,38,0.3)">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:30px"><h3 style="font-size:18px;font-weight:800;margin:0">Costco</h3><i class="ti ti-id" style="font-size:24px;opacity:0.7"></i></div>
-    <p style="font-family:ui-monospace,monospace;font-size:14px;letter-spacing:2px;margin:0;opacity:0.95">1234 5678 9012 3456</p>
-  </button>
-  <button onclick="showCardBarcode('CVS ExtraCare','8901234567','#059669')" style="width:100%;background:#059669;border:none;border-radius:18px;padding:20px;color:white;margin-bottom:12px;cursor:pointer;text-align:left;box-shadow:0 4px 12px rgba(5,150,105,0.3)">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:30px"><h3 style="font-size:18px;font-weight:800;margin:0">CVS ExtraCare</h3><i class="ti ti-id" style="font-size:24px;opacity:0.7"></i></div>
-    <p style="font-family:ui-monospace,monospace;font-size:14px;letter-spacing:2px;margin:0;opacity:0.95">8901 2345 67</p>
-  </button>
-  <button onclick="showCardBarcode('Walgreens','5678901234','#7C3AED')" style="width:100%;background:#7C3AED;border:none;border-radius:18px;padding:20px;color:white;margin-bottom:12px;cursor:pointer;text-align:left;box-shadow:0 4px 12px rgba(124,58,237,0.3)">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:30px"><h3 style="font-size:18px;font-weight:800;margin:0">Walgreens Balance</h3><i class="ti ti-id" style="font-size:24px;opacity:0.7"></i></div>
-    <p style="font-family:ui-monospace,monospace;font-size:14px;letter-spacing:2px;margin:0;opacity:0.95">5678 9012 34</p>
-  </button>
-</div>
+<div id="loyalty-list" style="padding:0 20px"></div>
 </div>
 </div>
 
-<!-- SETTINGS PAGE -->
+<!-- SETTINGS -->
 <div class="page" data-page="settings">
 <div style="min-height:100%;padding-top:14px">
 <div style="padding:0 20px 16px;display:flex;align-items:center;gap:12px">
   <button class="icon-btn" onclick="goPage('home')"><i class="ti ti-arrow-left"></i></button>
   <h2 style="font-size:24px;font-weight:800;margin:0">Settings</h2>
 </div>
-<div style="padding:0 20px">
+<div class="settings-list">
   <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:8px 0">Profile</p>
-  <div style="background:white;border-radius:16px;padding:0 16px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
-    <div style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--border)">
-      <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#FF6B6B,#FFA06B);display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:20px">S</div>
-      <div style="flex:1"><p style="font-size:15px;font-weight:700;margin:0">Shail Bhatt</p><p style="font-size:12px;color:var(--text-dim);margin:2px 0 0">shail@perq.app</p></div>
+  <div class="settings-group">
+    <div class="settings-row" onclick="editProfile()" style="cursor:pointer">
+      <div id="profile-avatar" style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#FF6B6B,#FFA06B);display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:20px">?</div>
+      <div class="settings-info"><p class="settings-row-title" id="profile-name-display">Set up profile</p><p class="settings-row-sub" id="profile-email-display">Tap to edit</p></div>
       <i class="ti ti-chevron-right" style="color:var(--text-dim)"></i>
-    </div>
-    <div onclick="toast('Email connected: Gmail')" style="display:flex;align-items:center;gap:12px;padding:14px 0;cursor:pointer">
-      <div style="width:32px;height:32px;border-radius:10px;background:#FFE5E5;color:#DC2626;display:flex;align-items:center;justify-content:center;font-size:16px"><i class="ti ti-mail"></i></div>
-      <div style="flex:1"><p style="font-size:14px;font-weight:600;margin:0">Email connected</p><p style="font-size:11px;color:var(--text-dim);margin:2px 0 0">Gmail · auto-import deals</p></div>
-      <span style="font-size:11px;color:#059669;font-weight:700">✓ Active</span>
     </div>
   </div>
 
   <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:8px 0">Notifications</p>
-  <div style="background:white;border-radius:16px;padding:0 16px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
-    <div style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--border)">
-      <div style="width:32px;height:32px;border-radius:10px;background:#FEF3C7;color:#D97706;display:flex;align-items:center;justify-content:center;font-size:16px"><i class="ti ti-bell"></i></div>
-      <div style="flex:1"><p style="font-size:14px;font-weight:600;margin:0">Expiry reminders</p><p style="font-size:11px;color:var(--text-dim);margin:2px 0 0">3 days before · evening · day-of</p></div>
-      <div onclick="this.classList.toggle('on');this.style.background=this.classList.contains('on')?'#FFE16B':'#ddd';this.firstElementChild.style.left=this.classList.contains('on')?'20px':'2px'" class="on" style="width:44px;height:26px;border-radius:999px;background:#FFE16B;position:relative;cursor:pointer;transition:background 0.2s"><div style="position:absolute;top:2px;left:20px;width:22px;height:22px;border-radius:50%;background:white;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2)"></div></div>
+  <div class="settings-group">
+    <div class="settings-row">
+      <div class="settings-icon-sm" style="background:#FEF3C7;color:#D97706"><i class="ti ti-bell"></i></div>
+      <div class="settings-info"><p class="settings-row-title">Expiry reminders</p><p class="settings-row-sub">3 days before · evening · day-of</p></div>
+      <button class="toggle on" data-setting="reminders" onclick="toggleSetting(this,'reminders')"></button>
     </div>
-    <div style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--border)">
-      <div style="width:32px;height:32px;border-radius:10px;background:#DBEAFE;color:#2563EB;display:flex;align-items:center;justify-content:center;font-size:16px"><i class="ti ti-map-pin"></i></div>
-      <div style="flex:1"><p style="font-size:14px;font-weight:600;margin:0">Proximity alerts</p><p style="font-size:11px;color:var(--text-dim);margin:2px 0 0">Notify when near a store with deal</p></div>
-      <div onclick="this.classList.toggle('on');this.style.background=this.classList.contains('on')?'#FFE16B':'#ddd';this.firstElementChild.style.left=this.classList.contains('on')?'20px':'2px'" class="on" style="width:44px;height:26px;border-radius:999px;background:#FFE16B;position:relative;cursor:pointer;transition:background 0.2s"><div style="position:absolute;top:2px;left:20px;width:22px;height:22px;border-radius:50%;background:white;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2)"></div></div>
+    <div class="settings-row">
+      <div class="settings-icon-sm" style="background:#DBEAFE;color:#2563EB"><i class="ti ti-map-pin"></i></div>
+      <div class="settings-info"><p class="settings-row-title">Proximity alerts</p><p class="settings-row-sub">Notify when near a store with deal</p></div>
+      <button class="toggle on" data-setting="proximity" onclick="toggleSetting(this,'proximity')"></button>
     </div>
-    <div style="display:flex;align-items:center;gap:12px;padding:14px 0">
-      <div style="width:32px;height:32px;border-radius:10px;background:#FCE7F3;color:#BE185D;display:flex;align-items:center;justify-content:center;font-size:16px"><i class="ti ti-share"></i></div>
-      <div style="flex:1"><p style="font-size:14px;font-weight:600;margin:0">Friends activity</p><p style="font-size:11px;color:var(--text-dim);margin:2px 0 0">Notify when friends share deals</p></div>
-      <div onclick="this.classList.toggle('on');this.style.background=this.classList.contains('on')?'#FFE16B':'#ddd';this.firstElementChild.style.left=this.classList.contains('on')?'20px':'2px'" style="width:44px;height:26px;border-radius:999px;background:#ddd;position:relative;cursor:pointer;transition:background 0.2s"><div style="position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:50%;background:white;transition:left 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2)"></div></div>
+    <div class="settings-row">
+      <div class="settings-icon-sm" style="background:#FCE7F3;color:#BE185D"><i class="ti ti-share"></i></div>
+      <div class="settings-info"><p class="settings-row-title">Friends activity</p><p class="settings-row-sub">When friends share deals with you</p></div>
+      <button class="toggle" data-setting="social" onclick="toggleSetting(this,'social')"></button>
     </div>
   </div>
 
-  <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:8px 0">Preferences</p>
-  <div style="background:white;border-radius:16px;padding:0 16px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
-    <div onclick="toast('Reminder days: 3')" style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--border);cursor:pointer">
-      <div style="width:32px;height:32px;border-radius:10px;background:#E0E7FF;color:#4338CA;display:flex;align-items:center;justify-content:center;font-size:16px"><i class="ti ti-clock"></i></div>
-      <div style="flex:1"><p style="font-size:14px;font-weight:600;margin:0">Reminder lead time</p><p style="font-size:11px;color:var(--text-dim);margin:2px 0 0">How early before expiry</p></div>
-      <span style="font-size:13px;color:var(--text-dim)">3 days</span><i class="ti ti-chevron-right" style="color:var(--text-dim);font-size:16px"></i>
-    </div>
-    <div onclick="toast('Default radius: 5 mi')" style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--border);cursor:pointer">
-      <div style="width:32px;height:32px;border-radius:10px;background:#D1FAE5;color:#065F46;display:flex;align-items:center;justify-content:center;font-size:16px"><i class="ti ti-radar"></i></div>
-      <div style="flex:1"><p style="font-size:14px;font-weight:600;margin:0">Default search radius</p><p style="font-size:11px;color:var(--text-dim);margin:2px 0 0">For Browse → Local tab</p></div>
-      <span style="font-size:13px;color:var(--text-dim)">5 mi</span><i class="ti ti-chevron-right" style="color:var(--text-dim);font-size:16px"></i>
-    </div>
-    <div onclick="toast('Categories: Groceries, Dining, Travel')" style="display:flex;align-items:center;gap:12px;padding:14px 0;cursor:pointer">
-      <div style="width:32px;height:32px;border-radius:10px;background:#FEF3C7;color:#92400E;display:flex;align-items:center;justify-content:center;font-size:16px"><i class="ti ti-category"></i></div>
-      <div style="flex:1"><p style="font-size:14px;font-weight:600;margin:0">Deal preferences</p><p style="font-size:11px;color:var(--text-dim);margin:2px 0 0">Categories you care about</p></div>
-      <i class="ti ti-chevron-right" style="color:var(--text-dim);font-size:16px"></i>
+  <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:8px 0">Data</p>
+  <div class="settings-group">
+    <div class="settings-row" onclick="resetApp()" style="cursor:pointer">
+      <div class="settings-icon-sm" style="background:#FEE2E2;color:#DC2626"><i class="ti ti-trash"></i></div>
+      <div class="settings-info"><p class="settings-row-title" style="color:#DC2626">Reset everything</p><p class="settings-row-sub">Clear all deals, points, and start over</p></div>
+      <i class="ti ti-chevron-right" style="color:var(--text-dim)"></i>
     </div>
   </div>
 
   <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:8px 0">About</p>
-  <div style="background:white;border-radius:16px;padding:0 16px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
-    <div onclick="toast('Privacy & Data')" style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--border);cursor:pointer">
-      <div style="width:32px;height:32px;border-radius:10px;background:#F3E8FF;color:#6D28D9;display:flex;align-items:center;justify-content:center;font-size:16px"><i class="ti ti-shield-lock"></i></div>
-      <div style="flex:1"><p style="font-size:14px;font-weight:600;margin:0">Privacy & Data</p></div>
-      <i class="ti ti-chevron-right" style="color:var(--text-dim);font-size:16px"></i>
-    </div>
-    <div onclick="toast('Help center')" style="display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--border);cursor:pointer">
-      <div style="width:32px;height:32px;border-radius:10px;background:#FEE2E2;color:#B91C1C;display:flex;align-items:center;justify-content:center;font-size:16px"><i class="ti ti-help-circle"></i></div>
-      <div style="flex:1"><p style="font-size:14px;font-weight:600;margin:0">Help & Support</p></div>
-      <i class="ti ti-chevron-right" style="color:var(--text-dim);font-size:16px"></i>
-    </div>
-    <div onclick="toast('App version 19.0.0')" style="display:flex;align-items:center;gap:12px;padding:14px 0;cursor:pointer">
-      <div style="width:32px;height:32px;border-radius:10px;background:#F1F5F9;color:#475569;display:flex;align-items:center;justify-content:center;font-size:16px"><i class="ti ti-info-circle"></i></div>
-      <div style="flex:1"><p style="font-size:14px;font-weight:600;margin:0">About Perq</p><p style="font-size:11px;color:var(--text-dim);margin:2px 0 0">Version 19.0.0</p></div>
-      <i class="ti ti-chevron-right" style="color:var(--text-dim);font-size:16px"></i>
+  <div class="settings-group">
+    <div class="settings-row">
+      <div class="settings-icon-sm" style="background:#F1F5F9;color:#475569"><i class="ti ti-info-circle"></i></div>
+      <div class="settings-info"><p class="settings-row-title">Perq · MVP Preview</p><p class="settings-row-sub">v0.1 · Test build</p></div>
     </div>
   </div>
 </div>
@@ -606,152 +416,12 @@ button,input{font-family:inherit;font-size:16px;color:var(--text)}
 
 </div>
 
-<!-- SNAP ACTION SHEET -->
-<div id="sheet-overlay" onclick="closeSnapSheet()" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:199;opacity:0;pointer-events:none;transition:opacity 0.3s"></div>
-<div id="snap-sheet" style="position:fixed;bottom:0;left:0;right:0;background:white;border-radius:28px 28px 0 0;padding:12px 20px calc(32px + var(--safe-bottom));z-index:200;transform:translateY(100%);transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);box-shadow:0 -8px 32px rgba(0,0,0,0.2)">
-  <div style="width:40px;height:4px;border-radius:999px;background:#ddd;margin:0 auto 16px"></div>
-  <h3 style="font-size:18px;font-weight:700;margin:0 0 16px;text-align:center">Add a deal</h3>
-  <button onclick="closeSnapSheet();toast('📷 Camera opened — take a photo')" style="display:flex;align-items:center;gap:14px;padding:16px;border-radius:14px;background:#f8f8f8;margin-bottom:8px;cursor:pointer;width:100%;border:none;text-align:left">
-    <div class="gradient-warm" style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:white;font-size:20px;flex-shrink:0">📷</div>
-    <div style="flex:1"><p style="font-size:15px;font-weight:700;margin:0">Take a photo</p><p style="font-size:12px;color:var(--text-dim);margin:2px 0 0">AI extracts merchant, code, expiry</p></div>
-  </button>
-  <button onclick="closeSnapSheet();toast('📁 Library opened')" style="display:flex;align-items:center;gap:14px;padding:16px;border-radius:14px;background:#f8f8f8;margin-bottom:8px;cursor:pointer;width:100%;border:none;text-align:left">
-    <div class="gradient-purple" style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:white;font-size:20px;flex-shrink:0"><i class="ti ti-photo"></i></div>
-    <div style="flex:1"><p style="font-size:15px;font-weight:700;margin:0">Choose from library</p><p style="font-size:12px;color:var(--text-dim);margin:2px 0 0">Upload a screenshot or saved coupon</p></div>
-  </button>
-  <button onclick="closeSnapSheet();toast('📲 Scanner opened')" style="display:flex;align-items:center;gap:14px;padding:16px;border-radius:14px;background:#f8f8f8;margin-bottom:8px;cursor:pointer;width:100%;border:none;text-align:left">
-    <div class="gradient-green" style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:white;font-size:20px;flex-shrink:0"><i class="ti ti-scan"></i></div>
-    <div style="flex:1"><p style="font-size:15px;font-weight:700;margin:0">Scan barcode/QR</p><p style="font-size:12px;color:var(--text-dim);margin:2px 0 0">Real-time barcode detection</p></div>
-  </button>
-  <button onclick="closeSnapSheet();toast('Manual entry form')" style="display:flex;align-items:center;gap:14px;padding:16px;border-radius:14px;background:#f8f8f8;margin-bottom:8px;cursor:pointer;width:100%;border:none;text-align:left">
-    <div class="gradient-pink" style="width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:white;font-size:20px;flex-shrink:0"><i class="ti ti-edit"></i></div>
-    <div style="flex:1"><p style="font-size:15px;font-weight:700;margin:0">Type it in</p><p style="font-size:12px;color:var(--text-dim);margin:2px 0 0">Enter deal details manually</p></div>
-  </button>
-</div>
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-overlay"></div>
+<div id="toast"></div>
 
-<!-- BARCODE MODAL FOR LOYALTY -->
-<div id="barcode-modal" onclick="closeBarcode()" style="position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:300;display:none;align-items:center;justify-content:center;padding:20px"></div>
+<input type="file" id="capture-input" accept="image/*" capture="environment" style="display:none">
 
-<script>
-function toast(msg){
-  const e=document.getElementById('t');if(e)e.remove();
-  const t=document.createElement('div');t.id='t';
-  t.style.cssText='position:fixed;bottom:120px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:white;padding:12px 20px;border-radius:999px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 8px 20px rgba(0,0,0,0.3);max-width:90%;text-align:center;animation:fadeIn 0.3s';
-  t.textContent=msg;document.body.appendChild(t);
-  setTimeout(()=>t.remove(),2200);
-}
-function goPage(page){
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  const target=document.querySelector('.page[data-page="'+page+'"]');
-  if(target){target.classList.add('active');target.scrollTop=0;}
-  document.querySelectorAll('.tabbar-btn').forEach(b=>b.classList.remove('active'));
-  const btn=document.querySelector('.tabbar-btn[data-tab="'+page+'"]');
-  if(btn)btn.classList.add('active');
-}
-function openSnapSheet(){
-  document.getElementById('snap-sheet').style.transform='translateY(0)';
-  const o=document.getElementById('sheet-overlay');
-  o.style.opacity='1';o.style.pointerEvents='auto';
-}
-function closeSnapSheet(){
-  document.getElementById('snap-sheet').style.transform='translateY(100%)';
-  const o=document.getElementById('sheet-overlay');
-  o.style.opacity='0';o.style.pointerEvents='none';
-}
-function openDeal(id){
-  goPage('wallet');
-  setTimeout(()=>{
-    const pass=document.querySelector('[data-deal="'+id+'"]');
-    if(!pass)return;
-    document.querySelectorAll('.wpass').forEach(p=>{
-      p.classList.remove('expanded');
-      p.querySelector('.pass-collapsed').style.display='flex';
-      p.querySelector('.pass-collapsed').style.flexDirection='column';
-      const exp=p.querySelector('.pass-expanded');
-      if(exp)exp.style.display='none';
-      p.style.padding='18px 20px';
-      p.style.background=p.dataset.deal==='starbucks'?'linear-gradient(135deg,#FF6B6B,#FFA06B)':p.dataset.deal==='wholefoods'?'linear-gradient(135deg,#00C9A7,#4FACFE)':'linear-gradient(135deg,#6366F1,#C084FC)';
-      p.style.color='white';
-      p.style.marginBottom='-90px';
-    });
-    expandPass(pass);
-    pass.scrollIntoView({behavior:'smooth',block:'center'});
-  },300);
-}
-function togglePass(el){
-  const isExpanded=el.classList.contains('expanded');
-  document.querySelectorAll('.wpass').forEach(p=>{
-    p.classList.remove('expanded');
-    p.querySelector('.pass-collapsed').style.display='flex';
-    p.querySelector('.pass-collapsed').style.flexDirection='column';
-    const exp=p.querySelector('.pass-expanded');
-    if(exp)exp.style.display='none';
-    p.style.padding='18px 20px';
-    p.style.background=p.dataset.deal==='starbucks'?'linear-gradient(135deg,#FF6B6B,#FFA06B)':p.dataset.deal==='wholefoods'?'linear-gradient(135deg,#00C9A7,#4FACFE)':'linear-gradient(135deg,#6366F1,#C084FC)';
-    p.style.color='white';
-    p.style.marginBottom='-90px';
-  });
-  if(!isExpanded)expandPass(el);
-}
-function expandPass(el){
-  el.classList.add('expanded');
-  el.querySelector('.pass-collapsed').style.display='none';
-  el.querySelector('.pass-expanded').style.display='block';
-  el.style.padding='0';
-  el.style.background='white';
-  el.style.color='#1a1a1a';
-  el.style.marginBottom='14px';
-  el.style.borderRadius='24px';
-  el.style.overflow='hidden';
-}
-function setBrowseTab(tab){
-  document.querySelectorAll('.btab').forEach(b=>{
-    b.classList.remove('active');
-    b.style.background='white';
-    b.style.color='#6B6A64';
-    b.style.borderColor='rgba(0,0,0,0.08)';
-  });
-  const active=document.querySelector('.btab[data-btab="'+tab+'"]');
-  if(active){
-    active.classList.add('active');
-    active.style.background='#1a1a1a';
-    active.style.color='white';
-    active.style.borderColor='#1a1a1a';
-  }
-  document.querySelectorAll('.bsection').forEach(s=>s.style.display='none');
-  const sec=document.querySelector('.bsection[data-bsection="'+tab+'"]');
-  if(sec)sec.style.display='block';
-}
-function openLoyalty(id){goPage('loyalty');}
-function showCardBarcode(name,number,color){
-  const m=document.getElementById('barcode-modal');
-  m.style.display='flex';
-  m.innerHTML='<div onclick="event.stopPropagation()" style="background:white;border-radius:24px;padding:24px;text-align:center;max-width:340px;width:100%"><h3 style="margin:0 0 4px;font-size:20px;font-weight:800;color:#1a1a1a">'+name+'</h3><p style="font-family:ui-monospace,monospace;font-size:14px;color:#777;margin:0 0 16px;letter-spacing:2px">'+number+'</p><div style="background:white;padding:16px;border:1px solid rgba(0,0,0,0.08);border-radius:14px"><div style="height:90px;background-image:repeating-linear-gradient(90deg,#1a1a1a 0px,#1a1a1a 2px,transparent 2px,transparent 4px,#1a1a1a 4px,#1a1a1a 8px,transparent 8px,transparent 10px,#1a1a1a 10px,#1a1a1a 12px,transparent 12px,transparent 16px);margin-bottom:12px"></div><p style="font-family:ui-monospace,monospace;font-size:12px;font-weight:700;letter-spacing:2px;margin:0;color:#1a1a1a">'+number+'</p></div><p style="font-size:11px;color:#777;margin:12px 0 16px">Show at checkout · Tap anywhere to close</p><button onclick="closeBarcode()" style="background:'+color+';color:white;border:none;padding:12px 32px;border-radius:999px;font-size:14px;font-weight:700;cursor:pointer">Done</button></div>';
-}
-function closeBarcode(){document.getElementById('barcode-modal').style.display='none';}
-let spinning=false;
-function doSpin(){
-  if(spinning)return;
-  spinning=true;
-  const btn=document.getElementById('spin-btn');
-  const result=document.getElementById('spin-result');
-  btn.disabled=true;result.textContent='';
-  const wheel=document.getElementById('wheel');
-  const slices=['+10 pts','Bonus deal!','+25 pts','Mystery 🎁','+5 pts','JACKPOT 100 pts!','+15 pts','Spin again'];
-  const idx=Math.floor(Math.random()*slices.length);
-  const baseRotation=parseFloat(wheel.style.transform.replace(/[^\d.-]/g,''))||0;
-  const target=baseRotation+360*5+(idx*45)+22;
-  wheel.style.transform='rotate('+target+'deg)';
-  setTimeout(()=>{
-    result.textContent='🎉 '+slices[idx];
-    if(slices[idx].includes('pts')){
-      const pts=parseInt(slices[idx].match(/\d+/)[0])||0;
-      const pn=document.getElementById('points-num');
-      pn.textContent=(parseInt(pn.textContent.replace(',',''))+pts).toLocaleString();
-    }
-    btn.disabled=false;spinning=false;
-  },4600);
-}
-</script>
+<script src="preview-app.js"></script>
 </body>
 </html>
