@@ -109,7 +109,7 @@ window.goPage=function(page){
   if(page==='browse')renderBrowse();
   if(page==='rewards')renderRewards();
   if(page==='settings')renderSettings();
-  if(page==='home')renderHome();
+  if(page==='community')renderCommunity();
 };
 
 window.setWalletFilter=function(f){
@@ -124,7 +124,9 @@ window.setWalletFilter=function(f){
 };
 
 // -------- Home --------
-function renderHome(){
+// Home page removed — savings hero now lives at top of Wallet
+function renderHome(){return;}
+function _legacyHome(){
   const redeemedDeals=state.deals.filter(d=>d.redeemed);
   const totalRedeemed=redeemedDeals.reduce((s,d)=>s+(parseFloat(d.value)||0),0);
   const potentialFromActive=state.deals.filter(d=>!d.redeemed).reduce((s,d)=>s+(parseFloat(d.value)||0),0);
@@ -181,13 +183,37 @@ window.openDealCard=function(id){
   },200);
 };
 
-// -------- Wallet (unified — deals + programs + loyalty) --------
+// -------- Wallet (unified — deals + programs + loyalty + savings hero) --------
 function renderWallet(){
+  // Savings hero (now lives at top of Wallet)
+  const redeemedDeals=state.deals.filter(d=>d.redeemed);
+  const totalRedeemed=redeemedDeals.reduce((s,d)=>s+(parseFloat(d.value)||0),0);
+  const potentialFromActive=state.deals.filter(d=>!d.redeemed).reduce((s,d)=>s+(parseFloat(d.value)||0),0);
+  const lblEl=document.getElementById('savings-label');
+  const amtEl=document.getElementById('total-saved');
+  const streakEl=document.getElementById('streak-text');
+  if(lblEl&&amtEl){
+    if(redeemedDeals.length>0){
+      lblEl.textContent='Total saved this year';
+      amtEl.textContent='$'+totalRedeemed.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+    } else {
+      lblEl.textContent='Potential savings';
+      amtEl.textContent='$'+potentialFromActive.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+    }
+  }
+  if(streakEl){
+    streakEl.textContent=
+      state.rewards.streak>0
+        ?'+$'+totalRedeemed+' saved · '+state.rewards.streak+' day streak 🔥'
+        :(state.deals.length>0?'Tap a deal and mark it redeemed to bank the savings':'Save your first deal to start a streak');
+  }
+
   document.querySelectorAll('.wallet-tab').forEach(t=>t.classList.toggle('active',t.getAttribute('data-wfilter')===walletFilter));
   const c=document.getElementById('wallet-content');
   const dealsCount=state.deals.filter(d=>!d.redeemed).length;
   const totalCount=dealsCount+state.programs.length+state.loyalty.length;
-  document.getElementById('wallet-sub').textContent=totalCount===0?'Empty wallet':totalCount+' item'+(totalCount===1?'':'s')+' saved';
+  const subEl=document.getElementById('wallet-sub');
+  if(subEl)subEl.textContent=totalCount===0?'Empty wallet':totalCount+' item'+(totalCount===1?'':'s')+' saved';
 
   let html='';
   if(walletFilter==='all'||walletFilter==='deals'){
@@ -197,38 +223,6 @@ function renderWallet(){
       html+=renderDealsList(active);
     } else if(walletFilter==='deals'){
       html+=emptyWalletSection('🎟️','No deals yet','Snap a coupon to add your first deal','openSnapSheet');
-    }
-  }
-
-  if(walletFilter==='shared'){
-    const sharedByMe=state.deals.filter(d=>d.shared);
-    const pool=load('perq-mvp:communityPool',[]);
-    const today=todayStr();
-    const sharedByOthers=pool.filter(p=>{
-      // Exclude my own shared deals (they appear in 'Shared by you' section)
-      if(state.deals.find(d=>d.id===p.id))return false;
-      if(!p.expiry)return true;
-      return new Date(p.expiry)>=new Date(today);
-    });
-
-    // SECTION 1: Shared by you (always show, even if empty)
-    html+='<div style="display:flex;align-items:center;justify-content:space-between;margin:8px 0 12px"><p style="color:rgba(255,255,255,0.7);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin:0">📤 Shared by you · '+sharedByMe.length+'</p>'+
-      (sharedByMe.length>0?'<span style="color:rgba(255,225,107,0.9);font-size:11px;font-weight:700">'+sharedByMe.reduce((s,d)=>s+(d.claimCount||0),0)+' total claims · '+sharedByMe.reduce((s,d)=>s+5+((d.claimCount||0)*5),0)+' pts earned</span>':'')+
-    '</div>';
-    if(sharedByMe.length>0){
-      html+=renderSharedByMeList(sharedByMe);
-    } else {
-      html+='<div style="background:rgba(255,255,255,0.05);border:1px dashed rgba(255,255,255,0.2);border-radius:14px;padding:24px;text-align:center;margin-bottom:24px"><p style="color:rgba(255,255,255,0.6);font-size:13px;margin:0 0 4px">No deals shared yet</p><p style="color:rgba(255,255,255,0.4);font-size:11px;margin:0">Open a deal in your wallet → tap the share icon to add it to the community pool</p></div>';
-    }
-
-    // SECTION 2: Community pool (deals shared by other users)
-    html+='<div style="display:flex;align-items:center;justify-content:space-between;margin:8px 0 12px"><p style="color:rgba(255,255,255,0.7);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin:0">👥 Community deals · '+sharedByOthers.length+'</p>'+
-      (sharedByOthers.length>0?'<span style="color:rgba(255,255,255,0.5);font-size:11px;font-weight:600">Tap to claim</span>':'')+
-    '</div>';
-    if(sharedByOthers.length>0){
-      html+=renderCommunityPoolList(sharedByOthers);
-    } else {
-      html+='<div style="background:rgba(255,255,255,0.05);border:1px dashed rgba(255,255,255,0.2);border-radius:14px;padding:24px;text-align:center"><p style="color:rgba(255,255,255,0.6);font-size:13px;margin:0 0 4px">No community deals yet</p><p style="color:rgba(255,255,255,0.4);font-size:11px;margin:0">When other Perq users share their deals,<br>they\'ll appear here for you to claim</p></div>';
     }
   }
 
@@ -266,6 +260,43 @@ function renderWallet(){
 function emptyWalletSection(emoji,title,sub,cta){
   const ctaHtml=cta?'<button class="empty-cta" onclick="'+cta+'()">+ Add</button>':'';
   return '<div style="background:white;border-radius:18px;padding:40px 24px;text-align:center;margin-top:14px"><div style="font-size:48px;opacity:0.4;margin-bottom:8px">'+emoji+'</div><p style="font-size:15px;font-weight:700;margin:0 0 4px;color:#1A1A1A">'+title+'</p><p style="font-size:12px;color:#777;margin:0 0 '+(cta?'16px':'0')+'">'+sub+'</p>'+ctaHtml+'</div>';
+}
+
+// -------- Community page (Shared by you + Pool from others) --------
+function renderCommunity(){
+  const c=document.getElementById('community-content');
+  const sharedByMe=state.deals.filter(d=>d.shared);
+  const pool=load('perq-mvp:communityPool',[]);
+  const today=todayStr();
+  const sharedByOthers=pool.filter(p=>{
+    if(state.deals.find(d=>d.id===p.id))return false;
+    if(!p.expiry)return true;
+    return new Date(p.expiry)>=new Date(today);
+  });
+
+  let html='';
+
+  // SECTION 1: Shared by you
+  html+='<div style="display:flex;align-items:center;justify-content:space-between;margin:8px 0 12px"><p style="color:rgba(255,255,255,0.7);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin:0">📤 Shared by you · '+sharedByMe.length+'</p>'+
+    (sharedByMe.length>0?'<span style="color:rgba(255,225,107,0.9);font-size:11px;font-weight:700">'+sharedByMe.reduce((s,d)=>s+(d.claimCount||0),0)+' claims · '+sharedByMe.reduce((s,d)=>s+5+((d.claimCount||0)*5),0)+' pts earned</span>':'')+
+  '</div>';
+  if(sharedByMe.length>0){
+    html+=renderSharedByMeList(sharedByMe);
+  } else {
+    html+='<div style="background:rgba(255,255,255,0.05);border:1px dashed rgba(255,255,255,0.2);border-radius:14px;padding:24px;text-align:center;margin-bottom:24px"><p style="color:rgba(255,255,255,0.6);font-size:13px;margin:0 0 4px">No deals shared yet</p><p style="color:rgba(255,255,255,0.4);font-size:11px;margin:0">Open any deal in your Wallet → tap share icon → "Share to community pool"</p></div>';
+  }
+
+  // SECTION 2: Community pool from other users
+  html+='<div style="display:flex;align-items:center;justify-content:space-between;margin:24px 0 12px"><p style="color:rgba(255,255,255,0.7);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin:0">👥 Community deals · '+sharedByOthers.length+'</p>'+
+    (sharedByOthers.length>0?'<span style="color:rgba(255,255,255,0.5);font-size:11px;font-weight:600">Tap to claim</span>':'')+
+  '</div>';
+  if(sharedByOthers.length>0){
+    html+=renderCommunityPoolList(sharedByOthers);
+  } else {
+    html+='<div style="background:rgba(255,255,255,0.05);border:1px dashed rgba(255,255,255,0.2);border-radius:14px;padding:24px;text-align:center"><p style="color:rgba(255,255,255,0.6);font-size:13px;margin:0 0 4px">No community deals yet</p><p style="color:rgba(255,255,255,0.4);font-size:11px;margin:0">When other Perq users share their deals,<br>they\'ll appear here for you to claim</p></div>';
+  }
+
+  c.innerHTML=html;
 }
 
 function renderDealsList(active){
@@ -587,9 +618,7 @@ window.confirmShare=function(id){
   }
   closeModal();
   toast('🎉 Shared with community · +5 pts');
-  walletFilter='shared';
-  renderAll();
-  setTimeout(()=>renderWallet(),50);
+  goPage('community');
 };
 
 window.unshareDeal=function(id){
@@ -631,18 +660,22 @@ function renderBrowse(){
   const sample=getSampleLocalDeals();
   local.innerHTML='<p style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:0 0 12px">📍 '+sample.length+' deals nearby</p>'+sample.map(d=>{
     const grad=getGradient(d.category);
-    return '<button onclick="claimBrowseDeal(\''+d.merchant+'\',\''+d.discount+'\',\''+d.category+'\',\''+(d.code||'')+'\',\''+d.expiry+'\')" style="width:100%;background:white;border-radius:16px;padding:12px;margin-bottom:10px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04);text-align:left"><div class="gradient-'+grad+'" style="width:56px;height:56px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:14px;flex-shrink:0">'+escapeHtml(d.discount.split(' ')[0])+'</div><div style="flex:1;min-width:0"><p style="font-size:14px;font-weight:700;margin:0">'+escapeHtml(d.merchant)+'</p><p style="font-size:12px;color:var(--text-dim);margin:2px 0 0">'+escapeHtml(d.discount)+'</p><p style="font-size:11px;color:var(--accent-dark);font-weight:700;margin:4px 0 0">📍 '+d.distance+' mi · '+d.time+'</p></div><span style="background:var(--accent);color:#1A1A1A;padding:8px 14px;border-radius:999px;font-size:12px;font-weight:700">Claim</span></button>';
+    return '<div style="background:white;border-radius:16px;padding:12px;margin-bottom:10px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04);text-align:left;'+(isBrowseDealClaimed(d.merchant,d.discount)?'opacity:0.7':'')+'"><div class="gradient-'+grad+'" style="width:56px;height:56px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:14px;flex-shrink:0">'+escapeHtml(d.discount.split(' ')[0])+'</div><div style="flex:1;min-width:0"><p style="font-size:14px;font-weight:700;margin:0">'+escapeHtml(d.merchant)+'</p><p style="font-size:12px;color:var(--text-dim);margin:2px 0 0">'+escapeHtml(d.discount)+'</p><p style="font-size:11px;color:var(--accent-dark);font-weight:700;margin:4px 0 0">📍 '+d.distance+' mi · '+d.time+'</p></div>'+(isBrowseDealClaimed(d.merchant,d.discount)?'<span style="background:#EAFBF4;color:#065F46;padding:8px 12px;border-radius:999px;font-size:11px;font-weight:700">✓ In wallet</span>':'<button onclick="claimBrowseDeal(\''+d.merchant+'\',\''+d.discount+'\',\''+d.category+'\',\''+(d.code||'')+'\',\''+d.expiry+'\')" style="background:var(--accent);color:#1A1A1A;border:none;padding:8px 14px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer">Claim</button>')+'</div>';
   }).join('');
 
   const onl=document.getElementById('online-deals-list');
   const od=getSampleOnlineDeals();
   onl.innerHTML='<p style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:0 0 12px">🌐 Top online deals</p><div style="columns:2;column-gap:8px">'+od.map(d=>{
     const grad=getGradient(d.category);
-    return '<button onclick="claimBrowseDeal(\''+d.merchant+'\',\''+d.discount+'\',\''+d.category+'\',\''+(d.code||'')+'\',\''+d.expiry+'\')" style="break-inside:avoid;margin-bottom:8px;border-radius:16px;overflow:hidden;position:relative;width:100%;padding:0;display:block;text-align:left"><div class="gradient-'+grad+'" style="height:'+d.h+'px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:30px">'+escapeHtml(d.short)+'</div><div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(180deg,transparent,rgba(0,0,0,0.85));padding:24px 12px 12px;color:white"><p style="font-size:13px;font-weight:700;margin:0">'+escapeHtml(d.merchant)+'</p><p style="font-size:11px;opacity:0.9;margin:0">'+escapeHtml(d.subtitle)+'</p></div></button>';
+    return '<div style="break-inside:avoid;margin-bottom:8px;border-radius:16px;overflow:hidden;position:relative;width:100%;display:block;'+(isBrowseDealClaimed(d.merchant,d.discount)?'opacity:0.7':'')+'"><div class="gradient-'+grad+'" style="height:'+d.h+'px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:30px">'+escapeHtml(d.short)+'</div><div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(180deg,transparent,rgba(0,0,0,0.85));padding:24px 10px 10px;color:white"><p style="font-size:13px;font-weight:700;margin:0">'+escapeHtml(d.merchant)+'</p><p style="font-size:11px;opacity:0.9;margin:0 0 8px">'+escapeHtml(d.subtitle)+'</p>'+(isBrowseDealClaimed(d.merchant,d.discount)?'<span style="display:block;background:rgba(255,255,255,0.95);color:#065F46;padding:6px;border-radius:8px;font-size:11px;font-weight:700;text-align:center">✓ In wallet</span>':'<button onclick="claimBrowseDeal(\''+d.merchant+'\',\''+d.discount+'\',\''+d.category+'\',\''+(d.code||'')+'\',\''+d.expiry+'\')" style="display:block;width:100%;background:var(--accent);color:#1A1A1A;border:none;padding:6px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">Claim</button>')+'</div></div>';
   }).join('')+'</div>';
 
   // Community pool moved to Wallet → Shared tab
   // Browse tab now only has Local + Online
+}
+
+function isBrowseDealClaimed(merchant,discount){
+  return state.deals.some(d=>d.merchant===merchant&&d.discount===discount);
 }
 
 function getSampleLocalDeals(){
@@ -812,17 +845,41 @@ document.getElementById('capture-input').addEventListener('change',(e)=>{
   const mode=e.target.getAttribute('data-mode');
   e.target.removeAttribute('data-mode');
   const r=new FileReader();
-  r.onload=()=>{
+  r.onload=async ()=>{
+    // Compress + normalize orientation for consistent OCR results
+    const compressed=await compressAndOrient(r.result,1600,0.85);
     if(mode==='loyalty'){
-      runLoyaltyScanFlow(r.result);
+      runLoyaltyScanFlow(compressed);
     } else {
-      pendingDealImage=r.result;
+      pendingDealImage=compressed;
       runScanFlow(pendingDealImage);
     }
   };
   r.readAsDataURL(f);
   e.target.value='';
 });
+
+// Compress + auto-orient camera images (helps OCR consistency between camera & upload)
+async function compressAndOrient(dataUrl,maxDim,quality){
+  return new Promise(resolve=>{
+    const img=new Image();
+    img.onload=()=>{
+      let w=img.naturalWidth,h=img.naturalHeight;
+      if(w>maxDim||h>maxDim){
+        const ratio=maxDim/Math.max(w,h);
+        w=Math.round(w*ratio);h=Math.round(h*ratio);
+      }
+      const canvas=document.createElement('canvas');
+      canvas.width=w;canvas.height=h;
+      const ctx=canvas.getContext('2d');
+      ctx.imageSmoothingQuality='high';
+      ctx.drawImage(img,0,0,w,h);
+      resolve(canvas.toDataURL('image/jpeg',quality));
+    };
+    img.onerror=()=>resolve(dataUrl);
+    img.src=dataUrl;
+  });
+}
 
 async function runLoyaltyScanFlow(imageDataUrl){
   const overlay=document.getElementById('scan-overlay');
@@ -1453,9 +1510,8 @@ window.seedCommunityPool=function(){
   // Merge — don't duplicate
   const merged=[...existing,...demos.filter(d=>!existing.find(e=>e.id===d.id))];
   save('perq-mvp:communityPool',merged);
-  toast('✓ Added 4 demo deals · check Wallet → Shared');
-  walletFilter='shared';
-  goPage('wallet');
+  toast('✓ Added 4 demo deals · check Community tab');
+  goPage('community');
 };
 
 window.checkReminders=function(){
@@ -1470,9 +1526,9 @@ window.checkReminders=function(){
 
 // -------- Render All --------
 function renderAll(){
-  renderHome();
   renderWallet();
   renderRewards();
+  renderCommunity();
   renderSettings();
 }
 
