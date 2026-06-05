@@ -270,7 +270,6 @@ button{border:none;background:none;cursor:pointer;color:inherit}
   <div style="display:flex;gap:6px;padding:0 20px 12px">
     <button class="btab" data-btab="local" onclick="setBrowseTab('local')" style="flex:1;background:#1A1A1A;color:white;border:1px solid #1A1A1A;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:700">📍 Local</button>
     <button class="btab" data-btab="online" onclick="setBrowseTab('online')" style="flex:1;background:white;color:var(--text-dim);border:1px solid var(--border);border-radius:999px;padding:8px 12px;font-size:12px;font-weight:700">🌐 Online</button>
-    <button class="btab" data-btab="friends" onclick="setBrowseTab('friends')" style="flex:1;background:white;color:var(--text-dim);border:1px solid var(--border);border-radius:999px;padding:8px 12px;font-size:12px;font-weight:700">👥 Friends</button>
   </div>
   <div class="bsection" data-bsection="local">
     <div style="margin:0 20px 16px;background:white;border-radius:16px;padding:14px 16px;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
@@ -283,7 +282,6 @@ button{border:none;background:none;cursor:pointer;color:inherit}
     <div id="local-deals-list" style="padding:0 20px 16px"></div>
   </div>
   <div class="bsection" data-bsection="online" style="display:none"><div id="online-deals-list" style="padding:8px 20px 16px"></div></div>
-  <div class="bsection" data-bsection="friends" style="display:none"><div id="friends-deals-list" style="padding:8px 20px 16px"></div></div>
 </div>
 </div>
 
@@ -367,14 +365,6 @@ button{border:none;background:none;cursor:pointer;color:inherit}
         <div class="settings-icon-sm" style="background:#FCE7F3;color:#BE185D"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></div>
         <div class="settings-info"><p class="settings-row-title">Friends activity</p><p class="settings-row-sub">When friends share deals</p></div>
         <button class="toggle" data-setting="social" onclick="toggleSetting(this,'social')"></button>
-      </div>
-    </div>
-    <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:8px 0">AI Scanning</p>
-    <div class="settings-group">
-      <div class="settings-row" onclick="editApiKey()">
-        <div class="settings-icon-sm" style="background:#EDE9FE;color:#6366F1"><svg viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg></div>
-        <div class="settings-info"><p class="settings-row-title">AI provider</p><p class="settings-row-sub" id="api-key-status">Tap to add — Anthropic or OpenAI</p></div>
-        <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--text-dim);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
     </div>
     <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:8px 0">Data</p>
@@ -466,6 +456,6 @@ button{border:none;background:none;cursor:pointer;color:inherit}
 <div id="toast"></div>
 <input type="file" id="capture-input" accept="image/*" capture="environment" style="display:none">
 
-<script src="preview-app.js?v=9"></script>
+<script src="preview-app.js?v=10"></script>
 </body>
 </html>

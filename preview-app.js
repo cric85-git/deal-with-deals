@@ -201,11 +201,34 @@ function renderWallet(){
   }
 
   if(walletFilter==='shared'){
-    const sharedDeals=state.deals.filter(d=>d.shared);
-    if(sharedDeals.length>0){
-      html+=renderDealsList(sharedDeals);
+    const sharedByMe=state.deals.filter(d=>d.shared);
+    const pool=load('perq-mvp:communityPool',[]);
+    const today=todayStr();
+    const sharedByOthers=pool.filter(p=>{
+      // Exclude my own shared deals (they appear in 'Shared by you' section)
+      if(state.deals.find(d=>d.id===p.id))return false;
+      if(!p.expiry)return true;
+      return new Date(p.expiry)>=new Date(today);
+    });
+
+    // SECTION 1: Shared by you (always show, even if empty)
+    html+='<div style="display:flex;align-items:center;justify-content:space-between;margin:8px 0 12px"><p style="color:rgba(255,255,255,0.7);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin:0">📤 Shared by you · '+sharedByMe.length+'</p>'+
+      (sharedByMe.length>0?'<span style="color:rgba(255,225,107,0.9);font-size:11px;font-weight:700">'+sharedByMe.reduce((s,d)=>s+(d.claimCount||0),0)+' total claims · '+sharedByMe.reduce((s,d)=>s+5+((d.claimCount||0)*5),0)+' pts earned</span>':'')+
+    '</div>';
+    if(sharedByMe.length>0){
+      html+=renderSharedByMeList(sharedByMe);
     } else {
-      html+=emptyWalletSection('📤','No shared deals yet','Tap the share icon on any deal to share it with friends',null);
+      html+='<div style="background:rgba(255,255,255,0.05);border:1px dashed rgba(255,255,255,0.2);border-radius:14px;padding:24px;text-align:center;margin-bottom:24px"><p style="color:rgba(255,255,255,0.6);font-size:13px;margin:0 0 4px">No deals shared yet</p><p style="color:rgba(255,255,255,0.4);font-size:11px;margin:0">Open a deal in your wallet → tap the share icon to add it to the community pool</p></div>';
+    }
+
+    // SECTION 2: Community pool (deals shared by other users)
+    html+='<div style="display:flex;align-items:center;justify-content:space-between;margin:8px 0 12px"><p style="color:rgba(255,255,255,0.7);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin:0">👥 Community deals · '+sharedByOthers.length+'</p>'+
+      (sharedByOthers.length>0?'<span style="color:rgba(255,255,255,0.5);font-size:11px;font-weight:600">Tap to claim</span>':'')+
+    '</div>';
+    if(sharedByOthers.length>0){
+      html+=renderCommunityPoolList(sharedByOthers);
+    } else {
+      html+='<div style="background:rgba(255,255,255,0.05);border:1px dashed rgba(255,255,255,0.2);border-radius:14px;padding:24px;text-align:center"><p style="color:rgba(255,255,255,0.6);font-size:13px;margin:0 0 4px">No community deals yet</p><p style="color:rgba(255,255,255,0.4);font-size:11px;margin:0">When other Perq users share their deals,<br>they\'ll appear here for you to claim</p></div>';
     }
   }
 
@@ -286,6 +309,99 @@ function renderDealsList(active){
   return html;
 }
 
+function renderSharedByMeList(deals){
+  return deals.map(d=>{
+    const grad=getGradient(d.category);
+    const du=daysUntil(d.expiry);
+    const expText=du===null?'No expiry':du===0?'Expires today':du===1?'Expires tomorrow':du<0?'Expired':du+' days left';
+    const claims=d.claimCount||0;
+    const earned=5+claims*5;
+    return '<div style="background:white;border-radius:18px;padding:14px 16px;margin-bottom:10px;box-shadow:0 4px 12px rgba(0,0,0,0.2)">'+
+      '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">'+
+        '<div class="gradient-'+grad+'" style="width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:14px;flex-shrink:0;text-align:center;line-height:1">'+escapeHtml((d.discount.match(/\$\d{1,3}(?:,\d{3})*|\d+%|FREE/i)||['?'])[0]).slice(0,5)+'</div>'+
+        '<div style="flex:1;min-width:0">'+
+          '<p style="font-size:14px;font-weight:700;margin:0;color:#1A1A1A">'+escapeHtml(d.merchant)+'</p>'+
+          '<p style="font-size:11px;color:#777;margin:2px 0 0">'+escapeHtml(d.discount)+' · '+expText+'</p>'+
+        '</div>'+
+      '</div>'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;background:#FAFAFA;border-radius:10px;padding:8px 12px">'+
+        '<div style="display:flex;align-items:center;gap:14px">'+
+          '<div><span style="font-size:18px;font-weight:800;color:#1A1A1A">'+claims+'</span><span style="font-size:11px;color:#777;margin-left:4px;font-weight:600">claim'+(claims===1?'':'s')+'</span></div>'+
+          '<div><span style="font-size:18px;font-weight:800;color:#B45309">+'+earned+'</span><span style="font-size:11px;color:#777;margin-left:4px;font-weight:600">pts earned</span></div>'+
+        '</div>'+
+        '<button onclick="unshareDeal(\''+d.id+'\')" style="background:#FFE5E5;color:#DC2626;border:none;border-radius:999px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer">Pull</button>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+function renderCommunityPoolList(pool){
+  return pool.map(p=>{
+    const grad=getGradient(p.category);
+    const du=daysUntil(p.expiry);
+    const expText=du===null?'No expiry':du===0?'Today!':du===1?'Tomorrow':du+'d left';
+    const initial=(p.sharedBy||'?').charAt(0).toUpperCase();
+    // Generate consistent avatar color from name
+    const hash=Array.from(p.sharedBy||'').reduce((a,c)=>a+c.charCodeAt(0),0);
+    const hue=(hash*47)%360;
+    return '<div style="background:white;border-radius:18px;padding:14px 16px;margin-bottom:10px;box-shadow:0 4px 12px rgba(0,0,0,0.2)">'+
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'+
+        '<div style="width:32px;height:32px;border-radius:50%;background:hsl('+hue+',60%,55%);color:white;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0">'+escapeHtml(initial)+'</div>'+
+        '<div style="flex:1;min-width:0"><p style="font-size:13px;font-weight:700;margin:0;color:#1A1A1A">'+escapeHtml(p.sharedBy)+'</p><p style="font-size:11px;color:#777;margin:1px 0 0">'+(p.claimCount||0)+' claim'+(p.claimCount===1?'':'s')+' · '+expText+'</p></div>'+
+      '</div>'+
+      '<div class="gradient-'+grad+'" style="border-radius:12px;padding:14px;color:white;margin-bottom:10px">'+
+        '<p style="font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;opacity:0.9;margin:0">'+escapeHtml(p.category)+'</p>'+
+        '<h4 style="font-size:18px;font-weight:800;margin:4px 0">'+escapeHtml(p.merchant)+'</h4>'+
+        '<p style="font-size:14px;opacity:0.95;margin:0">'+escapeHtml(p.discount)+'</p>'+
+      '</div>'+
+      '<button onclick="claimFromPool(\''+p.id+'\')" style="width:100%;background:#1A1A1A;color:white;border:none;padding:11px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">Claim deal</button>'+
+    '</div>';
+  }).join('');
+}
+
+window.claimFromPool=function(id){
+  const pool=load('perq-mvp:communityPool',[]);
+  const p=pool.find(x=>x.id===id);
+  if(!p)return;
+  // Add to user's wallet
+  const newDeal={
+    id:uid(),
+    poolId:id,
+    merchant:p.merchant,
+    discount:p.discount,
+    category:p.category,
+    code:p.code||'',
+    expiry:p.expiry||'',
+    address:p.address||'',
+    url:p.url||'',
+    value:p.value||5,
+    notes:'Claimed from community',
+    redeemed:false,
+    createdAt:Date.now()
+  };
+  state.deals.push(newDeal);
+  // Increment claim count on pool
+  p.claimCount=(p.claimCount||0)+1;
+  save('perq-mvp:communityPool',pool);
+  // If the original sharer is also you (testing), credit yourself
+  const original=state.deals.find(d=>d.id===id);
+  if(original){
+    original.claimCount=(original.claimCount||0)+1;
+    state.rewards.points+=5;
+    state.rewards.spins=(state.rewards.spins||0)+(original.claimCount%5===0?1:0);
+    save(K.deals,state.deals);
+    save(K.rewards,state.rewards);
+    if(original.claimCount%5===0)toast('🎉 +5 pts · +1 bonus spin (5 claims!)');
+    else toast('🎉 Claimed · +5 pts to '+(p.sharedBy||'sharer'));
+  } else {
+    toast('🎉 Added to wallet');
+  }
+  state.rewards.spins=(state.rewards.spins||0)+1;
+  save(K.deals,state.deals);
+  save(K.rewards,state.rewards);
+  renderAll();
+};
+
 function renderProgramsList(){
   return state.programs.map((p,i)=>{
     const grads=['linear-gradient(135deg,#6366F1,#C084FC)','linear-gradient(135deg,#F472B6,#FB923C)','linear-gradient(135deg,#1E40AF,#3B82F6)','linear-gradient(135deg,#00C9A7,#4FACFE)'];
@@ -355,63 +471,76 @@ window.redeemDeal=function(id){
 window.shareDeal=function(id){
   const d=state.deals.find(x=>x.id===id);
   if(!d)return;
-  const text=d.merchant+': '+d.discount+(d.code?' (code '+d.code+')':'')+(d.expiry?' — expires '+fmtDate(d.expiry):'');
-  const encodedText=encodeURIComponent(text);
-  const shareUrl=encodeURIComponent(location.origin+location.pathname+'?claim='+btoa(JSON.stringify({m:d.merchant,d:d.discount,c:d.code||'',e:d.expiry||''})).replace(/=/g,''));
+  const claimed=d.claimCount||0;
+  const sharedAlready=d.shared;
 
-  // Custom share modal — shows what will happen + share targets
-  const html='<div class="modal-handle"></div><h3 class="modal-title">Share this deal</h3>'+
-    '<div style="background:linear-gradient(135deg,'+(d.category==='Travel'?'#6366F1,#C084FC':d.category==='Groceries'?'#00C9A7,#4FACFE':'#FF6B6B,#FFA06B')+');border-radius:14px;padding:14px;color:white;margin-bottom:14px">'+
+  const html='<div class="modal-handle"></div><h3 class="modal-title">Share with community</h3>'+
+    '<div style="background:linear-gradient(135deg,'+(d.category==='Travel'?'#6366F1,#C084FC':d.category==='Groceries'?'#00C9A7,#4FACFE':d.category==='Apparel'?'#F472B6,#FB923C':'#FF6B6B,#FFA06B')+');border-radius:14px;padding:14px;color:white;margin-bottom:14px">'+
       '<p style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;opacity:0.9;margin:0">'+escapeHtml(d.category||'Deal')+'</p>'+
       '<h4 style="font-size:18px;font-weight:800;margin:4px 0 6px">'+escapeHtml(d.merchant)+'</h4>'+
       '<p style="font-size:14px;font-weight:600;margin:0;opacity:0.95">'+escapeHtml(d.discount)+'</p>'+
+      (d.expiry?'<p style="font-size:11px;opacity:0.85;margin:6px 0 0">Expires '+fmtDate(d.expiry)+'</p>':'')+
     '</div>'+
-    '<p style="font-size:12px;color:var(--text-dim);margin:0 0 12px;line-height:1.5">Sharing earns +5 pts. The deal will show up in the <strong>Shared</strong> tab.</p>'+
-    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px">'+
-      '<a href="sms:?body='+encodedText+'%20'+shareUrl+'" onclick="confirmShare(\''+d.id+'\')" style="text-decoration:none;background:#F0F0F0;border-radius:14px;padding:14px 8px;text-align:center;color:#1A1A1A">'+
-        '<div style="width:36px;height:36px;border-radius:50%;background:#34D399;color:white;margin:0 auto 6px;display:flex;align-items:center;justify-content:center">'+
-        '<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'+
-        '</div><span style="font-size:11px;font-weight:600">Message</span></a>'+
-      '<a href="https://wa.me/?text='+encodedText+'%20'+shareUrl+'" target="_blank" onclick="confirmShare(\''+d.id+'\')" style="text-decoration:none;background:#F0F0F0;border-radius:14px;padding:14px 8px;text-align:center;color:#1A1A1A">'+
-        '<div style="width:36px;height:36px;border-radius:50%;background:#25D366;color:white;margin:0 auto 6px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900">W</div>'+
-        '<span style="font-size:11px;font-weight:600">WhatsApp</span></a>'+
-      '<a href="mailto:?subject=Deal%20on%20Perq&body='+encodedText+'%0A%0A'+shareUrl+'" onclick="confirmShare(\''+d.id+'\')" style="text-decoration:none;background:#F0F0F0;border-radius:14px;padding:14px 8px;text-align:center;color:#1A1A1A">'+
-        '<div style="width:36px;height:36px;border-radius:50%;background:#4FACFE;color:white;margin:0 auto 6px;display:flex;align-items:center;justify-content:center">'+
-        '<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>'+
-        '</div><span style="font-size:11px;font-weight:600">Email</span></a>'+
-      '<button onclick="copyShareText(\''+d.id+'\')" style="background:#F0F0F0;border:none;border-radius:14px;padding:14px 8px;text-align:center;color:#1A1A1A;cursor:pointer">'+
-        '<div style="width:36px;height:36px;border-radius:50%;background:#6366F1;color:white;margin:0 auto 6px;display:flex;align-items:center;justify-content:center">'+
-        '<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>'+
-        '</div><span style="font-size:11px;font-weight:600">Copy link</span></button>'+
+    '<div style="background:#F0F9FF;border:1px solid #4FACFE;border-radius:12px;padding:14px;margin-bottom:14px">'+
+      '<p style="font-size:13px;font-weight:700;color:#075985;margin:0 0 6px;display:flex;align-items:center;gap:6px">'+
+        '<svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:none;stroke:#075985;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><circle cx="17" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>'+
+        'Pool with the Perq community</p>'+
+      '<p style="font-size:12px;color:#0c4a6e;margin:0;line-height:1.5">Other users can claim this deal until it expires. You earn <strong>+5 pts</strong> when you share, plus <strong>+5 pts</strong> every time someone claims it.</p>'+
     '</div>'+
-    '<button class="btn-secondary" onclick="closeModal()" style="width:100%;padding:14px;border-radius:14px;font-size:14px;font-weight:700;background:#F0F0F0;color:#333;border:none">Cancel</button>';
+    (sharedAlready?'<div style="background:#EAFBF4;border:1px solid #00C9A7;border-radius:10px;padding:10px;margin-bottom:14px;font-size:12px;color:#065F46;font-weight:600;text-align:center">✓ Already shared · '+claimed+' claim'+(claimed===1?'':'s')+' · earned '+(claimed*5+5)+' pts</div>':'')+
+    '<div style="display:flex;gap:8px">'+
+      '<button class="btn-secondary" onclick="closeModal()" style="flex:1;padding:14px;border-radius:14px;font-size:14px;font-weight:700;background:#F0F0F0;color:#333;border:none">Cancel</button>'+
+      (sharedAlready?'<button class="btn-primary" onclick="unshareDeal(\''+d.id+'\')" style="flex:1;padding:14px;border-radius:14px;font-size:14px;font-weight:700;background:#FFE5E5;color:#DC2626;border:none">Pull from pool</button>':'<button class="btn-primary" onclick="confirmShare(\''+d.id+'\')" style="flex:1;padding:14px;border-radius:14px;font-size:14px;font-weight:700;background:#1A1A1A;color:white;border:none">Share to pool · +5 pts</button>')+
+    '</div>';
   openModal(html);
 };
 
 window.confirmShare=function(id){
   const d=state.deals.find(x=>x.id===id);
   if(!d)return;
-  if(!d.shared){
-    d.shared=true;
-    d.sharedAt=Date.now();
-    state.rewards.points+=5;
-    save(K.deals,state.deals);save(K.rewards,state.rewards);
+  d.shared=true;
+  d.sharedAt=Date.now();
+  d.claimCount=d.claimCount||0;
+  state.rewards.points+=5;
+  save(K.deals,state.deals);save(K.rewards,state.rewards);
+  // Also save to community pool (local-first; will become a backend call later)
+  const pool=load('perq-mvp:communityPool',[]);
+  if(!pool.find(p=>p.id===d.id)){
+    pool.push({
+      id:d.id,
+      sharedBy:state.profile?.name||'You',
+      sharedAt:Date.now(),
+      merchant:d.merchant,
+      discount:d.discount,
+      category:d.category,
+      code:d.code,
+      expiry:d.expiry,
+      address:d.address,
+      url:d.url,
+      value:d.value,
+      claimCount:0
+    });
+    save('perq-mvp:communityPool',pool);
   }
-  // Modal closes via the link click; show toast
-  setTimeout(()=>{closeModal();toast('✓ Shared · added to Shared tab · +5 pts');renderAll();},100);
+  closeModal();
+  toast('🎉 Shared with community · +5 pts');
+  walletFilter='shared';
+  renderAll();
+  setTimeout(()=>renderWallet(),50);
 };
 
-window.copyShareText=function(id){
+window.unshareDeal=function(id){
   const d=state.deals.find(x=>x.id===id);
   if(!d)return;
-  const text=d.merchant+': '+d.discount+(d.code?' (code '+d.code+')':'')+(d.expiry?' — expires '+fmtDate(d.expiry):'')+'\n\n'+location.origin+location.pathname+'?claim='+btoa(JSON.stringify({m:d.merchant,d:d.discount,c:d.code||'',e:d.expiry||''})).replace(/=/g,'');
-  if(navigator.clipboard){
-    navigator.clipboard.writeText(text).then(()=>{
-      confirmShare(id);
-    }).catch(()=>toast('Copy failed'));
-  } else {
-    confirmShare(id);
-  }
+  d.shared=false;
+  d.sharedAt=null;
+  save(K.deals,state.deals);
+  // Remove from community pool
+  const pool=load('perq-mvp:communityPool',[]).filter(p=>p.id!==id);
+  save('perq-mvp:communityPool',pool);
+  closeModal();
+  toast('Pulled from community pool');
+  renderAll();
 };
 
 window.deleteDeal=function(id){
@@ -449,8 +578,8 @@ function renderBrowse(){
     return '<button onclick="claimBrowseDeal(\''+d.merchant+'\',\''+d.discount+'\',\''+d.category+'\',\''+(d.code||'')+'\',\''+d.expiry+'\')" style="break-inside:avoid;margin-bottom:8px;border-radius:16px;overflow:hidden;position:relative;width:100%;padding:0;display:block;text-align:left"><div class="gradient-'+grad+'" style="height:'+d.h+'px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:30px">'+escapeHtml(d.short)+'</div><div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(180deg,transparent,rgba(0,0,0,0.85));padding:24px 12px 12px;color:white"><p style="font-size:13px;font-weight:700;margin:0">'+escapeHtml(d.merchant)+'</p><p style="font-size:11px;opacity:0.9;margin:0">'+escapeHtml(d.subtitle)+'</p></div></button>';
   }).join('')+'</div>';
 
-  const fr=document.getElementById('friends-deals-list');
-  fr.innerHTML='<p style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:0 0 12px">👥 Shared by friends</p><div style="background:white;border-radius:16px;padding:24px;text-align:center;color:var(--text-dim)"><div style="font-size:40px;margin-bottom:8px;opacity:0.4">👥</div><p style="font-size:14px;font-weight:700;margin:0 0 4px;color:#1A1A1A">No friends yet</p><p style="font-size:12px;margin:0">Connect with friends to see their shared deals here.</p></div>';
+  // Community pool moved to Wallet → Shared tab
+  // Browse tab now only has Local + Online
 }
 
 function getSampleLocalDeals(){
