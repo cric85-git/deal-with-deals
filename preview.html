@@ -369,6 +369,11 @@ button{border:none;background:none;cursor:pointer;color:inherit}
     </div>
     <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:8px 0">Data</p>
     <div class="settings-group">
+      <div class="settings-row" onclick="seedCommunityPool()">
+        <div class="settings-icon-sm" style="background:#EAFBF4;color:#059669"><svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><circle cx="17" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg></div>
+        <div class="settings-info"><p class="settings-row-title">Add 3 demo community deals</p><p class="settings-row-sub">For testing the Shared tab flow</p></div>
+        <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--text-dim);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
       <div class="settings-row" onclick="resetApp()">
         <div class="settings-icon-sm" style="background:#FEE2E2;color:#DC2626"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg></div>
         <div class="settings-info"><p class="settings-row-title" style="color:#DC2626">Reset everything</p><p class="settings-row-sub">Clear all data and start over</p></div>
@@ -456,6 +461,6 @@ button{border:none;background:none;cursor:pointer;color:inherit}
 <div id="toast"></div>
 <input type="file" id="capture-input" accept="image/*" capture="environment" style="display:none">
 
-<script src="preview-app.js?v=10"></script>
+<script src="preview-app.js?v=11"></script>
 </body>
 </html>
