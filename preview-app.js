@@ -613,8 +613,8 @@ async function runScanFlow(imageDataUrl){
 
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 
-// Real OCR — calls Claude Vision API
-// Priority: 1) deployed proxy URL  2) user's own API key in settings  3) error
+// Real OCR — calls Claude Vision OR OpenAI Vision API
+// Priority: 1) deployed proxy URL  2) user's API key (auto-detects provider)  3) error
 const OCR_PROXY_URL=''; // set after deploying backend/ocr-proxy
 async function extractDealFromImage(imageDataUrl){
   const match=imageDataUrl.match(/^data:(image\/[a-z]+);base64,(.+)$/);
@@ -650,10 +650,18 @@ Read carefully — get the merchant name and discount EXACTLY as they appear. Re
     }catch(e){/* fall through */}
   }
 
-  // Fallback: user's own API key
+  // Fallback: user's own API key — auto-detect provider
   const apiKey=load('perq-mvp:apiKey','');
   if(!apiKey)throw new Error('NO_KEY');
+  const provider=load('perq-mvp:apiProvider','anthropic');
 
+  if(provider==='openai'||apiKey.startsWith('sk-proj-')||(apiKey.startsWith('sk-')&&!apiKey.startsWith('sk-ant-'))){
+    return await extractWithOpenAI(apiKey,imageDataUrl,prompt);
+  }
+  return await extractWithAnthropic(apiKey,mediaType,b64,prompt);
+}
+
+async function extractWithAnthropic(apiKey,mediaType,b64,prompt){
   const response=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
     headers:{
@@ -671,19 +679,56 @@ Read carefully — get the merchant name and discount EXACTLY as they appear. Re
       ]}]
     })
   });
-
   if(!response.ok){
     const errText=await response.text();
-    let errMsg='API error '+response.status;
+    let errMsg='Anthropic error '+response.status;
     try{const j=JSON.parse(errText);if(j.error&&j.error.message)errMsg=j.error.message;}catch(e){}
     throw new Error(errMsg);
   }
-
   const data=await response.json();
   const text=(data.content||[]).map(b=>b.text||'').join('').trim();
-  const cleaned=text.replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/i,'').trim();
+  return parseJsonResponse(text);
+}
+
+async function extractWithOpenAI(apiKey,imageDataUrl,prompt){
+  const response=await fetch('https://api.openai.com/v1/chat/completions',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'Authorization':'Bearer '+apiKey
+    },
+    body:JSON.stringify({
+      model:'gpt-4o',
+      max_tokens:600,
+      messages:[{
+        role:'user',
+        content:[
+          {type:'text',text:prompt},
+          {type:'image_url',image_url:{url:imageDataUrl}}
+        ]
+      }]
+    })
+  });
+  if(!response.ok){
+    const errText=await response.text();
+    let errMsg='OpenAI error '+response.status;
+    try{const j=JSON.parse(errText);if(j.error&&j.error.message)errMsg=j.error.message;}catch(e){}
+    throw new Error(errMsg);
+  }
+  const data=await response.json();
+  const text=data.choices?.[0]?.message?.content||'';
+  return parseJsonResponse(text);
+}
+
+function parseJsonResponse(text){
+  const cleaned=text.trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/i,'').trim();
   try{return JSON.parse(cleaned);}
-  catch(e){throw new Error('AI returned non-JSON response');}
+  catch(e){
+    // Try to find JSON object in the response
+    const m=cleaned.match(/\{[\s\S]*\}/);
+    if(m){try{return JSON.parse(m[0]);}catch(ee){}}
+    throw new Error('AI returned non-JSON response');
+  }
 }
 
 window.openDealPreview=function(data,image){
@@ -805,10 +850,17 @@ function renderSettings(){
   });
   // API key status
   const apiKey=load('perq-mvp:apiKey','');
+  const provider=load('perq-mvp:apiProvider','anthropic');
   const statusEl=document.getElementById('api-key-status');
   if(statusEl){
-    statusEl.textContent=apiKey?'✓ Connected — AI scan active':'Tap to add — enables real AI extraction';
-    statusEl.style.color=apiKey?'#059669':'';
+    if(apiKey){
+      const provName=provider==='openai'?'OpenAI GPT-4o':'Claude';
+      statusEl.textContent='✓ '+provName+' connected — AI scan active';
+      statusEl.style.color='#059669';
+    } else {
+      statusEl.textContent='Tap to add — Anthropic or OpenAI';
+      statusEl.style.color='';
+    }
   }
 }
 
@@ -829,22 +881,51 @@ window.editProfile=function(){
 
 window.editApiKey=function(){
   const current=load('perq-mvp:apiKey','');
+  const provider=load('perq-mvp:apiProvider','anthropic');
   const masked=current?current.slice(0,8)+'…'+current.slice(-4):'';
-  const html='<div class="modal-handle"></div><h3 class="modal-title">Anthropic API key</h3>'+
+  const html='<div class="modal-handle"></div><h3 class="modal-title">AI Scanning</h3>'+
     '<div style="background:#F0F9FF;border:1px solid #4FACFE;border-radius:12px;padding:12px;margin-bottom:14px;font-size:12px;color:#075985;line-height:1.5">'+
-    '🔑 Get a key from <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:#075985;font-weight:700">console.anthropic.com</a>. Stored only on this device.'+
+    '🔑 Use your own API key — stored only on this device. ~$0.001-0.01 per scan.'+
     '</div>'+
+    '<div class="form-row"><label>Provider</label>'+
+    '<div style="display:flex;gap:8px">'+
+      '<button id="prov-anthropic" onclick="setProvider(\'anthropic\')" style="flex:1;padding:12px;border-radius:12px;font-size:13px;font-weight:700;'+(provider==='anthropic'?'background:#1A1A1A;color:white':'background:#F0F0F0;color:#666')+'">Anthropic (Claude)</button>'+
+      '<button id="prov-openai" onclick="setProvider(\'openai\')" style="flex:1;padding:12px;border-radius:12px;font-size:13px;font-weight:700;'+(provider==='openai'?'background:#1A1A1A;color:white':'background:#F0F0F0;color:#666')+'">OpenAI (GPT-4o)</button>'+
+    '</div></div>'+
+    '<div id="prov-help" style="font-size:11px;color:var(--text-dim);margin:0 0 12px;line-height:1.5"></div>'+
     (current?'<p style="font-size:12px;color:var(--text-dim);margin:0 0 8px">Current: <code style="background:#f5f5f5;padding:2px 6px;border-radius:4px">'+escapeHtml(masked)+'</code></p>':'')+
-    '<div class="form-row"><label>API key (sk-ant-…)</label><input id="ak-input" type="password" placeholder="sk-ant-api03-…" autocomplete="off"></div>'+
+    '<div class="form-row"><label>API key</label><input id="ak-input" type="password" placeholder="" autocomplete="off"></div>'+
     '<div class="form-actions">'+(current?'<button class="btn-secondary" onclick="clearApiKey()" style="background:#FFE5E5;color:#DC2626">Remove</button>':'<button class="btn-secondary" onclick="closeModal()">Cancel</button>')+
     '<button class="btn-primary" onclick="saveApiKey()">Save</button></div>';
   openModal(html);
+  updateProviderHelp(provider);
 };
+
+window.setProvider=function(p){
+  save('perq-mvp:apiProvider',p);
+  document.getElementById('prov-anthropic').style.cssText='flex:1;padding:12px;border-radius:12px;font-size:13px;font-weight:700;'+(p==='anthropic'?'background:#1A1A1A;color:white':'background:#F0F0F0;color:#666');
+  document.getElementById('prov-openai').style.cssText='flex:1;padding:12px;border-radius:12px;font-size:13px;font-weight:700;'+(p==='openai'?'background:#1A1A1A;color:white':'background:#F0F0F0;color:#666');
+  updateProviderHelp(p);
+};
+
+function updateProviderHelp(p){
+  const help=document.getElementById('prov-help');
+  const input=document.getElementById('ak-input');
+  if(p==='openai'){
+    help.innerHTML='Get a key from <a href="https://platform.openai.com/api-keys" target="_blank" style="color:#2563EB;font-weight:700">platform.openai.com/api-keys</a>. Requires billing setup with $5+ credit. Uses GPT-4o vision.';
+    if(input)input.placeholder='sk-proj-… or sk-…';
+  } else {
+    help.innerHTML='Get a key from <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:#2563EB;font-weight:700">console.anthropic.com</a>. Uses Claude Sonnet 4.5 vision.';
+    if(input)input.placeholder='sk-ant-api03-…';
+  }
+}
 
 window.saveApiKey=function(){
   const key=document.getElementById('ak-input').value.trim();
   if(!key){toast('Paste your API key first');return;}
-  if(!key.startsWith('sk-ant-')){toast('Key should start with sk-ant-');return;}
+  const provider=load('perq-mvp:apiProvider','anthropic');
+  if(provider==='anthropic'&&!key.startsWith('sk-ant-')){toast('Anthropic key should start with sk-ant-');return;}
+  if(provider==='openai'&&!key.startsWith('sk-')){toast('OpenAI key should start with sk-');return;}
   save('perq-mvp:apiKey',key);
   closeModal();
   toast('✓ API key saved — AI scan enabled');
