@@ -588,35 +588,102 @@ async function runScanFlow(imageDataUrl){
 
   // Wait for extraction to complete
   let extracted=null;
-  try{extracted=await extractPromise;}catch(e){}
+  let extractError=null;
+  try{extracted=await extractPromise;}
+  catch(e){extractError=e;}
 
   // Final step
-  document.getElementById('scan-title').textContent=steps[3].title;
-  document.getElementById('scan-sub').textContent=steps[3].sub;
+  if(extractError&&extractError.message==='NO_KEY'){
+    document.getElementById('scan-title').textContent='OCR not configured';
+    document.getElementById('scan-sub').textContent='Add your Anthropic API key in Settings to enable AI scanning';
+  } else if(extractError){
+    document.getElementById('scan-title').textContent='Scan failed';
+    document.getElementById('scan-sub').textContent=extractError.message+' — fill in manually';
+  } else {
+    document.getElementById('scan-title').textContent=steps[3].title;
+    document.getElementById('scan-sub').textContent=steps[3].sub;
+  }
   document.getElementById('scan-step-4').setAttribute('data-active','true');
-  await sleep(700);
+  await sleep(extractError?1800:700);
 
-  // Hide scan overlay, show compact preview
+  // Hide scan overlay, show preview with whatever we got (empty if error)
   overlay.style.display='none';
   openDealPreview(extracted||{},imageDataUrl);
 }
 
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 
-// Mock AI extraction — for MVP demo. Real: call OCR proxy or Claude API
+// Real OCR — calls Claude Vision API
+// Priority: 1) deployed proxy URL  2) user's own API key in settings  3) error
+const OCR_PROXY_URL=''; // set after deploying backend/ocr-proxy
 async function extractDealFromImage(imageDataUrl){
-  // Simulated extraction — for demo / MVP test purposes
-  // Real implementation would POST imageDataUrl to /backend/ocr-proxy
-  await sleep(1800); // Simulate API latency
-  // Smart heuristic mock based on common patterns
-  const samples=[
-    {merchant:'Houk Air Conditioning',discount:'Up to $2,000 off new system',value:2000,category:'Home',code:'',expiry:'2026-08-31',address:'',url:'https://houkac.com/about/specials'},
-    {merchant:'Whole Foods',discount:'20% off produce',value:15,category:'Groceries',code:'FRESH20',expiry:futureDate(14),address:'',url:''},
-    {merchant:'Target',discount:'$10 off $50',value:10,category:'Home',code:'SAVE10',expiry:futureDate(21),address:'',url:''},
-    {merchant:'Starbucks',discount:'Free grande drink',value:6,category:'Dining',code:'',expiry:futureDate(7),address:'',url:''}
-  ];
-  // Pick random sample to demonstrate AI working
-  return samples[Math.floor(Math.random()*samples.length)];
+  const match=imageDataUrl.match(/^data:(image\/[a-z]+);base64,(.+)$/);
+  if(!match)throw new Error('Invalid image format');
+  const mediaType=match[1];
+  const b64=match[2];
+
+  const prompt=`Extract coupon/deal details from this image. Return ONLY a JSON object with these fields:
+{
+  "merchant": "store/brand name as shown on the coupon",
+  "discount": "the actual offer text, e.g. 'Up to $2,000 off' or '20% off produce'",
+  "code": "promo code if visible, else empty string",
+  "expiry": "YYYY-MM-DD format if a date is visible, else empty string",
+  "category": "one of: Groceries, Dining, Apparel, Travel, Beauty, Home, Electronics, Other",
+  "value": estimated dollar value as a number (e.g. 2000 for $2,000 off, 20 for 20% off),
+  "address": "business address if visible, else empty string",
+  "url": "website URL if visible, else empty string"
+}
+Read carefully — get the merchant name and discount EXACTLY as they appear. Return only the JSON, no other text.`;
+
+  // Try proxy first
+  if(OCR_PROXY_URL){
+    try{
+      const resp=await fetch(OCR_PROXY_URL,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({image:b64,mediaType})
+      });
+      if(resp.ok){
+        const data=await resp.json();
+        if(data.ok&&data.result)return data.result;
+      }
+    }catch(e){/* fall through */}
+  }
+
+  // Fallback: user's own API key
+  const apiKey=load('perq-mvp:apiKey','');
+  if(!apiKey)throw new Error('NO_KEY');
+
+  const response=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'x-api-key':apiKey,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true'
+    },
+    body:JSON.stringify({
+      model:'claude-sonnet-4-5',
+      max_tokens:600,
+      messages:[{role:'user',content:[
+        {type:'image',source:{type:'base64',media_type:mediaType,data:b64}},
+        {type:'text',text:prompt}
+      ]}]
+    })
+  });
+
+  if(!response.ok){
+    const errText=await response.text();
+    let errMsg='API error '+response.status;
+    try{const j=JSON.parse(errText);if(j.error&&j.error.message)errMsg=j.error.message;}catch(e){}
+    throw new Error(errMsg);
+  }
+
+  const data=await response.json();
+  const text=(data.content||[]).map(b=>b.text||'').join('').trim();
+  const cleaned=text.replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/i,'').trim();
+  try{return JSON.parse(cleaned);}
+  catch(e){throw new Error('AI returned non-JSON response');}
 }
 
 window.openDealPreview=function(data,image){
@@ -736,6 +803,13 @@ function renderSettings(){
     const k=t.getAttribute('data-setting');
     if(state.settings[k])t.classList.add('on');else t.classList.remove('on');
   });
+  // API key status
+  const apiKey=load('perq-mvp:apiKey','');
+  const statusEl=document.getElementById('api-key-status');
+  if(statusEl){
+    statusEl.textContent=apiKey?'✓ Connected — AI scan active':'Tap to add — enables real AI extraction';
+    statusEl.style.color=apiKey?'#059669':'';
+  }
 }
 
 window.toggleSetting=function(el,key){
@@ -751,6 +825,37 @@ window.editProfile=function(){
     '<div class="form-row"><label>Email</label><input id="p-email" type="email" value="'+escapeHtml(state.profile?.email||'')+'" placeholder="for email integration later"></div>'+
     '<div class="form-actions"><button class="btn-secondary" onclick="closeModal()">Cancel</button><button class="btn-primary" onclick="saveProfile()">Save</button></div>';
   openModal(html);
+};
+
+window.editApiKey=function(){
+  const current=load('perq-mvp:apiKey','');
+  const masked=current?current.slice(0,8)+'…'+current.slice(-4):'';
+  const html='<div class="modal-handle"></div><h3 class="modal-title">Anthropic API key</h3>'+
+    '<div style="background:#F0F9FF;border:1px solid #4FACFE;border-radius:12px;padding:12px;margin-bottom:14px;font-size:12px;color:#075985;line-height:1.5">'+
+    '🔑 Get a key from <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:#075985;font-weight:700">console.anthropic.com</a>. Stored only on this device.'+
+    '</div>'+
+    (current?'<p style="font-size:12px;color:var(--text-dim);margin:0 0 8px">Current: <code style="background:#f5f5f5;padding:2px 6px;border-radius:4px">'+escapeHtml(masked)+'</code></p>':'')+
+    '<div class="form-row"><label>API key (sk-ant-…)</label><input id="ak-input" type="password" placeholder="sk-ant-api03-…" autocomplete="off"></div>'+
+    '<div class="form-actions">'+(current?'<button class="btn-secondary" onclick="clearApiKey()" style="background:#FFE5E5;color:#DC2626">Remove</button>':'<button class="btn-secondary" onclick="closeModal()">Cancel</button>')+
+    '<button class="btn-primary" onclick="saveApiKey()">Save</button></div>';
+  openModal(html);
+};
+
+window.saveApiKey=function(){
+  const key=document.getElementById('ak-input').value.trim();
+  if(!key){toast('Paste your API key first');return;}
+  if(!key.startsWith('sk-ant-')){toast('Key should start with sk-ant-');return;}
+  save('perq-mvp:apiKey',key);
+  closeModal();
+  toast('✓ API key saved — AI scan enabled');
+  renderSettings();
+};
+
+window.clearApiKey=function(){
+  localStorage.removeItem('perq-mvp:apiKey');
+  closeModal();
+  toast('API key removed');
+  renderSettings();
 };
 
 window.saveProfile=function(){
