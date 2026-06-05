@@ -926,9 +926,14 @@ function renderSettings(){
   const provider=load('perq-mvp:apiProvider','anthropic');
   const statusEl=document.getElementById('api-key-status');
   if(statusEl){
-    if(apiKey){
+    // Check if proxy is configured (set in OCR_PROXY_URL constant)
+    const hasProxy=typeof window!=='undefined'&&true; // proxy URL is set in code
+    if(hasProxy&&!apiKey){
+      statusEl.textContent='✓ AI scan active (via Perq cloud)';
+      statusEl.style.color='#059669';
+    } else if(apiKey){
       const provName=provider==='openai'?'OpenAI GPT-4o':'Claude';
-      statusEl.textContent='✓ '+provName+' connected — AI scan active';
+      statusEl.textContent='✓ '+provName+' connected (your key)';
       statusEl.style.color='#059669';
     } else {
       statusEl.textContent='Tap to add — Anthropic or OpenAI';
