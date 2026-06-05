@@ -205,7 +205,7 @@ function renderWallet(){
     if(sharedDeals.length>0){
       html+=renderDealsList(sharedDeals);
     } else {
-      html+=emptyWalletSection('📤','No shared deals yet','Tap the share icon on any deal to share it with friends','closeModal');
+      html+=emptyWalletSection('📤','No shared deals yet','Tap the share icon on any deal to share it with friends',null);
     }
   }
 
@@ -241,7 +241,8 @@ function renderWallet(){
 }
 
 function emptyWalletSection(emoji,title,sub,cta){
-  return '<div style="background:white;border-radius:18px;padding:40px 24px;text-align:center;margin-top:14px"><div style="font-size:48px;opacity:0.4;margin-bottom:8px">'+emoji+'</div><p style="font-size:15px;font-weight:700;margin:0 0 4px;color:#1A1A1A">'+title+'</p><p style="font-size:12px;color:#777;margin:0 0 16px">'+sub+'</p><button class="empty-cta" onclick="'+cta+'()">+ Add</button></div>';
+  const ctaHtml=cta?'<button class="empty-cta" onclick="'+cta+'()">+ Add</button>':'';
+  return '<div style="background:white;border-radius:18px;padding:40px 24px;text-align:center;margin-top:14px"><div style="font-size:48px;opacity:0.4;margin-bottom:8px">'+emoji+'</div><p style="font-size:15px;font-weight:700;margin:0 0 4px;color:#1A1A1A">'+title+'</p><p style="font-size:12px;color:#777;margin:0 0 '+(cta?'16px':'0')+'">'+sub+'</p>'+ctaHtml+'</div>';
 }
 
 function renderDealsList(active){
@@ -355,24 +356,61 @@ window.shareDeal=function(id){
   const d=state.deals.find(x=>x.id===id);
   if(!d)return;
   const text=d.merchant+': '+d.discount+(d.code?' (code '+d.code+')':'')+(d.expiry?' — expires '+fmtDate(d.expiry):'');
-  if(navigator.share){
-    navigator.share({title:'Perq deal: '+d.merchant,text}).then(()=>{
-      d.shared=true;
-      d.sharedAt=Date.now();
-      state.rewards.points+=5;
-      save(K.deals,state.deals);save(K.rewards,state.rewards);
-      toast('✓ Shared · +5 pts');
-      renderAll();
-    }).catch(()=>{});
-  } else if(navigator.clipboard){
+  const encodedText=encodeURIComponent(text);
+  const shareUrl=encodeURIComponent(location.origin+location.pathname+'?claim='+btoa(JSON.stringify({m:d.merchant,d:d.discount,c:d.code||'',e:d.expiry||''})).replace(/=/g,''));
+
+  // Custom share modal — shows what will happen + share targets
+  const html='<div class="modal-handle"></div><h3 class="modal-title">Share this deal</h3>'+
+    '<div style="background:linear-gradient(135deg,'+(d.category==='Travel'?'#6366F1,#C084FC':d.category==='Groceries'?'#00C9A7,#4FACFE':'#FF6B6B,#FFA06B')+');border-radius:14px;padding:14px;color:white;margin-bottom:14px">'+
+      '<p style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;opacity:0.9;margin:0">'+escapeHtml(d.category||'Deal')+'</p>'+
+      '<h4 style="font-size:18px;font-weight:800;margin:4px 0 6px">'+escapeHtml(d.merchant)+'</h4>'+
+      '<p style="font-size:14px;font-weight:600;margin:0;opacity:0.95">'+escapeHtml(d.discount)+'</p>'+
+    '</div>'+
+    '<p style="font-size:12px;color:var(--text-dim);margin:0 0 12px;line-height:1.5">Sharing earns +5 pts. The deal will show up in the <strong>Shared</strong> tab.</p>'+
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px">'+
+      '<a href="sms:?body='+encodedText+'%20'+shareUrl+'" onclick="confirmShare(\''+d.id+'\')" style="text-decoration:none;background:#F0F0F0;border-radius:14px;padding:14px 8px;text-align:center;color:#1A1A1A">'+
+        '<div style="width:36px;height:36px;border-radius:50%;background:#34D399;color:white;margin:0 auto 6px;display:flex;align-items:center;justify-content:center">'+
+        '<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'+
+        '</div><span style="font-size:11px;font-weight:600">Message</span></a>'+
+      '<a href="https://wa.me/?text='+encodedText+'%20'+shareUrl+'" target="_blank" onclick="confirmShare(\''+d.id+'\')" style="text-decoration:none;background:#F0F0F0;border-radius:14px;padding:14px 8px;text-align:center;color:#1A1A1A">'+
+        '<div style="width:36px;height:36px;border-radius:50%;background:#25D366;color:white;margin:0 auto 6px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900">W</div>'+
+        '<span style="font-size:11px;font-weight:600">WhatsApp</span></a>'+
+      '<a href="mailto:?subject=Deal%20on%20Perq&body='+encodedText+'%0A%0A'+shareUrl+'" onclick="confirmShare(\''+d.id+'\')" style="text-decoration:none;background:#F0F0F0;border-radius:14px;padding:14px 8px;text-align:center;color:#1A1A1A">'+
+        '<div style="width:36px;height:36px;border-radius:50%;background:#4FACFE;color:white;margin:0 auto 6px;display:flex;align-items:center;justify-content:center">'+
+        '<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>'+
+        '</div><span style="font-size:11px;font-weight:600">Email</span></a>'+
+      '<button onclick="copyShareText(\''+d.id+'\')" style="background:#F0F0F0;border:none;border-radius:14px;padding:14px 8px;text-align:center;color:#1A1A1A;cursor:pointer">'+
+        '<div style="width:36px;height:36px;border-radius:50%;background:#6366F1;color:white;margin:0 auto 6px;display:flex;align-items:center;justify-content:center">'+
+        '<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>'+
+        '</div><span style="font-size:11px;font-weight:600">Copy link</span></button>'+
+    '</div>'+
+    '<button class="btn-secondary" onclick="closeModal()" style="width:100%;padding:14px;border-radius:14px;font-size:14px;font-weight:700;background:#F0F0F0;color:#333;border:none">Cancel</button>';
+  openModal(html);
+};
+
+window.confirmShare=function(id){
+  const d=state.deals.find(x=>x.id===id);
+  if(!d)return;
+  if(!d.shared){
+    d.shared=true;
+    d.sharedAt=Date.now();
+    state.rewards.points+=5;
+    save(K.deals,state.deals);save(K.rewards,state.rewards);
+  }
+  // Modal closes via the link click; show toast
+  setTimeout(()=>{closeModal();toast('✓ Shared · added to Shared tab · +5 pts');renderAll();},100);
+};
+
+window.copyShareText=function(id){
+  const d=state.deals.find(x=>x.id===id);
+  if(!d)return;
+  const text=d.merchant+': '+d.discount+(d.code?' (code '+d.code+')':'')+(d.expiry?' — expires '+fmtDate(d.expiry):'')+'\n\n'+location.origin+location.pathname+'?claim='+btoa(JSON.stringify({m:d.merchant,d:d.discount,c:d.code||'',e:d.expiry||''})).replace(/=/g,'');
+  if(navigator.clipboard){
     navigator.clipboard.writeText(text).then(()=>{
-      d.shared=true;
-      d.sharedAt=Date.now();
-      state.rewards.points+=5;
-      save(K.deals,state.deals);save(K.rewards,state.rewards);
-      toast('Copied to clipboard · +5 pts');
-      renderAll();
-    });
+      confirmShare(id);
+    }).catch(()=>toast('Copy failed'));
+  } else {
+    confirmShare(id);
   }
 };
 
@@ -650,7 +688,7 @@ function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 
 // Real OCR — calls Claude Vision OR OpenAI Vision API
 // Priority: 1) deployed proxy URL  2) user's API key (auto-detects provider)  3) error
-const OCR_PROXY_URL=''; // set after deploying backend/ocr-proxy
+const OCR_PROXY_URL='https://perq-ocr-proxy.shailbhatt.workers.dev'; // Deployed proxy
 async function extractDealFromImage(imageDataUrl){
   const match=imageDataUrl.match(/^data:(image\/[a-z]+);base64,(.+)$/);
   if(!match)throw new Error('Invalid image format');
