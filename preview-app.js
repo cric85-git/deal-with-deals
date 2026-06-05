@@ -341,10 +341,10 @@ function renderCommunityPoolList(pool){
     const du=daysUntil(p.expiry);
     const expText=du===null?'No expiry':du===0?'Today!':du===1?'Tomorrow':du+'d left';
     const initial=(p.sharedBy||'?').charAt(0).toUpperCase();
-    // Generate consistent avatar color from name
     const hash=Array.from(p.sharedBy||'').reduce((a,c)=>a+c.charCodeAt(0),0);
     const hue=(hash*47)%360;
-    return '<div style="background:white;border-radius:18px;padding:14px 16px;margin-bottom:10px;box-shadow:0 4px 12px rgba(0,0,0,0.2)">'+
+    const alreadyClaimed=state.deals.some(d=>d.poolId===p.id);
+    return '<div style="background:white;border-radius:18px;padding:14px 16px;margin-bottom:10px;box-shadow:0 4px 12px rgba(0,0,0,0.2);'+(alreadyClaimed?'opacity:0.7':'')+'">'+
       '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'+
         '<div style="width:32px;height:32px;border-radius:50%;background:hsl('+hue+',60%,55%);color:white;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0">'+escapeHtml(initial)+'</div>'+
         '<div style="flex:1;min-width:0"><p style="font-size:13px;font-weight:700;margin:0;color:#1A1A1A">'+escapeHtml(p.sharedBy)+'</p><p style="font-size:11px;color:#777;margin:1px 0 0">'+(p.claimCount||0)+' claim'+(p.claimCount===1?'':'s')+' · '+expText+'</p></div>'+
@@ -354,7 +354,9 @@ function renderCommunityPoolList(pool){
         '<h4 style="font-size:18px;font-weight:800;margin:4px 0">'+escapeHtml(p.merchant)+'</h4>'+
         '<p style="font-size:14px;opacity:0.95;margin:0">'+escapeHtml(p.discount)+'</p>'+
       '</div>'+
-      '<button onclick="claimFromPool(\''+p.id+'\')" style="width:100%;background:#1A1A1A;color:white;border:none;padding:11px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">Claim deal</button>'+
+      (alreadyClaimed
+        ?'<button disabled style="width:100%;background:#EAFBF4;color:#065F46;border:none;padding:11px;border-radius:10px;font-size:13px;font-weight:700;cursor:not-allowed">✓ Already in your wallet</button>'
+        :'<button onclick="claimFromPool(\''+p.id+'\')" style="width:100%;background:#1A1A1A;color:white;border:none;padding:11px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">Claim deal</button>')+
     '</div>';
   }).join('');
 }
@@ -362,11 +364,18 @@ function renderCommunityPoolList(pool){
 window.claimFromPool=function(id){
   const pool=load('perq-mvp:communityPool',[]);
   const p=pool.find(x=>x.id===id);
-  if(!p)return;
-  // Add to user's wallet
+  if(!p){toast('Deal no longer available');return;}
+  // Block duplicate claims by same user
+  if(state.deals.some(d=>d.poolId===id)){
+    toast('Already in your wallet');
+    return;
+  }
+  // Add to user's wallet — flagged as community-claimed (cannot be re-shared to pool)
   const newDeal={
     id:uid(),
     poolId:id,
+    fromCommunity:true,
+    sharedByOriginal:p.sharedBy,
     merchant:p.merchant,
     discount:p.discount,
     category:p.category,
@@ -388,15 +397,15 @@ window.claimFromPool=function(id){
   if(original){
     original.claimCount=(original.claimCount||0)+1;
     state.rewards.points+=5;
-    state.rewards.spins=(state.rewards.spins||0)+(original.claimCount%5===0?1:0);
-    save(K.deals,state.deals);
-    save(K.rewards,state.rewards);
-    if(original.claimCount%5===0)toast('🎉 +5 pts · +1 bonus spin (5 claims!)');
-    else toast('🎉 Claimed · +5 pts to '+(p.sharedBy||'sharer'));
+    if(original.claimCount%5===0){
+      state.rewards.spins=(state.rewards.spins||0)+1;
+      toast('🎉 +5 pts · +1 bonus spin (5 claims!)');
+    } else {
+      toast('🎉 Claimed · +5 pts to '+(p.sharedBy||'sharer'));
+    }
   } else {
-    toast('🎉 Added to wallet');
+    toast('🎉 Added to your wallet');
   }
-  state.rewards.spins=(state.rewards.spins||0)+1;
   save(K.deals,state.deals);
   save(K.rewards,state.rewards);
   renderAll();
@@ -473,26 +482,80 @@ window.shareDeal=function(id){
   if(!d)return;
   const claimed=d.claimCount||0;
   const sharedAlready=d.shared;
+  const fromCommunity=d.fromCommunity;
 
-  const html='<div class="modal-handle"></div><h3 class="modal-title">Share with community</h3>'+
-    '<div style="background:linear-gradient(135deg,'+(d.category==='Travel'?'#6366F1,#C084FC':d.category==='Groceries'?'#00C9A7,#4FACFE':d.category==='Apparel'?'#F472B6,#FB923C':'#FF6B6B,#FFA06B')+');border-radius:14px;padding:14px;color:white;margin-bottom:14px">'+
-      '<p style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;opacity:0.9;margin:0">'+escapeHtml(d.category||'Deal')+'</p>'+
-      '<h4 style="font-size:18px;font-weight:800;margin:4px 0 6px">'+escapeHtml(d.merchant)+'</h4>'+
-      '<p style="font-size:14px;font-weight:600;margin:0;opacity:0.95">'+escapeHtml(d.discount)+'</p>'+
-      (d.expiry?'<p style="font-size:11px;opacity:0.85;margin:6px 0 0">Expires '+fmtDate(d.expiry)+'</p>':'')+
-    '</div>'+
-    '<div style="background:#F0F9FF;border:1px solid #4FACFE;border-radius:12px;padding:14px;margin-bottom:14px">'+
-      '<p style="font-size:13px;font-weight:700;color:#075985;margin:0 0 6px;display:flex;align-items:center;gap:6px">'+
-        '<svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:none;stroke:#075985;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><circle cx="17" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>'+
-        'Pool with the Perq community</p>'+
-      '<p style="font-size:12px;color:#0c4a6e;margin:0;line-height:1.5">Other users can claim this deal until it expires. You earn <strong>+5 pts</strong> when you share, plus <strong>+5 pts</strong> every time someone claims it.</p>'+
-    '</div>'+
-    (sharedAlready?'<div style="background:#EAFBF4;border:1px solid #00C9A7;border-radius:10px;padding:10px;margin-bottom:14px;font-size:12px;color:#065F46;font-weight:600;text-align:center">✓ Already shared · '+claimed+' claim'+(claimed===1?'':'s')+' · earned '+(claimed*5+5)+' pts</div>':'')+
-    '<div style="display:flex;gap:8px">'+
-      '<button class="btn-secondary" onclick="closeModal()" style="flex:1;padding:14px;border-radius:14px;font-size:14px;font-weight:700;background:#F0F0F0;color:#333;border:none">Cancel</button>'+
-      (sharedAlready?'<button class="btn-primary" onclick="unshareDeal(\''+d.id+'\')" style="flex:1;padding:14px;border-radius:14px;font-size:14px;font-weight:700;background:#FFE5E5;color:#DC2626;border:none">Pull from pool</button>':'<button class="btn-primary" onclick="confirmShare(\''+d.id+'\')" style="flex:1;padding:14px;border-radius:14px;font-size:14px;font-weight:700;background:#1A1A1A;color:white;border:none">Share to pool · +5 pts</button>')+
+  const text=d.merchant+': '+d.discount+(d.code?' (code '+d.code+')':'')+(d.expiry?' — expires '+fmtDate(d.expiry):'');
+  const encodedText=encodeURIComponent(text);
+  const shareUrl=encodeURIComponent(location.origin+location.pathname);
+
+  let html='<div class="modal-handle"></div><h3 class="modal-title">Share this deal</h3>';
+
+  // Deal preview card
+  html+='<div style="background:linear-gradient(135deg,'+(d.category==='Travel'?'#6366F1,#C084FC':d.category==='Groceries'?'#00C9A7,#4FACFE':d.category==='Apparel'?'#F472B6,#FB923C':'#FF6B6B,#FFA06B')+');border-radius:14px;padding:14px;color:white;margin-bottom:14px">'+
+    '<p style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;opacity:0.9;margin:0">'+escapeHtml(d.category||'Deal')+'</p>'+
+    '<h4 style="font-size:18px;font-weight:800;margin:4px 0 6px">'+escapeHtml(d.merchant)+'</h4>'+
+    '<p style="font-size:14px;font-weight:600;margin:0;opacity:0.95">'+escapeHtml(d.discount)+'</p>'+
+    (d.expiry?'<p style="font-size:11px;opacity:0.85;margin:6px 0 0">Expires '+fmtDate(d.expiry)+'</p>':'')+
+  '</div>';
+
+  // Anti-fraud notice if claimed from community
+  if(fromCommunity){
+    html+='<div style="background:#FFFBEB;border:1px solid #FBBF24;border-radius:12px;padding:12px;margin-bottom:14px">'+
+      '<p style="font-size:12px;font-weight:700;color:#92400E;margin:0 0 4px;display:flex;align-items:center;gap:6px">⚠️ Community-claimed deal</p>'+
+      '<p style="font-size:11px;color:#78350F;margin:0;line-height:1.5">This was claimed from the community pool (originally shared by <strong>'+escapeHtml(d.sharedByOriginal||'someone')+'</strong>). You can share via Message/WhatsApp/Email/Copy link, but it can\'t be re-pooled to prevent farming points.</p>'+
     '</div>';
+  } else {
+    html+='<div style="background:#F0F9FF;border:1px solid #4FACFE;border-radius:12px;padding:12px;margin-bottom:14px">'+
+      '<p style="font-size:12px;font-weight:700;color:#075985;margin:0 0 4px;display:flex;align-items:center;gap:6px">'+
+        '<svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:none;stroke:#075985;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><circle cx="17" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>'+
+        'Pool with the Perq community</p>'+
+      '<p style="font-size:11px;color:#0c4a6e;margin:0;line-height:1.5">Other Perq users can claim until expiry. <strong>+5 pts</strong> on share, <strong>+5 pts</strong> per claim, <strong>+1 spin</strong> every 5 claims.</p>'+
+    '</div>';
+  }
+
+  // Community pool button (only if not from community)
+  if(!fromCommunity){
+    if(sharedAlready){
+      html+='<div style="background:#EAFBF4;border:1px solid #00C9A7;border-radius:10px;padding:10px;margin-bottom:14px;font-size:12px;color:#065F46;font-weight:600;text-align:center">✓ Shared with community · '+claimed+' claim'+(claimed===1?'':'s')+' · earned '+(claimed*5+5)+' pts</div>';
+      html+='<button onclick="unshareDeal(\''+d.id+'\')" style="width:100%;background:#FFE5E5;color:#DC2626;border:none;padding:12px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:14px">Pull from community pool</button>';
+    } else {
+      html+='<button onclick="confirmShare(\''+d.id+'\')" style="width:100%;background:#1A1A1A;color:white;border:none;padding:14px;border-radius:14px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:14px">📤 Share to community pool · +5 pts</button>';
+    }
+  }
+
+  // Social share options (always available)
+  html+='<p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:8px 0 8px">Or share with someone specific</p>';
+  html+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px">'+
+    '<a href="sms:?body='+encodedText+'%20'+shareUrl+'" style="text-decoration:none;background:#F0F0F0;border-radius:14px;padding:14px 8px;text-align:center;color:#1A1A1A">'+
+      '<div style="width:36px;height:36px;border-radius:50%;background:#34D399;color:white;margin:0 auto 6px;display:flex;align-items:center;justify-content:center">'+
+      '<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'+
+      '</div><span style="font-size:11px;font-weight:600">Message</span></a>'+
+    '<a href="https://wa.me/?text='+encodedText+'%20'+shareUrl+'" target="_blank" rel="noopener" style="text-decoration:none;background:#F0F0F0;border-radius:14px;padding:14px 8px;text-align:center;color:#1A1A1A">'+
+      '<div style="width:36px;height:36px;border-radius:50%;background:#25D366;color:white;margin:0 auto 6px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900">W</div>'+
+      '<span style="font-size:11px;font-weight:600">WhatsApp</span></a>'+
+    '<a href="mailto:?subject=Deal%20on%20Perq&body='+encodedText+'%0A%0A'+shareUrl+'" style="text-decoration:none;background:#F0F0F0;border-radius:14px;padding:14px 8px;text-align:center;color:#1A1A1A">'+
+      '<div style="width:36px;height:36px;border-radius:50%;background:#4FACFE;color:white;margin:0 auto 6px;display:flex;align-items:center;justify-content:center">'+
+      '<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>'+
+      '</div><span style="font-size:11px;font-weight:600">Email</span></a>'+
+    '<button onclick="copyShareText(\''+d.id+'\')" style="background:#F0F0F0;border:none;border-radius:14px;padding:14px 8px;text-align:center;color:#1A1A1A;cursor:pointer">'+
+      '<div style="width:36px;height:36px;border-radius:50%;background:#6366F1;color:white;margin:0 auto 6px;display:flex;align-items:center;justify-content:center">'+
+      '<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>'+
+      '</div><span style="font-size:11px;font-weight:600">Copy link</span></button>'+
+  '</div>';
+
+  html+='<button onclick="closeModal()" style="width:100%;padding:14px;border-radius:14px;font-size:14px;font-weight:700;background:#F0F0F0;color:#333;border:none">Cancel</button>';
   openModal(html);
+};
+
+window.copyShareText=function(id){
+  const d=state.deals.find(x=>x.id===id);
+  if(!d)return;
+  const text=d.merchant+': '+d.discount+(d.code?' (code '+d.code+')':'')+(d.expiry?' — expires '+fmtDate(d.expiry):'')+'\n\n'+location.origin+location.pathname;
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(text).then(()=>toast('Copied to clipboard')).catch(()=>toast('Copy failed'));
+  } else {
+    toast('Copy not supported');
+  }
 };
 
 window.confirmShare=function(id){
@@ -746,14 +809,107 @@ window.triggerLibrary=function(){
 document.getElementById('capture-input').addEventListener('change',(e)=>{
   const f=e.target.files&&e.target.files[0];
   if(!f)return;
+  const mode=e.target.getAttribute('data-mode');
+  e.target.removeAttribute('data-mode');
   const r=new FileReader();
   r.onload=()=>{
-    pendingDealImage=r.result;
-    runScanFlow(pendingDealImage);
+    if(mode==='loyalty'){
+      runLoyaltyScanFlow(r.result);
+    } else {
+      pendingDealImage=r.result;
+      runScanFlow(pendingDealImage);
+    }
   };
   r.readAsDataURL(f);
   e.target.value='';
 });
+
+async function runLoyaltyScanFlow(imageDataUrl){
+  const overlay=document.getElementById('scan-overlay');
+  document.getElementById('scan-image').src=imageDataUrl;
+  overlay.style.display='flex';
+  const steps=[
+    {id:'scan-step-1',title:'Reading card…',sub:'Detecting store name'},
+    {id:'scan-step-2',title:'Extracting number…',sub:'Locating card or member ID'},
+    {id:'scan-step-3',title:'Polishing…',sub:'Almost done'},
+    {id:'scan-step-4',title:'Ready!',sub:'Tap below to review'}
+  ];
+  for(let i=1;i<=4;i++){const el=document.getElementById('scan-step-'+i);el.removeAttribute('data-active');el.removeAttribute('data-done');}
+
+  const extractPromise=extractLoyaltyFromImage(imageDataUrl);
+
+  for(let i=0;i<steps.length-1;i++){
+    document.getElementById('scan-title').textContent=steps[i].title;
+    document.getElementById('scan-sub').textContent=steps[i].sub;
+    document.getElementById(steps[i].id).setAttribute('data-active','true');
+    await sleep(800);
+    document.getElementById(steps[i].id).removeAttribute('data-active');
+    document.getElementById(steps[i].id).setAttribute('data-done','true');
+  }
+  let extracted=null,extractError=null;
+  try{extracted=await extractPromise;}catch(e){extractError=e;}
+
+  if(extractError){
+    document.getElementById('scan-title').textContent='Scan failed';
+    document.getElementById('scan-sub').textContent='Fill in manually';
+  } else {
+    document.getElementById('scan-title').textContent='Ready!';
+    document.getElementById('scan-sub').textContent='Review and save';
+  }
+  document.getElementById('scan-step-4').setAttribute('data-active','true');
+  await sleep(extractError?1500:600);
+  overlay.style.display='none';
+  openLoyaltyManualPrefilled(extracted||{},imageDataUrl);
+}
+
+async function extractLoyaltyFromImage(imageDataUrl){
+  const match=imageDataUrl.match(/^data:(image\/[a-z]+);base64,(.+)$/);
+  if(!match)throw new Error('Invalid image');
+  const mediaType=match[1],b64=match[2];
+  const prompt=`Extract loyalty/membership card details from this image. Return ONLY a JSON object:
+{
+  "name": "store or program name on the card",
+  "number": "card or member number (digits and spaces only)",
+  "expiry": "YYYY-MM-DD if visible, else empty string"
+}
+Read carefully — get the name and number EXACTLY as shown. Return only JSON.`;
+
+  if(OCR_PROXY_URL){
+    try{
+      const resp=await fetch(OCR_PROXY_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:b64,mediaType,prompt})});
+      if(resp.ok){
+        const data=await resp.json();
+        if(data.ok&&data.result)return data.result;
+      }
+    }catch(e){}
+  }
+  throw new Error('Scan service unavailable');
+}
+
+function openLoyaltyManualPrefilled(data,image){
+  const colors=['#DC2626','#059669','#7C3AED','#2563EB','#D97706','#1F2937'];
+  let html='<div class="modal-handle"></div><h3 class="modal-title">Review & save</h3>';
+  if(image)html+='<div style="width:100%;height:90px;background:#f5f5f5;border-radius:12px;margin-bottom:12px;overflow:hidden"><img src="'+image+'" style="width:100%;height:100%;object-fit:cover"></div>';
+  if(data.name||data.number){
+    html+='<div style="background:#EAFBF4;border:1px solid #00C9A7;border-radius:12px;padding:10px 12px;margin-bottom:12px;display:flex;align-items:center;gap:8px;font-size:12px;color:#065F46;font-weight:600"><span style="font-size:16px">✨</span>AI extracted these details</div>';
+  }
+  html+='<div class="form-row"><label>Store name *</label><input id="lc-name" placeholder="Costco" value="'+escapeHtml(data.name||'')+'"></div>';
+  html+='<div class="form-row"><label>Card number *</label><input id="lc-number" placeholder="1234 5678 9012" value="'+escapeHtml(data.number||'')+'" inputmode="numeric"></div>';
+  html+='<div class="form-row"><label>Card color</label><div style="display:flex;gap:8px;flex-wrap:wrap" id="color-picker">'+
+    colors.map((c,i)=>'<button data-color="'+c+'" style="width:40px;height:40px;border-radius:10px;background:'+c+';border:'+(i===0?'3px solid #1A1A1A':'3px solid transparent')+'"></button>').join('')+
+  '</div></div>';
+  html+='<div class="form-actions"><button class="btn-secondary" onclick="closeModal()">Cancel</button><button class="btn-primary" onclick="saveLoyalty()">Save</button></div>';
+  openModal(html);
+  let color='#DC2626';
+  document.querySelectorAll('#color-picker button').forEach(b=>{
+    b.addEventListener('click',()=>{
+      color=b.getAttribute('data-color');
+      document.querySelectorAll('#color-picker button').forEach(x=>x.style.border='3px solid transparent');
+      b.style.border='3px solid #1A1A1A';
+    });
+  });
+  window._lcColor=()=>color;
+}
 
 // -------- Scan Flow Animation + AI Extract --------
 async function runScanFlow(imageDataUrl){
@@ -824,9 +980,11 @@ async function extractDealFromImage(imageDataUrl){
   const mediaType=match[1];
   const b64=match[2];
 
-  const prompt=`Extract coupon/deal details from this image. Return ONLY a JSON object with these fields:
+  const prompt=`Extract coupon/deal details from this image. Read VERY carefully — handwritten and stylized text often gets misread. Pay close attention to letter shapes (especially l vs r, m vs n, e vs c, 0 vs O).
+
+Return ONLY a JSON object with these fields:
 {
-  "merchant": "store/brand name as shown on the coupon",
+  "merchant": "store/brand name as shown — read each letter carefully, do not autocorrect to a similar known brand",
   "discount": "the actual offer text, e.g. 'Up to $2,000 off' or '20% off produce'",
   "code": "promo code if visible, else empty string",
   "expiry": "YYYY-MM-DD format if a date is visible, else empty string",
@@ -835,7 +993,8 @@ async function extractDealFromImage(imageDataUrl){
   "address": "business address if visible, else empty string",
   "url": "website URL if visible, else empty string"
 }
-Read carefully — get the merchant name and discount EXACTLY as they appear. Return only the JSON, no other text.`;
+
+For handwritten text: trace each character carefully. If a word looks like a known brand but a letter is ambiguous, prefer what's actually written over what's common. Return only the JSON, no other text.`;
 
   // Try proxy first
   if(OCR_PROXY_URL){
@@ -976,33 +1135,151 @@ window.saveDealForm=function(){
 };
 
 window.openAddProgram=function(){
+  const KNOWN={
+    airline:[
+      {name:'Delta SkyMiles',unit:'miles',loginUrl:'https://www.delta.com/login'},
+      {name:'United MileagePlus',unit:'miles',loginUrl:'https://www.united.com/en/us/account/sign-in'},
+      {name:'American AAdvantage',unit:'miles',loginUrl:'https://www.aa.com/login'},
+      {name:'Southwest Rapid Rewards',unit:'points',loginUrl:'https://www.southwest.com/loyalty/login'},
+      {name:'JetBlue TrueBlue',unit:'points',loginUrl:'https://www.jetblue.com/account/login'},
+      {name:'Alaska Mileage Plan',unit:'miles',loginUrl:'https://www.alaskaair.com/account/login'}
+    ],
+    hotel:[
+      {name:'Marriott Bonvoy',unit:'points',loginUrl:'https://www.marriott.com/sign-in.mi'},
+      {name:'Hilton Honors',unit:'points',loginUrl:'https://www.hilton.com/en/hilton-honors/login/'},
+      {name:'IHG One Rewards',unit:'points',loginUrl:'https://www.ihg.com/onerewards/content/us/en/login'},
+      {name:'World of Hyatt',unit:'points',loginUrl:'https://world.hyatt.com/content/gp/en/login.html'},
+      {name:'Wyndham Rewards',unit:'points',loginUrl:'https://www.wyndhamhotels.com/wyndham-rewards/sign-in'},
+      {name:'Choice Privileges',unit:'points',loginUrl:'https://www.choicehotels.com/login'}
+    ],
+    creditcard:[
+      {name:'Chase Ultimate Rewards',unit:'points',loginUrl:'https://ultimaterewards.chase.com'},
+      {name:'Amex Membership Rewards',unit:'points',loginUrl:'https://www.americanexpress.com/login'},
+      {name:'Capital One Miles',unit:'miles',loginUrl:'https://verified.capitalone.com/auth/signin'},
+      {name:'Citi ThankYou',unit:'points',loginUrl:'https://www.thankyou.com'},
+      {name:'Discover Cashback',unit:'$',loginUrl:'https://portal.discover.com/customersvcs/universalLogin/ac_main'},
+      {name:'Bank of America Travel Rewards',unit:'points',loginUrl:'https://www.bankofamerica.com/login/sign-in/signOnV2Screen.go'}
+    ]
+  };
+  const allOpts=[
+    '<optgroup label="✈️ Airlines">'+KNOWN.airline.map(p=>'<option value="airline:'+escapeHtml(p.name)+'">'+escapeHtml(p.name)+'</option>').join('')+'</optgroup>',
+    '<optgroup label="🏨 Hotels">'+KNOWN.hotel.map(p=>'<option value="hotel:'+escapeHtml(p.name)+'">'+escapeHtml(p.name)+'</option>').join('')+'</optgroup>',
+    '<optgroup label="💳 Credit Cards">'+KNOWN.creditcard.map(p=>'<option value="creditcard:'+escapeHtml(p.name)+'">'+escapeHtml(p.name)+'</option>').join('')+'</optgroup>',
+    '<option value="custom">+ Custom (enter manually)</option>'
+  ].join('');
+
   const html='<div class="modal-handle"></div><h3 class="modal-title">Add reward program</h3>'+
-    '<div class="form-row"><label>Program name *</label><input id="rp-name" placeholder="Delta SkyMiles, Marriott Bonvoy"></div>'+
-    '<div class="form-grid"><div class="form-row"><label>Balance</label><input id="rp-balance" type="number" inputmode="numeric" placeholder="50000"></div><div class="form-row"><label>Unit</label><input id="rp-unit" placeholder="miles" value="points"></div></div>'+
-    '<div class="form-row"><label>Type</label><select id="rp-type"><option value="✈️">Airline miles</option><option value="🏨">Hotel points</option><option value="💳">Credit card rewards</option><option value="💵">Cashback</option><option value="⭐">Other</option></select></div>'+
-    '<div class="form-row"><label>Expiry (if any)</label><input id="rp-expiry" type="date"></div>'+
-    '<div class="form-actions"><button class="btn-secondary" onclick="closeModal()">Cancel</button><button class="btn-primary" onclick="saveProgram()">Save</button></div>';
+    '<div class="form-row"><label>Program *</label><select id="rp-select" onchange="onProgramSelect(this.value)"><option value="">Select a program…</option>'+allOpts+'</select></div>'+
+    '<div id="rp-login-section" style="display:none">'+
+      '<div style="background:#F0F9FF;border:1px solid #4FACFE;border-radius:12px;padding:12px;margin-bottom:14px">'+
+        '<p style="font-size:13px;font-weight:700;color:#075985;margin:0 0 6px">🔐 Connect your account</p>'+
+        '<p style="font-size:11px;color:#0c4a6e;margin:0 0 10px;line-height:1.5">We\'ll redirect you to <strong id="rp-provider-name">the provider</strong> to log in. Perq receives only your member ID, balance, and expiry — never your password.</p>'+
+        '<button id="rp-login-btn" onclick="loginToProgram()" style="width:100%;background:#075985;color:white;border:none;padding:12px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">Continue to login →</button>'+
+      '</div>'+
+      '<p style="font-size:11px;color:var(--text-dim);text-align:center;margin:0 0 12px">Or skip login and enter manually</p>'+
+    '</div>'+
+    '<div id="rp-manual-section" style="display:none">'+
+      '<div class="form-row"><label>Custom name *</label><input id="rp-name" placeholder="e.g. Local Credit Union Rewards"></div>'+
+      '<div class="form-row"><label>Type</label><select id="rp-type"><option value="airline">Airline miles</option><option value="hotel">Hotel points</option><option value="creditcard">Credit card rewards</option><option value="cashback">Cashback</option><option value="other">Other</option></select></div>'+
+    '</div>'+
+    '<div id="rp-fields" style="display:none">'+
+      '<div class="form-grid"><div class="form-row"><label>Member ID</label><input id="rp-memberid" placeholder="Your account number"></div><div class="form-row"><label>Balance</label><input id="rp-balance" type="number" inputmode="numeric" placeholder="50000"></div></div>'+
+      '<div class="form-grid"><div class="form-row"><label>Unit</label><input id="rp-unit" placeholder="miles" value="points"></div><div class="form-row"><label>Expiry (if any)</label><input id="rp-expiry" type="date"></div></div>'+
+    '</div>'+
+    '<div class="form-actions"><button class="btn-secondary" onclick="closeModal()">Cancel</button><button class="btn-primary" onclick="saveProgram()" id="rp-save-btn" disabled style="opacity:0.4">Save</button></div>';
   openModal(html);
+  // Stash KNOWN for the dropdown handlers
+  window._knownPrograms=KNOWN;
+};
+
+window.onProgramSelect=function(val){
+  const loginSec=document.getElementById('rp-login-section');
+  const manualSec=document.getElementById('rp-manual-section');
+  const fields=document.getElementById('rp-fields');
+  const saveBtn=document.getElementById('rp-save-btn');
+
+  if(!val){
+    loginSec.style.display='none';
+    manualSec.style.display='none';
+    fields.style.display='none';
+    saveBtn.disabled=true;saveBtn.style.opacity='0.4';
+    return;
+  }
+
+  saveBtn.disabled=false;saveBtn.style.opacity='1';
+
+  if(val==='custom'){
+    loginSec.style.display='none';
+    manualSec.style.display='block';
+    fields.style.display='block';
+  } else {
+    const [type,name]=val.split(':');
+    const list=window._knownPrograms[type]||[];
+    const prog=list.find(p=>p.name===name);
+    if(prog){
+      document.getElementById('rp-provider-name').textContent=prog.name;
+      document.getElementById('rp-login-btn').setAttribute('data-url',prog.loginUrl);
+      document.getElementById('rp-unit').value=prog.unit||'points';
+      window._currentProvider={type,name,unit:prog.unit,loginUrl:prog.loginUrl};
+    }
+    loginSec.style.display='block';
+    manualSec.style.display='none';
+    fields.style.display='block';
+  }
+};
+
+window.loginToProgram=function(){
+  const url=document.getElementById('rp-login-btn').getAttribute('data-url');
+  if(url)window.open(url,'_blank','noopener,noreferrer');
+  toast('Once logged in, return here and enter your balance');
 };
 
 window.saveProgram=function(){
-  const name=document.getElementById('rp-name').value.trim();
-  if(!name){toast('Name required');return;}
+  const sel=document.getElementById('rp-select').value;
+  let name='',type='other',icon='⭐',unit='points';
+  if(sel==='custom'){
+    name=document.getElementById('rp-name').value.trim();
+    type=document.getElementById('rp-type').value;
+    icon={airline:'✈️',hotel:'🏨',creditcard:'💳',cashback:'💵',other:'⭐'}[type]||'⭐';
+  } else if(sel){
+    const parts=sel.split(':');
+    type=parts[0];name=parts[1];
+    icon={airline:'✈️',hotel:'🏨',creditcard:'💳'}[type]||'⭐';
+    unit=window._currentProvider?.unit||'points';
+  }
+  if(!name){toast('Select or enter a program name');return;}
   state.programs.push({
-    id:uid(),name,
+    id:uid(),
+    name,type,icon,
+    memberId:document.getElementById('rp-memberid').value.trim(),
     balance:document.getElementById('rp-balance').value||'0',
-    unit:document.getElementById('rp-unit').value||'points',
-    icon:document.getElementById('rp-type').value,
+    unit:document.getElementById('rp-unit').value||unit,
     expiry:document.getElementById('rp-expiry').value||null,
     addedAt:Date.now()
   });
   save(K.programs,state.programs);
   closeModal();
   toast('✓ Program added');
+  walletFilter='programs';
   renderAll();
 };
 
 window.openAddLoyalty=function(){
+  const html='<div class="modal-handle"></div><h3 class="modal-title">Add loyalty card</h3>'+
+    '<p style="font-size:13px;color:var(--text-dim);text-align:center;margin:0 0 16px">How would you like to add this card?</p>'+
+    '<button class="snap-option" onclick="closeModal();triggerLoyaltyCamera()" style="margin-bottom:8px"><div class="snap-option-icon gradient-warm"><svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div><div class="snap-option-info"><p class="snap-option-title">Scan card</p><p class="snap-option-sub">AI reads store name + card number from photo</p></div></button>'+
+    '<button class="snap-option" onclick="closeModal();openLoyaltyManual()"><div class="snap-option-icon gradient-purple"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div><div class="snap-option-info"><p class="snap-option-title">Type details</p><p class="snap-option-sub">Enter manually with color picker</p></div></button>';
+  openModal(html);
+};
+
+window.triggerLoyaltyCamera=function(){
+  const i=document.getElementById('capture-input');
+  i.setAttribute('capture','environment');
+  i.setAttribute('data-mode','loyalty');
+  i.click();
+};
+
+window.openLoyaltyManual=function(){
   const colors=['#DC2626','#059669','#7C3AED','#2563EB','#D97706','#1F2937'];
   const html='<div class="modal-handle"></div><h3 class="modal-title">Add loyalty card</h3>'+
     '<div class="form-row"><label>Store name *</label><input id="lc-name" placeholder="Costco, CVS ExtraCare"></div>'+
