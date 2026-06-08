@@ -96,6 +96,12 @@ input[type=range]:focus{outline:none}
 .ob-step{display:none;flex:1;flex-direction:column;justify-content:center;text-align:center;animation:fadeIn .3s}
 .ob-step.active{display:flex}
 .ob-emoji{font-size:80px;margin-bottom:24px;line-height:1}
+.ob-logo-mark{width:120px;height:120px;border-radius:30px;background:#1A1A1A;display:flex;align-items:center;justify-content:center;color:#FFE16B;font-weight:900;margin:0 auto 28px;box-shadow:0 12px 32px rgba(0,0,0,0.18),0 0 0 6px rgba(255,225,107,0.25);position:relative;overflow:hidden}
+.ob-logo-mark.small{width:84px;height:84px;border-radius:22px;margin-bottom:20px}
+.ob-logo-mark span{font-size:64px;letter-spacing:-3px;line-height:1;font-family:-apple-system,"SF Pro Display",sans-serif}
+.ob-logo-mark.small span{font-size:46px;letter-spacing:-2px}
+.ob-logo-mark::after{content:'';position:absolute;inset:6px;border-radius:24px;border:2px solid rgba(255,225,107,0.18);pointer-events:none}
+.ob-logo-mark.small::after{inset:4px;border-radius:18px}
 .ob-title{font-size:30px;font-weight:900;letter-spacing:-0.6px;margin:0 0 12px;line-height:1.1}
 .ob-sub{font-size:15px;color:var(--text-dim);line-height:1.5;margin:0 0 32px;max-width:300px;align-self:center}
 .ob-input{width:100%;background:white;border:2px solid transparent;border-radius:14px;padding:14px 16px;font-size:15px;outline:none;margin-bottom:12px;text-align:center}
@@ -184,9 +190,10 @@ input[type=range]:focus{outline:none}
     <div class="ob-dot active"></div>
     <div class="ob-dot"></div>
     <div class="ob-dot"></div>
+    <div class="ob-dot"></div>
   </div>
   <div class="ob-step active" data-step="1">
-    <div class="ob-emoji">🎟️</div>
+    <div class="ob-logo-mark"><span>P</span></div>
     <h1 class="ob-title">Welcome to Perq</h1>
     <p class="ob-sub">Snap a coupon, forget about it. We'll remind you before it expires and alert you when you're nearby.</p>
     <div class="ob-actions"><button class="ob-btn" onclick="nextStep()">Get started</button></div>
@@ -214,7 +221,17 @@ input[type=range]:focus{outline:none}
       <button class="ob-pref" data-pref="Home">🏠 Home</button>
       <button class="ob-pref" data-pref="Electronics">📱 Tech</button>
     </div>
-    <div class="ob-actions"><button class="ob-btn" onclick="finishOnboarding()">Start using Perq</button></div>
+    <div class="ob-actions"><button class="ob-btn" onclick="nextStep()">Continue</button></div>
+  </div>
+  <div class="ob-step" data-step="4">
+    <div class="ob-logo-mark small"><span>P</span></div>
+    <h1 class="ob-title">Install Perq on your home screen</h1>
+    <p class="ob-sub" id="install-platform-sub">Run Perq like a real app — full-screen, instant launch.</p>
+    <div id="install-instructions" style="background:white;border-radius:18px;padding:18px;margin:0 0 20px;text-align:left;box-shadow:0 4px 16px rgba(0,0,0,0.06)"></div>
+    <div class="ob-actions">
+      <button class="ob-btn" onclick="finishOnboarding()">Got it · start using Perq</button>
+      <button class="ob-btn secondary" onclick="finishOnboarding()">Skip for now</button>
+    </div>
   </div>
 </div>
 
@@ -423,6 +440,6 @@ input[type=range]:focus{outline:none}
 <div id="confetti-root" style="position:fixed;inset:0;pointer-events:none;z-index:9998;overflow:hidden"></div>
 <input type="file" id="capture-input" accept="image/*" capture="environment" style="display:none">
 
-<script src="preview-app.js?v=15"></script>
+<script src="preview-app.js?v=16"></script>
 </body>
 </html>
