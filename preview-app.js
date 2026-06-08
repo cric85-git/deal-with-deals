@@ -21,7 +21,7 @@ let state={
   deals:load(K.deals,[]),
   programs:load(K.programs,[]),
   loyalty:load(K.loyalty,[]),
-  rewards:load(K.rewards,{points:0,spins:0,streak:0,saved:0,lastClaim:null}),
+  rewards:load(K.rewards,{points:0,spins:0,streak:0,saved:0,lastClaim:null,missions:{date:null,done:{}},lastSeenTier:'BRONZE',unlocksSeen:[]}),
   settings:load(K.settings,{reminders:true,proximity:true,social:false}),
   selectedPrefs:[]
 };
@@ -30,6 +30,16 @@ let onboardStep=1;
 let pendingDealImage=null;
 let walletFilter='all';
 let currentBrowseTab='local';
+
+// Migration: ensure new gamification fields exist on reward state for returning users
+(function migrateRewards(){
+  const r=state.rewards||{};
+  if(!r.missions)r.missions={date:null,done:{}};
+  if(!r.lastSeenTier)r.lastSeenTier=getTierForPoints(r.points||0).name;
+  if(!Array.isArray(r.unlocksSeen))r.unlocksSeen=[];
+  state.rewards=r;
+  save(K.rewards,state.rewards);
+})();
 
 function load(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}}
 function save(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
@@ -439,15 +449,142 @@ window.claimFromPool=function(id){
   }
   save(K.deals,state.deals);
   save(K.rewards,state.rewards);
+  completeMission('save');
+  checkTierUp();
   renderAll();
 };
 
+// Provider-specific brand colors and gradients
+const PROVIDER_BRANDS={
+  'Delta SkyMiles':{bg:'linear-gradient(135deg,#003366,#003B7B)',accent:'#E01933',logo:'△'},
+  'United MileagePlus':{bg:'linear-gradient(135deg,#002677,#0F2D7B)',accent:'#FFD700',logo:'U'},
+  'American AAdvantage':{bg:'linear-gradient(135deg,#0078D2,#1B438C)',accent:'#E81E26',logo:'A'},
+  'Southwest Rapid Rewards':{bg:'linear-gradient(135deg,#304CB2,#1A2B7C)',accent:'#F9B612',logo:'SW'},
+  'JetBlue TrueBlue':{bg:'linear-gradient(135deg,#0033A0,#001F5C)',accent:'#9DC8E8',logo:'JB'},
+  'Alaska Mileage Plan':{bg:'linear-gradient(135deg,#01426A,#015488)',accent:'#41B6E6',logo:'AS'},
+  'Marriott Bonvoy':{bg:'linear-gradient(135deg,#1C1C1C,#3D3D3D)',accent:'#A0855B',logo:'M'},
+  'Hilton Honors':{bg:'linear-gradient(135deg,#104C97,#0A3973)',accent:'#FFFFFF',logo:'H'},
+  'IHG One Rewards':{bg:'linear-gradient(135deg,#003D7C,#005EB8)',accent:'#F7B500',logo:'IHG'},
+  'World of Hyatt':{bg:'linear-gradient(135deg,#5C2D5F,#3D1F45)',accent:'#FFD700',logo:'H'},
+  'Wyndham Rewards':{bg:'linear-gradient(135deg,#FFD200,#FFA500)',accent:'#1F3A93',logo:'W'},
+  'Choice Privileges':{bg:'linear-gradient(135deg,#003F7F,#1B5E9C)',accent:'#FFFFFF',logo:'CP'},
+  'Chase Ultimate Rewards':{bg:'linear-gradient(135deg,#117ACA,#0A5BA0)',accent:'#FFFFFF',logo:'C'},
+  'Amex Membership Rewards':{bg:'linear-gradient(135deg,#016FD0,#0056A4)',accent:'#FFFFFF',logo:'AX'},
+  'Capital One Miles':{bg:'linear-gradient(135deg,#D03027,#A8221A)',accent:'#004977',logo:'C1'},
+  'Citi ThankYou':{bg:'linear-gradient(135deg,#003B7B,#002356)',accent:'#FFFFFF',logo:'C'},
+  'Discover Cashback':{bg:'linear-gradient(135deg,#FF6000,#D14E00)',accent:'#FFFFFF',logo:'D'},
+  'Bank of America Travel Rewards':{bg:'linear-gradient(135deg,#012169,#E31837)',accent:'#FFFFFF',logo:'B'}
+};
+
+function getProgramBrand(name){
+  return PROVIDER_BRANDS[name]||{bg:'linear-gradient(135deg,#6366F1,#C084FC)',accent:'#FFFFFF',logo:name.charAt(0)};
+}
+
 function renderProgramsList(){
-  return state.programs.map((p,i)=>{
-    const grads=['linear-gradient(135deg,#6366F1,#C084FC)','linear-gradient(135deg,#F472B6,#FB923C)','linear-gradient(135deg,#1E40AF,#3B82F6)','linear-gradient(135deg,#00C9A7,#4FACFE)'];
-    return '<div onclick="viewProgram(\''+p.id+'\')" style="background:'+grads[i%4]+';border-radius:18px;padding:20px;color:white;margin-bottom:12px;box-shadow:0 4px 12px rgba(0,0,0,0.2);cursor:pointer"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px"><div><p style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;opacity:0.9;margin:0">Reward Program</p><h3 style="font-size:18px;font-weight:800;margin:4px 0 0">'+escapeHtml(p.name)+'</h3></div><span style="font-size:28px">'+(p.icon||'⭐')+'</span></div><div style="display:flex;justify-content:space-between;align-items:flex-end"><div><p style="font-size:24px;font-weight:900;margin:0">'+escapeHtml(p.balance)+'</p><p style="font-size:11px;opacity:0.9;margin:2px 0 0">'+escapeHtml(p.unit)+(p.expiry?' · expires '+fmtDate(p.expiry):' · no expiry')+'</p></div></div></div>';
+  return state.programs.map(p=>{
+    const brand=getProgramBrand(p.name);
+    const du=p.expiry?daysUntil(p.expiry):null;
+    let expState='no-expiry',expText='No expiry';
+    if(du!==null){
+      if(du<0){expState='expired';expText='Expired';}
+      else if(du<=30){expState='urgent';expText=du+' days left';}
+      else if(du<=90){expState='warning';expText=du+' days left';}
+      else {expState='healthy';expText=du+' days left';}
+    }
+    const expColors={
+      expired:'background:#FFE5E5;color:#DC2626',
+      urgent:'background:#FFE5E5;color:#DC2626',
+      warning:'background:#FEF3C7;color:#92400E',
+      healthy:'background:rgba(255,255,255,0.2);color:white',
+      'no-expiry':'background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.7)'
+    };
+    const balance=parseFloat(p.balance||0);
+    const formatted=balance>=1000?balance.toLocaleString():p.balance;
+    return '<div onclick="viewProgram(\''+p.id+'\')" style="background:'+brand.bg+';border-radius:18px;padding:18px;color:white;margin-bottom:12px;box-shadow:0 6px 16px rgba(0,0,0,0.25);cursor:pointer;position:relative;overflow:hidden">'+
+      '<div style="position:absolute;top:-30px;right:-30px;font-size:140px;font-weight:900;opacity:0.07;line-height:1;letter-spacing:-8px">'+escapeHtml(brand.logo)+'</div>'+
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;position:relative">'+
+        '<div>'+
+          '<p style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;opacity:0.7;margin:0">'+(p.type==='airline'?'Airline':p.type==='hotel'?'Hotel':p.type==='creditcard'?'Credit Card':'Rewards')+'</p>'+
+          '<h3 style="font-size:17px;font-weight:800;margin:4px 0 0;letter-spacing:-0.2px">'+escapeHtml(p.name)+'</h3>'+
+        '</div>'+
+        '<span style="background:'+brand.accent+';color:'+(brand.accent==='#FFFFFF'?'#1A1A1A':'white')+';padding:4px 10px;border-radius:6px;font-size:11px;font-weight:800;letter-spacing:0.5px">'+(p.icon||'⭐')+'</span>'+
+      '</div>'+
+      '<div style="position:relative;margin-bottom:14px">'+
+        '<p style="font-size:32px;font-weight:900;margin:0;letter-spacing:-1.5px;line-height:1">'+escapeHtml(formatted)+'</p>'+
+        '<p style="font-size:12px;opacity:0.85;margin:2px 0 0;font-weight:600">'+escapeHtml(p.unit)+'</p>'+
+      '</div>'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;position:relative">'+
+        '<div style="font-size:11px;opacity:0.85">'+(p.memberId?'Member: '+escapeHtml(p.memberId.slice(-4).padStart(p.memberId.length,'•')):'No member ID')+'</div>'+
+        '<span style="'+expColors[expState]+';padding:5px 10px;border-radius:999px;font-size:10px;font-weight:700">'+expText+'</span>'+
+      '</div>'+
+    '</div>';
   }).join('');
 }
+
+window.viewProgram=function(id){
+  const p=state.programs.find(x=>x.id===id);
+  if(!p)return;
+  const brand=getProgramBrand(p.name);
+  const du=p.expiry?daysUntil(p.expiry):null;
+  let expBlock='';
+  if(du!==null){
+    if(du<0){expBlock='<div style="background:#FFE5E5;color:#DC2626;border-radius:10px;padding:10px;margin-bottom:14px;font-size:13px;font-weight:700;text-align:center">⚠️ Points expired</div>';}
+    else if(du<=30){expBlock='<div style="background:#FFE5E5;color:#DC2626;border-radius:10px;padding:10px;margin-bottom:14px;font-size:13px;font-weight:700;text-align:center">⏰ Expires in '+du+' days — use soon!</div>';}
+    else if(du<=90){expBlock='<div style="background:#FEF3C7;color:#92400E;border-radius:10px;padding:10px;margin-bottom:14px;font-size:13px;font-weight:700;text-align:center">⏰ Expires in '+du+' days</div>';}
+  }
+  const html='<div class="modal-handle"></div>'+
+    '<div style="background:'+brand.bg+';border-radius:18px;padding:18px;color:white;margin-bottom:14px;position:relative;overflow:hidden">'+
+      '<div style="position:absolute;top:-30px;right:-30px;font-size:140px;font-weight:900;opacity:0.08;line-height:1">'+escapeHtml(brand.logo)+'</div>'+
+      '<p style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;opacity:0.7;margin:0;position:relative">'+(p.type==='airline'?'Airline':p.type==='hotel'?'Hotel':p.type==='creditcard'?'Credit Card':'Rewards')+'</p>'+
+      '<h3 style="font-size:20px;font-weight:800;margin:4px 0 18px;position:relative">'+escapeHtml(p.name)+'</h3>'+
+      '<p style="font-size:36px;font-weight:900;margin:0;letter-spacing:-1.5px;line-height:1;position:relative">'+escapeHtml((parseFloat(p.balance||0)).toLocaleString())+'</p>'+
+      '<p style="font-size:13px;opacity:0.85;margin:2px 0 0;position:relative">'+escapeHtml(p.unit)+'</p>'+
+    '</div>'+
+    expBlock+
+    (p.memberId?'<div style="background:#F8F8F8;border-radius:10px;padding:12px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between"><span style="font-size:11px;color:#777;font-weight:600;text-transform:uppercase;letter-spacing:0.8px">Member ID</span><span style="font-family:ui-monospace,monospace;font-size:13px;font-weight:700">'+escapeHtml(p.memberId)+'</span></div>':'')+
+    (p.expiry?'<div style="background:#F8F8F8;border-radius:10px;padding:12px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between"><span style="font-size:11px;color:#777;font-weight:600;text-transform:uppercase;letter-spacing:0.8px">Points expire</span><span style="font-size:13px;font-weight:700">'+fmtDate(p.expiry)+'</span></div>':'')+
+    '<div style="display:flex;gap:8px">'+
+      '<button onclick="updateProgramBalance(\''+p.id+'\')" style="flex:1;padding:12px;border-radius:12px;font-size:13px;font-weight:700;background:#1A1A1A;color:white;border:none">Update balance</button>'+
+      '<button onclick="deleteProgram(\''+p.id+'\')" style="flex:0 0 50px;padding:12px;border-radius:12px;background:#FFE5E5;color:#DC2626;border:none"><svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg></button>'+
+    '</div>';
+  openModal(html);
+};
+
+window.updateProgramBalance=function(id){
+  const p=state.programs.find(x=>x.id===id);
+  if(!p)return;
+  closeModal();
+  setTimeout(()=>{
+    const html='<div class="modal-handle"></div><h3 class="modal-title">Update '+escapeHtml(p.name)+'</h3>'+
+      '<div class="form-row"><label>Current balance</label><input id="upd-balance" type="number" inputmode="numeric" value="'+escapeHtml(p.balance)+'"></div>'+
+      '<div class="form-row"><label>Member ID (optional)</label><input id="upd-memberid" value="'+escapeHtml(p.memberId||'')+'" placeholder="Your account number"></div>'+
+      '<div class="form-row"><label>Points expire (optional)</label><input id="upd-expiry" type="date" value="'+escapeHtml(p.expiry||'')+'"></div>'+
+      '<div class="form-actions"><button class="btn-secondary" onclick="closeModal()">Cancel</button><button class="btn-primary" onclick="saveProgramUpdate(\''+id+'\')">Save</button></div>';
+    openModal(html);
+  },200);
+};
+
+window.saveProgramUpdate=function(id){
+  const p=state.programs.find(x=>x.id===id);
+  if(!p)return;
+  p.balance=document.getElementById('upd-balance').value||p.balance;
+  p.memberId=document.getElementById('upd-memberid').value.trim();
+  p.expiry=document.getElementById('upd-expiry').value||null;
+  p.lastUpdated=Date.now();
+  save(K.programs,state.programs);
+  closeModal();
+  toast('✓ Balance updated');
+  renderAll();
+};
+
+window.deleteProgram=function(id){
+  if(!confirm('Delete this program?'))return;
+  state.programs=state.programs.filter(x=>x.id!==id);
+  save(K.programs,state.programs);
+  closeModal();
+  toast('Deleted');
+  renderAll();
+};
 
 function renderLoyaltyList(){
   return state.loyalty.map(c=>{
@@ -505,6 +642,8 @@ window.redeemDeal=function(id){
   state.rewards.spins+=1;
   save(K.deals,state.deals);save(K.rewards,state.rewards);
   toast('✓ Saved $'+(parseFloat(d.value)||0).toFixed(0)+' · +10 pts · +1 spin');
+  completeMission('redeem');
+  checkTierUp();
   renderAll();
 };
 
@@ -618,6 +757,8 @@ window.confirmShare=function(id){
   }
   closeModal();
   toast('🎉 Shared with community · +5 pts');
+  completeMission('share');
+  checkTierUp();
   goPage('community');
 };
 
@@ -641,17 +782,6 @@ window.deleteDeal=function(id){
   save(K.deals,state.deals);
   toast('Deleted');
   renderAll();
-};
-
-window.viewProgram=function(id){
-  const p=state.programs.find(x=>x.id===id);
-  if(!p)return;
-  if(confirm(p.name+'\nBalance: '+p.balance+' '+p.unit+(p.expiry?'\nExpires: '+p.expiry:'')+'\n\nDelete this program?')){
-    state.programs=state.programs.filter(x=>x.id!==id);
-    save(K.programs,state.programs);
-    toast('Deleted');
-    renderAll();
-  }
 };
 
 // -------- Browse --------
@@ -726,6 +856,8 @@ window.claimBrowseDeal=function(merchant,discount,category,code,expiry){
   state.rewards.spins+=1;
   save(K.deals,state.deals);save(K.rewards,state.rewards);
   toast('✓ Added to wallet · +1 spin');
+  completeMission('save');
+  checkTierUp();
   renderAll();
   renderBrowse(); // Force Browse to update Claim → ✓ In wallet immediately
 };
@@ -748,31 +880,268 @@ window.setBrowseTab=function(tab){
   document.querySelector('.bsection[data-bsection="'+tab+'"]').style.display='block';
 };
 
-// -------- Rewards --------
-function getCurrentTier(){let cur=TIERS[0];for(const t of TIERS){if(state.rewards.points>=t.min)cur=t;}return cur;}
+// -------- Rewards (Gamified: Missions · Streak fire · Surprise unlocks · Tier celebrations) --------
+
+// Mission templates - reset daily. Each id is unique; pts is bonus on completion.
+const MISSION_TEMPLATES=[
+  {id:'save',label:'Save a deal',sub:'Snap, upload, or claim from Browse',pts:10,emoji:'📸',gradient:'linear-gradient(135deg,#FF6B6B,#FFA06B)'},
+  {id:'share',label:'Share with community',sub:'Pool a deal for others to claim',pts:15,emoji:'📤',gradient:'linear-gradient(135deg,#6366F1,#C084FC)'},
+  {id:'redeem',label:'Redeem a deal',sub:'Mark one redeemed at checkout',pts:25,emoji:'✓',gradient:'linear-gradient(135deg,#00C9A7,#4FACFE)'}
+];
+
+// Streak levels — visual flame intensity + perks
+const STREAK_LEVELS=[
+  {min:0,emoji:'',label:'Start your streak',color:'#9CA3AF',glow:'none',perk:'Save a deal today to begin'},
+  {min:1,emoji:'🔥',label:'On fire',color:'#FF6B6B',glow:'0 0 12px rgba(255,107,107,0.6)',perk:'+1 spin per redeem'},
+  {min:3,emoji:'🔥🔥',label:'3-day streak',color:'#FF4500',glow:'0 0 18px rgba(255,69,0,0.7)',perk:'Unlocked: 3× points on Sundays'},
+  {min:7,emoji:'🔥🔥🔥',label:'Week warrior',color:'#FF1A1A',glow:'0 0 24px rgba(255,26,26,0.85)',perk:'Unlocked: 2× spin wheel rewards'},
+  {min:30,emoji:'🌋',label:'Inferno',color:'#9333EA',glow:'0 0 32px rgba(147,51,234,0.9)',perk:'Legendary: All rewards doubled'}
+];
+
+// Surprise unlocks — locked features visible to drive aspiration
+const UNLOCKS=[
+  {id:'bonus_pool',pts:100,title:'Bonus deal pool',sub:'Premium curated deals from partners',emoji:'🎁',gradient:'linear-gradient(135deg,#FFD700,#FFA500)'},
+  {id:'priority_share',pts:200,title:'Priority sharing',sub:'Your shares appear at the top of community',emoji:'⚡',gradient:'linear-gradient(135deg,#6366F1,#C084FC)'},
+  {id:'double_spin',pts:300,title:'Double spin Sundays',sub:'Two spin wheels every Sunday',emoji:'🎰',gradient:'linear-gradient(135deg,#F472B6,#FB923C)'},
+  {id:'early_access',pts:500,title:'Early-access deals',sub:'See deals 24 hours before everyone',emoji:'🚀',gradient:'linear-gradient(135deg,#00C9A7,#4FACFE)'},
+  {id:'platinum_perks',pts:750,title:'Platinum perks',sub:'Concierge support + monthly bonus pack',emoji:'💎',gradient:'linear-gradient(135deg,#A78BFA,#6366F1)'}
+];
+
+function getTierForPoints(p){let cur=TIERS[0];for(const t of TIERS){if(p>=t.min)cur=t;}return cur;}
+function getCurrentTier(){return getTierForPoints(state.rewards.points);}
+
+function getStreakLevel(){
+  const s=state.rewards.streak||0;
+  let lvl=STREAK_LEVELS[0];
+  for(const l of STREAK_LEVELS){if(s>=l.min)lvl=l;}
+  return lvl;
+}
+
+// Reset daily missions if date changed; called on every render
+function refreshDailyMissions(){
+  const today=todayStr();
+  if(!state.rewards.missions||state.rewards.missions.date!==today){
+    state.rewards.missions={date:today,done:{}};
+    save(K.rewards,state.rewards);
+  }
+}
+
+// Mark a mission complete; returns true if newly completed (so caller can show toast)
+function completeMission(missionId){
+  refreshDailyMissions();
+  const tmpl=MISSION_TEMPLATES.find(m=>m.id===missionId);
+  if(!tmpl)return false;
+  if(state.rewards.missions.done[missionId])return false;
+  state.rewards.missions.done[missionId]=Date.now();
+  state.rewards.points+=tmpl.pts;
+  save(K.rewards,state.rewards);
+  toast('🎯 Mission complete: '+tmpl.label+' · +'+tmpl.pts+' pts');
+  // Check if all missions for the day done -> bonus spin
+  const allDone=MISSION_TEMPLATES.every(m=>state.rewards.missions.done[m.id]);
+  if(allDone){
+    state.rewards.spins=(state.rewards.spins||0)+1;
+    save(K.rewards,state.rewards);
+    setTimeout(()=>toast('🎁 All daily missions complete! +1 bonus spin'),1200);
+  }
+  // Tier-up check after points gained
+  setTimeout(checkTierUp,300);
+  return true;
+}
+
+// Detect tier crossings and trigger celebration
+function checkTierUp(){
+  const newTier=getCurrentTier();
+  const lastTierName=state.rewards.lastSeenTier||'BRONZE';
+  if(newTier.name!==lastTierName){
+    const oldIdx=TIERS.findIndex(t=>t.name===lastTierName);
+    const newIdx=TIERS.findIndex(t=>t.name===newTier.name);
+    if(newIdx>oldIdx){
+      state.rewards.lastSeenTier=newTier.name;
+      save(K.rewards,state.rewards);
+      celebrateTierUp(newTier);
+    } else {
+      // Just sync without celebrating downgrades
+      state.rewards.lastSeenTier=newTier.name;
+      save(K.rewards,state.rewards);
+    }
+  }
+  // Also check unlocks
+  checkUnlocks();
+}
+
+function checkUnlocks(){
+  const seen=state.rewards.unlocksSeen||[];
+  for(const u of UNLOCKS){
+    if(state.rewards.points>=u.pts && !seen.includes(u.id)){
+      state.rewards.unlocksSeen=[...seen,u.id];
+      save(K.rewards,state.rewards);
+      setTimeout(()=>toast('🔓 Unlocked: '+u.title),1800);
+      break; // one announcement at a time
+    }
+  }
+}
+
+// Confetti burst — pure DOM, no library
+function triggerConfetti(){
+  const root=document.getElementById('confetti-root');
+  if(!root)return;
+  root.innerHTML='';
+  const colors=['#FFE16B','#FF6B6B','#00C9A7','#6366F1','#F472B6','#FFA06B','#4FACFE'];
+  const N=70;
+  for(let i=0;i<N;i++){
+    const el=document.createElement('span');
+    el.className='confetti-piece';
+    el.style.left=(Math.random()*100)+'%';
+    el.style.background=colors[i%colors.length];
+    el.style.animationDelay=(Math.random()*0.4)+'s';
+    el.style.animationDuration=(1.8+Math.random()*1.4)+'s';
+    el.style.transform='rotate('+(Math.random()*360)+'deg)';
+    root.appendChild(el);
+  }
+  setTimeout(()=>{root.innerHTML='';},3500);
+}
+
+function celebrateTierUp(tier){
+  triggerConfetti();
+  const html='<div class="modal-handle"></div>'+
+    '<div style="text-align:center;padding:8px 0 4px">'+
+      '<div style="font-size:72px;line-height:1;animation:tierPop 0.6s cubic-bezier(0.34,1.56,0.64,1)">'+tier.emoji+'</div>'+
+      '<p style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin:14px 0 4px">Tier unlocked</p>'+
+      '<h2 style="font-size:32px;font-weight:900;letter-spacing:-1px;margin:0 0 8px;background:linear-gradient(135deg,'+tier.colors[0]+','+tier.colors[1]+');-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">'+tier.name+'</h2>'+
+      '<p style="font-size:14px;color:var(--text-dim);margin:0 0 24px;line-height:1.5">You\'ve hit '+tier.min+' points.<br>Welcome to the '+tier.name.toLowerCase()+' club.</p>'+
+      '<div style="background:linear-gradient(135deg,'+tier.colors[0]+','+tier.colors[1]+');border-radius:20px;padding:20px;color:white;margin-bottom:20px;box-shadow:0 8px 24px rgba(0,0,0,0.15)">'+
+        '<p style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;opacity:0.85;margin:0">'+(state.profile?.name||'You')+'\'s tier</p>'+
+        '<p style="font-size:24px;font-weight:900;margin:6px 0 0;letter-spacing:-0.5px">'+tier.emoji+' '+tier.name+'</p>'+
+        '<p style="font-size:12px;opacity:0.85;margin:8px 0 0">'+state.rewards.points.toLocaleString()+' points</p>'+
+      '</div>'+
+      '<button onclick="closeModal()" style="width:100%;background:#1A1A1A;color:white;padding:14px;border-radius:14px;font-size:14px;font-weight:800">Keep going</button>'+
+    '</div>';
+  setTimeout(()=>openModal(html),200);
+}
 
 function renderRewards(){
-  document.getElementById('points-display').textContent=state.rewards.points.toLocaleString();
+  refreshDailyMissions();
+  const root=document.getElementById('rewards-root');
+  if(!root)return;
   const tier=getCurrentTier();
-  const tb=document.getElementById('tier-badge');
-  tb.textContent=tier.emoji+' '+tier.name;
-  tb.style.background='linear-gradient(135deg,'+tier.colors[0]+','+tier.colors[1]+')';
-  const fill=document.getElementById('progress-fill');
-  fill.style.background='linear-gradient(90deg,'+tier.colors[0]+','+tier.colors[1]+')';
+  const streak=getStreakLevel();
+  const nextTier=tier.next===Infinity?null:TIERS[TIERS.indexOf(tier)+1];
   const pct=tier.next===Infinity?100:Math.min(100,((state.rewards.points-tier.min)/(tier.next-tier.min))*100);
-  fill.style.width=pct+'%';
-  document.getElementById('next-tier-text').textContent=tier.next===Infinity?'Max tier':(tier.next-state.rewards.points)+' to '+TIERS[TIERS.indexOf(tier)+1].name;
-  document.getElementById('streak-pill').textContent='🔥 '+state.rewards.streak+' day streak';
 
-  const spinBtn=document.getElementById('spin-btn');
-  const avail=document.getElementById('spins-available');
-  if(state.rewards.spins>0){
-    spinBtn.disabled=false;spinBtn.style.opacity='1';
-    avail.textContent=state.rewards.spins+' spin'+(state.rewards.spins===1?'':'s')+' available';
-  } else {
-    spinBtn.disabled=true;spinBtn.style.opacity='0.5';
-    avail.textContent='Save a deal to earn spins (+1 per save)';
-  }
+  // 1) Header — streak fire
+  let html='<div style="padding:0 20px 16px;display:flex;align-items:center;gap:12px">'+
+    '<button class="icon-btn" onclick="goPage(\'wallet\')"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>'+
+    '<h2 style="color:white;font-size:24px;font-weight:800;margin:0;flex:1">Rewards</h2>'+
+  '</div>';
+
+  // Streak Fire visualization
+  const streakCount=state.rewards.streak||0;
+  html+='<div style="margin:0 20px 16px;background:rgba(255,255,255,0.95);backdrop-filter:blur(20px);border-radius:24px;padding:18px;display:flex;align-items:center;gap:14px;box-shadow:0 4px 14px rgba(0,0,0,0.08)">'+
+    '<div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,'+(streakCount>0?streak.color:'#E5E7EB')+','+(streakCount>0?streak.color:'#D1D5DB')+');display:flex;align-items:center;justify-content:center;font-size:30px;box-shadow:'+streak.glow+';flex-shrink:0;'+(streakCount>0?'animation:flamePulse 1.4s ease-in-out infinite':'')+'">'+(streak.emoji||'❄️')+'</div>'+
+    '<div style="flex:1;min-width:0">'+
+      '<p style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin:0">Streak</p>'+
+      '<p style="font-size:22px;font-weight:900;margin:2px 0 0;letter-spacing:-0.5px">'+streakCount+' day'+(streakCount===1?'':'s')+'</p>'+
+      '<p style="font-size:11px;color:var(--text-dim);margin:2px 0 0;line-height:1.4">'+escapeHtml(streak.perk)+'</p>'+
+    '</div>'+
+  '</div>';
+
+  // 2) Points / tier card
+  html+='<div style="margin:0 20px 16px;background:white;border-radius:24px;padding:24px 20px;text-align:center;box-shadow:0 6px 20px rgba(0,0,0,0.06)">'+
+    '<p style="font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin:0">Your points</p>'+
+    '<h2 style="font-size:48px;font-weight:900;margin:4px 0 8px;letter-spacing:-2px;line-height:1">'+state.rewards.points.toLocaleString()+'</h2>'+
+    '<div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:14px">'+
+      '<span style="background:linear-gradient(135deg,'+tier.colors[0]+','+tier.colors[1]+');color:white;font-size:11px;font-weight:800;padding:4px 12px;border-radius:999px">'+tier.emoji+' '+tier.name+'</span>'+
+      '<span style="font-size:11px;color:var(--text-dim)">'+(nextTier?(tier.next-state.rewards.points)+' to '+nextTier.name:'Max tier')+'</span>'+
+    '</div>'+
+    '<div style="background:#f0f0f0;border-radius:999px;height:8px;overflow:hidden">'+
+      '<div style="background:linear-gradient(90deg,'+tier.colors[0]+','+tier.colors[1]+');height:100%;width:'+pct+'%;border-radius:999px;transition:width .5s"></div>'+
+    '</div>'+
+  '</div>';
+
+  // 3) Daily missions
+  const done=state.rewards.missions.done||{};
+  const completedCount=MISSION_TEMPLATES.filter(m=>done[m.id]).length;
+  html+='<div style="margin:0 20px 16px">'+
+    '<div style="display:flex;align-items:baseline;justify-content:space-between;padding:0 4px 10px">'+
+      '<p style="font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:white;margin:0">🎯 Daily missions</p>'+
+      '<p style="font-size:11px;color:rgba(255,255,255,0.85);margin:0;font-weight:600">'+completedCount+'/'+MISSION_TEMPLATES.length+' done</p>'+
+    '</div>'+
+    MISSION_TEMPLATES.map(m=>{
+      const isDone=!!done[m.id];
+      return '<div style="background:white;border-radius:16px;padding:14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;'+(isDone?'opacity:0.6':'box-shadow:0 2px 8px rgba(0,0,0,0.06)')+'">'+
+        '<div style="width:44px;height:44px;border-radius:12px;background:'+m.gradient+';display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;'+(isDone?'filter:grayscale(0.5)':'')+'">'+m.emoji+'</div>'+
+        '<div style="flex:1;min-width:0">'+
+          '<p style="font-size:14px;font-weight:700;margin:0;'+(isDone?'text-decoration:line-through;color:var(--text-dim)':'')+'">'+escapeHtml(m.label)+'</p>'+
+          '<p style="font-size:11px;color:var(--text-dim);margin:2px 0 0">'+escapeHtml(m.sub)+'</p>'+
+        '</div>'+
+        '<div style="flex-shrink:0">'+
+          (isDone
+            ?'<span style="background:#EAFBF4;color:#065F46;font-size:11px;font-weight:800;padding:6px 10px;border-radius:999px">✓ Done</span>'
+            :'<span style="background:'+m.gradient+';color:white;font-size:11px;font-weight:800;padding:6px 10px;border-radius:999px">+'+m.pts+' pts</span>')+
+        '</div>'+
+      '</div>';
+    }).join('')+
+  '</div>';
+
+  // 4) Spin wheel
+  const spinsAvailable=state.rewards.spins||0;
+  html+='<div style="margin:0 20px 16px;background:white;border-radius:24px;padding:20px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.06)">'+
+    '<p style="font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);margin:0 0 14px">🎰 Spin to win</p>'+
+    '<div style="position:relative;width:220px;height:220px;margin:0 auto 14px">'+
+      '<div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:12px solid transparent;border-right:12px solid transparent;border-top:18px solid #1A1A1A;z-index:2;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3))"></div>'+
+      '<svg id="wheel" viewBox="0 0 220 220" style="width:100%;height:100%;transition:transform 4.5s cubic-bezier(0.17,0.67,0.21,0.99);transform-origin:50% 50%">'+
+        '<path d="M110 110 L110 0 A110 110 0 0 1 187.78 32.22 Z" fill="#FF6B6B"/>'+
+        '<path d="M110 110 L187.78 32.22 A110 110 0 0 1 220 110 Z" fill="#FFA06B"/>'+
+        '<path d="M110 110 L220 110 A110 110 0 0 1 187.78 187.78 Z" fill="#FFE16B"/>'+
+        '<path d="M110 110 L187.78 187.78 A110 110 0 0 1 110 220 Z" fill="#4FACFE"/>'+
+        '<path d="M110 110 L110 220 A110 110 0 0 1 32.22 187.78 Z" fill="#C084FC"/>'+
+        '<path d="M110 110 L32.22 187.78 A110 110 0 0 1 0 110 Z" fill="#F472B6"/>'+
+        '<path d="M110 110 L0 110 A110 110 0 0 1 32.22 32.22 Z" fill="#34D399"/>'+
+        '<path d="M110 110 L32.22 32.22 A110 110 0 0 1 110 0 Z" fill="#FBBF24"/>'+
+        '<text x="132" y="58" text-anchor="middle" font-size="11" font-weight="800" fill="white">+10</text>'+
+        '<text x="164" y="92" text-anchor="middle" font-size="11" font-weight="800" fill="white">DEAL</text>'+
+        '<text x="164" y="135" text-anchor="middle" font-size="11" font-weight="800" fill="white">+25</text>'+
+        '<text x="132" y="166" text-anchor="middle" font-size="13" font-weight="800" fill="white">?</text>'+
+        '<text x="88" y="166" text-anchor="middle" font-size="11" font-weight="800" fill="white">+5</text>'+
+        '<text x="56" y="135" text-anchor="middle" font-size="11" font-weight="800" fill="white">JACK</text>'+
+        '<text x="56" y="92" text-anchor="middle" font-size="11" font-weight="800" fill="white">+15</text>'+
+        '<text x="88" y="58" text-anchor="middle" font-size="11" font-weight="800" fill="white">SPIN</text>'+
+      '</svg>'+
+      '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:50px;height:50px;border-radius:50%;background:white;border:3px solid #1A1A1A;display:flex;align-items:center;justify-content:center;font-size:20px;z-index:1">🎰</div>'+
+    '</div>'+
+    '<p id="spins-available" style="font-size:13px;color:var(--text-dim);margin:0 0 12px">'+
+      (spinsAvailable>0
+        ?spinsAvailable+' spin'+(spinsAvailable===1?'':'s')+' available'
+        :'Save a deal to earn spins (+1 per save)')+
+    '</p>'+
+    '<button id="spin-btn" onclick="doSpin()" '+(spinsAvailable<1?'disabled':'')+' style="background:linear-gradient(135deg,#1A1A1A,#2A2A3E);color:white;padding:14px 32px;border-radius:999px;font-size:14px;font-weight:800;letter-spacing:0.5px;box-shadow:0 4px 12px rgba(0,0,0,0.2);'+(spinsAvailable<1?'opacity:0.5':'')+'">⚡ SPIN NOW</button>'+
+    '<p id="spin-result" style="margin-top:12px;font-size:14px;font-weight:700;color:var(--accent-dark);min-height:18px"></p>'+
+  '</div>';
+
+  // 5) Surprise unlocks
+  html+='<div style="margin:0 20px 16px">'+
+    '<p style="font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:white;margin:0 4px 10px">🔓 Unlocks</p>'+
+    UNLOCKS.map(u=>{
+      const unlocked=state.rewards.points>=u.pts;
+      const remaining=u.pts-state.rewards.points;
+      const unlockPct=Math.min(100,(state.rewards.points/u.pts)*100);
+      return '<div style="background:'+(unlocked?u.gradient:'rgba(255,255,255,0.95)')+';border-radius:18px;padding:14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;color:'+(unlocked?'white':'#1A1A1A')+';'+(unlocked?'box-shadow:0 6px 18px rgba(0,0,0,0.15)':'box-shadow:0 2px 8px rgba(0,0,0,0.06)')+';position:relative;overflow:hidden">'+
+        (!unlocked?'<div style="position:absolute;left:0;bottom:0;height:3px;width:'+unlockPct+'%;background:linear-gradient(90deg,#FFE16B,#FFA06B);transition:width .5s"></div>':'')+
+        '<div style="width:44px;height:44px;border-radius:12px;background:'+(unlocked?'rgba(255,255,255,0.25)':u.gradient)+';display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;'+(!unlocked?'filter:grayscale(0.4) opacity(0.85)':'')+'">'+u.emoji+'</div>'+
+        '<div style="flex:1;min-width:0">'+
+          '<p style="font-size:14px;font-weight:800;margin:0">'+escapeHtml(u.title)+'</p>'+
+          '<p style="font-size:11px;margin:2px 0 0;line-height:1.4;'+(unlocked?'opacity:0.9':'color:var(--text-dim)')+'">'+escapeHtml(u.sub)+'</p>'+
+        '</div>'+
+        '<div style="flex-shrink:0">'+
+          (unlocked
+            ?'<span style="background:rgba(255,255,255,0.25);color:white;font-size:10px;font-weight:800;padding:4px 8px;border-radius:999px">✓ UNLOCKED</span>'
+            :'<span style="background:#1A1A1A;color:white;font-size:10px;font-weight:800;padding:4px 8px;border-radius:999px">'+remaining+' to go</span>')+
+        '</div>'+
+      '</div>';
+    }).join('')+
+  '</div>';
+
+  root.innerHTML=html;
 }
 
 let spinning=false;
@@ -785,8 +1154,11 @@ window.doSpin=function(){
     {label:'Mystery 🎁',pts:5},{label:'+5 pts',pts:5},{label:'JACKPOT 100 pts!',pts:100},
     {label:'+15 pts',pts:15},{label:'Spin again',pts:0,respin:true}
   ];
+  // 7-day streak doubles spin rewards
+  const streakBonus=(state.rewards.streak||0)>=7?2:1;
   const idx=weightedPick([22,8,14,12,22,4,12,6]);
   const wheel=document.getElementById('wheel');
+  if(!wheel){spinning=false;return;}
   const cur=parseFloat((wheel.style.transform.match(/-?[\d.]+/)||[0])[0])||0;
   const target=cur+360*5+(idx*45)+22.5;
   wheel.style.transform='rotate('+target+'deg)';
@@ -794,11 +1166,15 @@ window.doSpin=function(){
   document.getElementById('spin-result').textContent='';
   setTimeout(()=>{
     const slice=slices[idx];
-    document.getElementById('spin-result').textContent='🎉 '+slice.label;
-    state.rewards.points+=slice.pts;
+    const earned=slice.pts*streakBonus;
+    const label=streakBonus>1&&slice.pts>0?slice.label+' (×'+streakBonus+' streak!)':slice.label;
+    const resultEl=document.getElementById('spin-result');
+    if(resultEl)resultEl.textContent='🎉 '+label;
+    state.rewards.points+=earned;
     if(slice.respin)state.rewards.spins+=1;
     save(K.rewards,state.rewards);
     spinning=false;
+    checkTierUp();
     renderRewards();
   },4600);
 };
@@ -1208,6 +1584,8 @@ window.saveDealForm=function(){
   pendingDealImage=null;
   closeModal();
   toast('✓ Deal saved · +1 spin earned');
+  completeMission('save');
+  checkTierUp();
   renderAll();
 };
 
