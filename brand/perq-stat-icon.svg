@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Status-bar notification icon for Android.
+  Must be monochrome (white silhouette on transparent). Android tints with iconColor.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <!-- Simplified pocket silhouette -->
+  <path d="M5 9 L5 19 Q5 21 7 21 L17 21 Q19 21 19 19 L19 9 Q19 7.5 17.3 7 L12 6 L6.7 7 Q5 7.5 5 9 Z" fill="#FFFFFF"/>
+  <!-- $ glyph in pocket -->
+  <text x="12" y="16" font-family="-apple-system,sans-serif" font-size="9" font-weight="900" fill="#0D1B2A" text-anchor="middle">$</text>
+</svg>

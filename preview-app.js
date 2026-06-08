@@ -531,6 +531,7 @@ window.claimFromPool=function(id){
   save(K.rewards,state.rewards);
   completeMission('save');
   checkTierUp();
+  scheduleReminders();
   renderAll();
 };
 
@@ -725,6 +726,7 @@ window.redeemDeal=function(id){
   toast('✓ Saved $'+(parseFloat(d.value)||0).toFixed(0)+' · +'+pts+' pts · +1 spin');
   completeMission('redeem');
   checkTierUp();
+  scheduleReminders();
   renderAll();
 };
 
@@ -802,6 +804,12 @@ window.copyShareText=function(id){
   const d=state.deals.find(x=>x.id===id);
   if(!d)return;
   const text=d.merchant+': '+d.discount+(d.code?' (code '+d.code+')':'')+(d.expiry?' — expires '+fmtDate(d.expiry):'')+'\n\n'+location.origin+location.pathname;
+  // Prefer native share sheet on iOS/Android
+  if(window.PerqNative&&window.PerqNative.isNative){
+    window.PerqNative.nativeShare({title:'Perq deal',text,url:location.origin+location.pathname})
+      .then(ok=>{if(ok)toast('Shared');else toast('Share cancelled');});
+    return;
+  }
   if(navigator.clipboard){
     navigator.clipboard.writeText(text).then(()=>toast('Copied to clipboard')).catch(()=>toast('Copy failed'));
   } else {
@@ -864,6 +872,7 @@ window.deleteDeal=function(id){
   state.deals=state.deals.filter(d=>d.id!==id);
   save(K.deals,state.deals);
   toast('Deleted');
+  scheduleReminders();
   renderAll();
 };
 
@@ -941,6 +950,7 @@ window.claimBrowseDeal=function(merchant,discount,category,code,expiry){
   toast('✓ Added to wallet · +1 spin');
   completeMission('save');
   checkTierUp();
+  scheduleReminders();
   renderAll();
   renderBrowse(); // Force Browse to update Claim → ✓ In wallet immediately
 };
@@ -1746,6 +1756,7 @@ window.saveDealForm=function(){
   toast('✓ Deal saved · +1 spin earned');
   completeMission('save');
   checkTierUp();
+  scheduleReminders();
   renderAll();
 };
 
@@ -1968,7 +1979,20 @@ window.toggleSetting=function(el,key){
   state.settings[key]=el.classList.contains('on');
   save(K.settings,state.settings);
   toast(el.classList.contains('on')?'Enabled':'Disabled');
+  if(key==='reminders')scheduleReminders();
 };
+
+// Native bridge: schedule expiry notifications via Capacitor LocalNotifications
+// when running as native iOS/Android app. No-op on web preview.
+function scheduleReminders(){
+  if(!window.PerqNative||!window.PerqNative.isNative)return;
+  window.PerqNative.rescheduleExpiryReminders(state.deals,state.settings)
+    .then(r=>{
+      if(r&&r.scheduled>0)console.log('[Perq] Scheduled '+r.scheduled+' expiry reminders');
+      else if(r&&r.skipped)console.log('[Perq] Reminder schedule skipped:',r.skipped);
+    })
+    .catch(e=>console.warn('[Perq] Reminder schedule failed:',e));
+}
 
 window.editProfile=function(){
   const html='<div class="modal-handle"></div><h3 class="modal-title">Profile</h3>'+
@@ -2073,6 +2097,9 @@ window.seedCommunityPool=function(){
 };
 
 window.checkReminders=function(){
+  // On native, this also triggers a re-schedule pass so users can confirm
+  // notifications are wired even if they previously denied permission.
+  scheduleReminders();
   const expiring=state.deals.filter(d=>{
     if(d.redeemed||!d.expiry)return false;
     const du=daysUntil(d.expiry);
@@ -2093,4 +2120,5 @@ function renderAll(){
 // -------- Init --------
 checkOnboarding();
 renderAll();
+scheduleReminders(); // No-op on web; schedules iOS/Android local notifications on native
 })();
