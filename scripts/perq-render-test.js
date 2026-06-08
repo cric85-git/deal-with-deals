@@ -75,13 +75,13 @@ try {
 // Check rendered content has expected sections
 if (lastHTML.includes('Daily missions') || lastHTML.includes('🎯')) pass++;
 else { fail++; console.error('Missing missions section'); }
-if (lastHTML.includes('Your points')) pass++;
-else { fail++; console.error('Missing points section'); }
+if (lastHTML.includes('BRONZE') || lastHTML.includes('SILVER') || lastHTML.includes('pts')) pass++;
+else { fail++; console.error('Missing points/tier section'); }
 if (lastHTML.includes('Spin to win') || lastHTML.includes('SPIN NOW')) pass++;
 else { fail++; console.error('Missing spin section'); }
 if (lastHTML.includes('Unlocks') || lastHTML.includes('🔓')) pass++;
 else { fail++; console.error('Missing unlocks section'); }
-if (lastHTML.includes('Streak') || lastHTML.includes('streak')) pass++;
+if (lastHTML.includes('Streak') || lastHTML.includes('streak') || lastHTML.includes('STREAK')) pass++;
 else { fail++; console.error('Missing streak section'); }
 
 // Test mission completion
@@ -119,6 +119,32 @@ try {
 } catch (e) {
   fail++;
   console.error('confirmShare threw:', e.message);
+}
+
+// Test bonus_pool unlock fires correctly when crossing 100 pts
+try {
+  // Reset state via direct localStorage manipulation
+  const baseRewards = { points: 95, spins: 0, streak: 0, saved: 0, lastClaim: null, missions: { date: null, done: {} }, lastSeenTier: 'BRONZE', unlocksSeen: [] };
+  store['perq-mvp:rewards'] = JSON.stringify(baseRewards);
+  // Push a deal we can redeem to push past 100
+  const dealsX = JSON.parse(store['perq-mvp:deals'] || '[]');
+  dealsX.push({ id: 'unlockTrigger', merchant: 'Trigger', discount: '$10 off', value: 10, redeemed: false, createdAt: Date.now() });
+  store['perq-mvp:deals'] = JSON.stringify(dealsX);
+  // Reload code to pick up fresh state
+  vm.runInContext(code, ctx, { filename: 'preview-app.js' });
+  // Trigger redeem (gives +10 redeem + +25 mission = +35 pts -> 130)
+  sandbox.redeemDeal('unlockTrigger');
+  const finalRewards = JSON.parse(store['perq-mvp:rewards']);
+  if (finalRewards.unlocksSeen && finalRewards.unlocksSeen.includes('bonus_pool')) pass++;
+  else { fail++; console.error('bonus_pool unlock not marked seen'); }
+  // Verify bonus deal got dropped into wallet
+  const finalDeals = JSON.parse(store['perq-mvp:deals']);
+  const bonus = finalDeals.find(d => d.isBonus);
+  if (bonus) pass++;
+  else { fail++; console.error('bonus deal not added to wallet'); }
+} catch (e) {
+  fail++;
+  console.error('unlock flow threw:', e.message);
 }
 
 console.log(`RENDER TEST: PASS ${pass}, FAIL ${fail}`);

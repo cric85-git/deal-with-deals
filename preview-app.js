@@ -37,8 +37,22 @@ let currentBrowseTab='local';
   if(!r.missions)r.missions={date:null,done:{}};
   if(!r.lastSeenTier)r.lastSeenTier=getTierForPoints(r.points||0).name;
   if(!Array.isArray(r.unlocksSeen))r.unlocksSeen=[];
+  if(!r.lastSundaySpin)r.lastSundaySpin=null;
   state.rewards=r;
   save(K.rewards,state.rewards);
+})();
+
+// Sunday bonus spin perk — runs once per Sunday for users with the double_spin unlock
+(function grantSundayBonus(){
+  if(!(state.rewards.unlocksSeen||[]).includes('double_spin'))return;
+  const now=new Date();
+  if(now.getDay()!==0)return; // 0 = Sunday
+  const today=todayStr();
+  if(state.rewards.lastSundaySpin===today)return;
+  state.rewards.spins=(state.rewards.spins||0)+1;
+  state.rewards.lastSundaySpin=today;
+  save(K.rewards,state.rewards);
+  setTimeout(()=>toast('☀️ Sunday bonus: +1 spin'),1500);
 })();
 
 function load(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}}
@@ -73,11 +87,76 @@ window.nextStep=function(){
     state.profile={name,createdAt:Date.now(),preferences:[]};
     save(K.profile,state.profile);
   }
+  if(onboardStep===3){
+    // Capture preferences before moving to install step
+    if(state.selectedPrefs.length>0&&state.profile){
+      state.profile.preferences=state.selectedPrefs;
+      save(K.profile,state.profile);
+    }
+  }
   onboardStep++;
   document.querySelectorAll('.ob-step').forEach(s=>s.classList.remove('active'));
-  document.querySelector('.ob-step[data-step="'+onboardStep+'"]').classList.add('active');
+  const target=document.querySelector('.ob-step[data-step="'+onboardStep+'"]');
+  if(target)target.classList.add('active');
   document.querySelectorAll('.ob-dot').forEach((d,i)=>{d.classList.toggle('active',(i+1)<=onboardStep);});
+  if(onboardStep===4)renderInstallInstructions();
 };
+
+function detectPlatform(){
+  const ua=navigator.userAgent||'';
+  const standalone=window.matchMedia&&window.matchMedia('(display-mode:standalone)').matches||window.navigator.standalone;
+  if(standalone)return 'installed';
+  if(/iPhone|iPad|iPod/.test(ua)){
+    return /CriOS|FxiOS|EdgiOS/.test(ua)?'ios-other':'ios-safari';
+  }
+  if(/Android/.test(ua))return 'android';
+  return 'desktop';
+}
+
+function renderInstallInstructions(){
+  const el=document.getElementById('install-instructions');
+  const sub=document.getElementById('install-platform-sub');
+  if(!el)return;
+  const platform=detectPlatform();
+  // iOS Safari share icon (square with up arrow)
+  const shareIcon='<svg viewBox="0 0 24 24" style="width:22px;height:22px;fill:none;stroke:#0A84FF;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
+  const plusIcon='<svg viewBox="0 0 24 24" style="width:22px;height:22px;fill:none;stroke:#1A1A1A;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0"><rect x="3" y="3" width="18" height="18" rx="3"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>';
+  const dotsIcon='<svg viewBox="0 0 24 24" style="width:22px;height:22px;fill:none;stroke:#1A1A1A;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>';
+
+  function step(num,iconHtml,text){
+    return '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">'+
+      '<div style="width:28px;height:28px;border-radius:50%;background:#1A1A1A;color:#FFE16B;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0">'+num+'</div>'+
+      iconHtml+
+      '<p style="font-size:13px;margin:0;line-height:1.4;flex:1">'+text+'</p>'+
+    '</div>';
+  }
+
+  if(platform==='ios-safari'){
+    sub.textContent='On iPhone — takes 5 seconds. Run Perq full-screen like a real app.';
+    el.innerHTML=
+      step(1,shareIcon,'Tap the <strong>Share</strong> icon in Safari\'s bottom bar')+
+      step(2,plusIcon,'Scroll down and tap <strong>Add to Home Screen</strong>')+
+      '<div style="display:flex;align-items:center;gap:12px;padding:10px 0"><div style="width:28px;height:28px;border-radius:50%;background:#1A1A1A;color:#FFE16B;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0">3</div><div style="width:22px;height:22px;background:#FFE16B;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#1A1A1A;font-weight:900;font-size:13px;flex-shrink:0">P</div><p style="font-size:13px;margin:0;line-height:1.4;flex:1">Tap <strong>Add</strong> — Perq lives on your home screen</p></div>';
+  } else if(platform==='ios-other'){
+    sub.textContent='Switch to Safari to install Perq on your home screen.';
+    el.innerHTML=
+      '<div style="padding:10px 0;border-bottom:1px solid var(--border)"><p style="font-size:13px;margin:0;line-height:1.4">iOS only allows installing web apps from <strong>Safari</strong>.</p></div>'+
+      step(1,shareIcon,'Open <strong>app.perq.app</strong> in Safari (not Chrome/Firefox)')+
+      step(2,plusIcon,'Tap <strong>Share</strong> → <strong>Add to Home Screen</strong>');
+  } else if(platform==='android'){
+    sub.textContent='On Android — takes 5 seconds. Run Perq like a real app.';
+    el.innerHTML=
+      step(1,dotsIcon,'Tap the <strong>⋮ menu</strong> in Chrome\'s top-right')+
+      step(2,plusIcon,'Tap <strong>Install app</strong> or <strong>Add to Home screen</strong>')+
+      '<div style="display:flex;align-items:center;gap:12px;padding:10px 0"><div style="width:28px;height:28px;border-radius:50%;background:#1A1A1A;color:#FFE16B;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0">3</div><div style="width:22px;height:22px;background:#FFE16B;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#1A1A1A;font-weight:900;font-size:13px;flex-shrink:0">P</div><p style="font-size:13px;margin:0;line-height:1.4;flex:1">Confirm <strong>Install</strong> — Perq joins your app drawer</p></div>';
+  } else if(platform==='installed'){
+    sub.textContent='You\'re all set!';
+    el.innerHTML='<div style="text-align:center;padding:12px"><p style="font-size:32px;margin:0">✅</p><p style="font-size:14px;font-weight:700;margin:8px 0 4px">Perq is already installed</p><p style="font-size:12px;color:var(--text-dim);margin:0">You\'re running in app mode.</p></div>';
+  } else {
+    sub.textContent='Open Perq on your phone to install it as an app.';
+    el.innerHTML='<div style="text-align:center;padding:12px"><p style="font-size:32px;margin:0">📱</p><p style="font-size:14px;font-weight:700;margin:8px 0 4px">Install on mobile</p><p style="font-size:12px;color:var(--text-dim);margin:0;line-height:1.5">Open this URL on your iPhone (Safari) or Android phone (Chrome) to add it to your home screen.</p></div>';
+  }
+}
 
 window.finishOnboarding=function(){
   if(state.selectedPrefs.length>0&&state.profile){
@@ -437,12 +516,13 @@ window.claimFromPool=function(id){
   const original=state.deals.find(d=>d.id===id);
   if(original){
     original.claimCount=(original.claimCount||0)+1;
-    state.rewards.points+=5;
+    const sharePts=applyMultiplier(5);
+    state.rewards.points+=sharePts;
     if(original.claimCount%5===0){
       state.rewards.spins=(state.rewards.spins||0)+1;
-      toast('🎉 +5 pts · +1 bonus spin (5 claims!)');
+      toast('🎉 +'+sharePts+' pts · +1 bonus spin (5 claims!)');
     } else {
-      toast('🎉 Claimed · +5 pts to '+(p.sharedBy||'sharer'));
+      toast('🎉 Claimed · +'+sharePts+' pts to '+(p.sharedBy||'sharer'));
     }
   } else {
     toast('🎉 Added to your wallet');
@@ -631,7 +711,8 @@ window.redeemDeal=function(id){
   if(!d)return;
   d.redeemed=true;
   d.redeemedAt=Date.now();
-  state.rewards.points+=10;
+  const pts=applyMultiplier(10);
+  state.rewards.points+=pts;
   state.rewards.saved+=parseFloat(d.value)||0;
   if(state.rewards.lastClaim!==todayStr()){
     const yest=new Date();yest.setDate(yest.getDate()-1);
@@ -641,7 +722,7 @@ window.redeemDeal=function(id){
   }
   state.rewards.spins+=1;
   save(K.deals,state.deals);save(K.rewards,state.rewards);
-  toast('✓ Saved $'+(parseFloat(d.value)||0).toFixed(0)+' · +10 pts · +1 spin');
+  toast('✓ Saved $'+(parseFloat(d.value)||0).toFixed(0)+' · +'+pts+' pts · +1 spin');
   completeMission('redeem');
   checkTierUp();
   renderAll();
@@ -734,7 +815,8 @@ window.confirmShare=function(id){
   d.shared=true;
   d.sharedAt=Date.now();
   d.claimCount=d.claimCount||0;
-  state.rewards.points+=5;
+  const sharePts=applyMultiplier(5*shareMultiplier());
+  state.rewards.points+=sharePts;
   save(K.deals,state.deals);save(K.rewards,state.rewards);
   // Also save to community pool (local-first; will become a backend call later)
   const pool=load('perq-mvp:communityPool',[]);
@@ -751,12 +833,13 @@ window.confirmShare=function(id){
       address:d.address,
       url:d.url,
       value:d.value,
+      priority:hasUnlock('priority_share')?true:false,
       claimCount:0
     });
     save('perq-mvp:communityPool',pool);
   }
   closeModal();
-  toast('🎉 Shared with community · +5 pts');
+  toast('🎉 Shared with community · +'+sharePts+' pts');
   completeMission('share');
   checkTierUp();
   goPage('community');
@@ -898,17 +981,23 @@ const STREAK_LEVELS=[
   {min:30,emoji:'🌋',label:'Inferno',color:'#9333EA',glow:'0 0 32px rgba(147,51,234,0.9)',perk:'Legendary: All rewards doubled'}
 ];
 
-// Surprise unlocks — locked features visible to drive aspiration
+// Surprise unlocks — locked features visible to drive aspiration; deliverUnlockPerk grants the actual benefit
 const UNLOCKS=[
-  {id:'bonus_pool',pts:100,title:'Bonus deal pool',sub:'Premium curated deals from partners',emoji:'🎁',gradient:'linear-gradient(135deg,#FFD700,#FFA500)'},
-  {id:'priority_share',pts:200,title:'Priority sharing',sub:'Your shares appear at the top of community',emoji:'⚡',gradient:'linear-gradient(135deg,#6366F1,#C084FC)'},
-  {id:'double_spin',pts:300,title:'Double spin Sundays',sub:'Two spin wheels every Sunday',emoji:'🎰',gradient:'linear-gradient(135deg,#F472B6,#FB923C)'},
-  {id:'early_access',pts:500,title:'Early-access deals',sub:'See deals 24 hours before everyone',emoji:'🚀',gradient:'linear-gradient(135deg,#00C9A7,#4FACFE)'},
-  {id:'platinum_perks',pts:750,title:'Platinum perks',sub:'Concierge support + monthly bonus pack',emoji:'💎',gradient:'linear-gradient(135deg,#A78BFA,#6366F1)'}
+  {id:'bonus_pool',pts:100,title:'Bonus deal pool',sub:'Free curated deal added to your wallet',emoji:'🎁',gradient:'linear-gradient(135deg,#FFD700,#FFA500)'},
+  {id:'priority_share',pts:200,title:'Priority sharing',sub:'2× points on every share you make',emoji:'⚡',gradient:'linear-gradient(135deg,#6366F1,#C084FC)'},
+  {id:'double_spin',pts:300,title:'Sunday bonus spin',sub:'+1 free spin every Sunday automatically',emoji:'🎰',gradient:'linear-gradient(135deg,#F472B6,#FB923C)'},
+  {id:'early_access',pts:500,title:'Early-access deals',sub:'See partner deals 24 hours early in Browse',emoji:'🚀',gradient:'linear-gradient(135deg,#00C9A7,#4FACFE)'},
+  {id:'platinum_perks',pts:750,title:'Platinum perks',sub:'1.5× multiplier on all points earned',emoji:'💎',gradient:'linear-gradient(135deg,#A78BFA,#6366F1)'}
 ];
 
 function getTierForPoints(p){let cur=TIERS[0];for(const t of TIERS){if(p>=t.min)cur=t;}return cur;}
 function getCurrentTier(){return getTierForPoints(state.rewards.points);}
+
+// Multipliers from active unlocks
+function hasUnlock(id){return (state.rewards.unlocksSeen||[]).includes(id);}
+function pointMultiplier(){return hasUnlock('platinum_perks')?1.5:1;}
+function shareMultiplier(){return hasUnlock('priority_share')?2:1;}
+function applyMultiplier(pts){return Math.round(pts*pointMultiplier());}
 
 function getStreakLevel(){
   const s=state.rewards.streak||0;
@@ -975,10 +1064,67 @@ function checkUnlocks(){
     if(state.rewards.points>=u.pts && !seen.includes(u.id)){
       state.rewards.unlocksSeen=[...seen,u.id];
       save(K.rewards,state.rewards);
-      setTimeout(()=>toast('🔓 Unlocked: '+u.title),1800);
+      // Trigger the actual perk delivery
+      deliverUnlockPerk(u);
       break; // one announcement at a time
     }
   }
+}
+
+// Deliver a tangible perk when an unlock fires
+function deliverUnlockPerk(unlock){
+  let bodyText='',extraReward=null;
+  if(unlock.id==='bonus_pool'){
+    // Drop a curated free deal into wallet right now
+    const bonusDeals=[
+      {merchant:'Starbucks',discount:'Free tall drink',category:'Dining',code:'PERQBONUS',value:6,expiry:futureDate(14)},
+      {merchant:'Target',discount:'$10 off $50',category:'Groceries',code:'PERQ10',value:10,expiry:futureDate(21)},
+      {merchant:'Chipotle',discount:'BOGO entrée',category:'Dining',code:'PERQBOGO',value:12,expiry:futureDate(10)},
+      {merchant:'Sephora',discount:'15% off skincare',category:'Beauty',code:'PERQGLOW',value:15,expiry:futureDate(14)}
+    ];
+    const pick=bonusDeals[Math.floor(Math.random()*bonusDeals.length)];
+    state.deals.push({
+      id:uid(),merchant:pick.merchant,discount:pick.discount,category:pick.category,
+      code:pick.code,value:pick.value,expiry:pick.expiry,
+      notes:'Bonus deal — unlocked at 100 pts',redeemed:false,createdAt:Date.now(),isBonus:true
+    });
+    save(K.deals,state.deals);
+    extraReward='<div style="background:linear-gradient(135deg,#FF6B6B,#FFA06B);border-radius:14px;padding:14px;color:white;margin:14px 0;text-align:left">'+
+      '<p style="font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;opacity:0.9;margin:0">Added to your wallet</p>'+
+      '<p style="font-size:18px;font-weight:800;margin:4px 0 2px">'+escapeHtml(pick.merchant)+'</p>'+
+      '<p style="font-size:13px;font-weight:600;margin:0;opacity:0.95">'+escapeHtml(pick.discount)+'</p>'+
+      '<p style="font-size:11px;opacity:0.85;margin:6px 0 0">Code: <strong style="font-family:ui-monospace,monospace">'+escapeHtml(pick.code)+'</strong> · Expires '+fmtDate(pick.expiry)+'</p>'+
+    '</div>';
+    bodyText='You scored a free curated deal — it\'s already in your Wallet, ready to redeem.';
+  } else if(unlock.id==='priority_share'){
+    bodyText='From now on, every deal you share to community earns <strong>2× points</strong> instead of 5. Your shares also surface at the top of community feeds.';
+  } else if(unlock.id==='double_spin'){
+    bodyText='Every Sunday from now on you get <strong>+1 bonus spin</strong> automatically. Spins also stack — they don\'t expire.';
+    // Grant immediate bonus spin if today is Sunday
+    if(new Date().getDay()===0){
+      state.rewards.spins=(state.rewards.spins||0)+1;
+      save(K.rewards,state.rewards);
+      extraReward='<div style="background:#FEF3C7;border:1px solid #FBBF24;border-radius:12px;padding:12px;margin:14px 0;text-align:left;color:#92400E"><p style="font-size:12px;font-weight:700;margin:0">🎁 +1 Sunday bonus spin already added</p></div>';
+    }
+  } else if(unlock.id==='early_access'){
+    bodyText='Browse now shows <strong>partner-exclusive deals 24 hours early</strong>, tagged with 🚀. First-claim wins.';
+  } else if(unlock.id==='platinum_perks'){
+    bodyText='All point gains are now <strong>1.5× multiplied</strong>. Plus monthly bonus pack delivered automatically.';
+  }
+  const html='<div class="modal-handle"></div>'+
+    '<div style="text-align:center;padding:8px 0 4px">'+
+      '<div style="font-size:64px;line-height:1;animation:tierPop 0.6s cubic-bezier(0.34,1.56,0.64,1);margin-bottom:6px">'+unlock.emoji+'</div>'+
+      '<p style="font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin:14px 0 4px">🔓 Unlocked at '+unlock.pts+' pts</p>'+
+      '<h2 style="font-size:24px;font-weight:900;letter-spacing:-0.5px;margin:0 0 12px;background:'+unlock.gradient+';-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">'+escapeHtml(unlock.title)+'</h2>'+
+      '<p style="font-size:14px;color:var(--text);margin:0;line-height:1.5">'+bodyText+'</p>'+
+      (extraReward||'')+
+      '<button onclick="closeModal()" style="width:100%;background:#1A1A1A;color:white;padding:14px;border-radius:14px;font-size:14px;font-weight:800;margin-top:14px">'+(unlock.id==='bonus_pool'?'See it in my Wallet':'Got it')+'</button>'+
+    '</div>';
+  setTimeout(()=>{
+    triggerConfetti();
+    openModal(html);
+    if(typeof renderAll==='function')renderAll();
+  },300);
 }
 
 // Confetti burst — pure DOM, no library
@@ -1028,67 +1174,46 @@ function renderRewards(){
   const nextTier=tier.next===Infinity?null:TIERS[TIERS.indexOf(tier)+1];
   const pct=tier.next===Infinity?100:Math.min(100,((state.rewards.points-tier.min)/(tier.next-tier.min))*100);
 
-  // 1) Header — streak fire
-  let html='<div style="padding:0 20px 16px;display:flex;align-items:center;gap:12px">'+
+  // 1) Header
+  let html='<div style="padding:0 20px 12px;display:flex;align-items:center;gap:12px">'+
     '<button class="icon-btn" onclick="goPage(\'wallet\')"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>'+
     '<h2 style="color:white;font-size:24px;font-weight:800;margin:0;flex:1">Rewards</h2>'+
   '</div>';
 
-  // Streak Fire visualization
+  // 2) Compact top row — streak + points side by side
   const streakCount=state.rewards.streak||0;
-  html+='<div style="margin:0 20px 16px;background:rgba(255,255,255,0.95);backdrop-filter:blur(20px);border-radius:24px;padding:18px;display:flex;align-items:center;gap:14px;box-shadow:0 4px 14px rgba(0,0,0,0.08)">'+
-    '<div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,'+(streakCount>0?streak.color:'#E5E7EB')+','+(streakCount>0?streak.color:'#D1D5DB')+');display:flex;align-items:center;justify-content:center;font-size:30px;box-shadow:'+streak.glow+';flex-shrink:0;'+(streakCount>0?'animation:flamePulse 1.4s ease-in-out infinite':'')+'">'+(streak.emoji||'❄️')+'</div>'+
-    '<div style="flex:1;min-width:0">'+
-      '<p style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin:0">Streak</p>'+
-      '<p style="font-size:22px;font-weight:900;margin:2px 0 0;letter-spacing:-0.5px">'+streakCount+' day'+(streakCount===1?'':'s')+'</p>'+
-      '<p style="font-size:11px;color:var(--text-dim);margin:2px 0 0;line-height:1.4">'+escapeHtml(streak.perk)+'</p>'+
-    '</div>'+
-  '</div>';
-
-  // 2) Points / tier card
-  html+='<div style="margin:0 20px 16px;background:white;border-radius:24px;padding:24px 20px;text-align:center;box-shadow:0 6px 20px rgba(0,0,0,0.06)">'+
-    '<p style="font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin:0">Your points</p>'+
-    '<h2 style="font-size:48px;font-weight:900;margin:4px 0 8px;letter-spacing:-2px;line-height:1">'+state.rewards.points.toLocaleString()+'</h2>'+
-    '<div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:14px">'+
-      '<span style="background:linear-gradient(135deg,'+tier.colors[0]+','+tier.colors[1]+');color:white;font-size:11px;font-weight:800;padding:4px 12px;border-radius:999px">'+tier.emoji+' '+tier.name+'</span>'+
-      '<span style="font-size:11px;color:var(--text-dim)">'+(nextTier?(tier.next-state.rewards.points)+' to '+nextTier.name:'Max tier')+'</span>'+
-    '</div>'+
-    '<div style="background:#f0f0f0;border-radius:999px;height:8px;overflow:hidden">'+
-      '<div style="background:linear-gradient(90deg,'+tier.colors[0]+','+tier.colors[1]+');height:100%;width:'+pct+'%;border-radius:999px;transition:width .5s"></div>'+
-    '</div>'+
-  '</div>';
-
-  // 3) Daily missions
-  const done=state.rewards.missions.done||{};
-  const completedCount=MISSION_TEMPLATES.filter(m=>done[m.id]).length;
-  html+='<div style="margin:0 20px 16px">'+
-    '<div style="display:flex;align-items:baseline;justify-content:space-between;padding:0 4px 10px">'+
-      '<p style="font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:white;margin:0">🎯 Daily missions</p>'+
-      '<p style="font-size:11px;color:rgba(255,255,255,0.85);margin:0;font-weight:600">'+completedCount+'/'+MISSION_TEMPLATES.length+' done</p>'+
-    '</div>'+
-    MISSION_TEMPLATES.map(m=>{
-      const isDone=!!done[m.id];
-      return '<div style="background:white;border-radius:16px;padding:14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;'+(isDone?'opacity:0.6':'box-shadow:0 2px 8px rgba(0,0,0,0.06)')+'">'+
-        '<div style="width:44px;height:44px;border-radius:12px;background:'+m.gradient+';display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;'+(isDone?'filter:grayscale(0.5)':'')+'">'+m.emoji+'</div>'+
-        '<div style="flex:1;min-width:0">'+
-          '<p style="font-size:14px;font-weight:700;margin:0;'+(isDone?'text-decoration:line-through;color:var(--text-dim)':'')+'">'+escapeHtml(m.label)+'</p>'+
-          '<p style="font-size:11px;color:var(--text-dim);margin:2px 0 0">'+escapeHtml(m.sub)+'</p>'+
+  html+='<div style="margin:0 20px 14px;display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
+    // Streak tile
+    '<div style="background:rgba(255,255,255,0.95);backdrop-filter:blur(20px);border-radius:18px;padding:14px;box-shadow:0 4px 14px rgba(0,0,0,0.08);position:relative;overflow:hidden">'+
+      '<div style="display:flex;align-items:center;gap:10px">'+
+        '<div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,'+(streakCount>0?streak.color:'#E5E7EB')+','+(streakCount>0?streak.color:'#D1D5DB')+');display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:'+streak.glow+';flex-shrink:0;'+(streakCount>0?'animation:flamePulse 1.4s ease-in-out infinite':'')+'">'+(streak.emoji||'❄️')+'</div>'+
+        '<div style="min-width:0;flex:1">'+
+          '<p style="font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);margin:0">Streak</p>'+
+          '<p style="font-size:18px;font-weight:900;margin:0;letter-spacing:-0.5px;line-height:1.1">'+streakCount+'<span style="font-size:11px;font-weight:700;color:var(--text-dim);margin-left:3px">day'+(streakCount===1?'':'s')+'</span></p>'+
         '</div>'+
-        '<div style="flex-shrink:0">'+
-          (isDone
-            ?'<span style="background:#EAFBF4;color:#065F46;font-size:11px;font-weight:800;padding:6px 10px;border-radius:999px">✓ Done</span>'
-            :'<span style="background:'+m.gradient+';color:white;font-size:11px;font-weight:800;padding:6px 10px;border-radius:999px">+'+m.pts+' pts</span>')+
+      '</div>'+
+    '</div>'+
+    // Points tile
+    '<div style="background:white;border-radius:18px;padding:14px;box-shadow:0 4px 14px rgba(0,0,0,0.08);position:relative;overflow:hidden">'+
+      '<div style="display:flex;align-items:center;gap:10px">'+
+        '<div style="width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,'+tier.colors[0]+','+tier.colors[1]+');display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;color:white">'+tier.emoji+'</div>'+
+        '<div style="min-width:0;flex:1">'+
+          '<p style="font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);margin:0">'+tier.name+'</p>'+
+          '<p style="font-size:18px;font-weight:900;margin:0;letter-spacing:-0.5px;line-height:1.1">'+state.rewards.points.toLocaleString()+'<span style="font-size:11px;font-weight:700;color:var(--text-dim);margin-left:3px">pts</span></p>'+
         '</div>'+
-      '</div>';
-    }).join('')+
+      '</div>'+
+      '<div style="background:#f0f0f0;border-radius:999px;height:4px;overflow:hidden;margin-top:8px">'+
+        '<div style="background:linear-gradient(90deg,'+tier.colors[0]+','+tier.colors[1]+');height:100%;width:'+pct+'%;border-radius:999px;transition:width .5s"></div>'+
+      '</div>'+
+    '</div>'+
   '</div>';
 
-  // 4) Spin wheel
+  // 3) Spin wheel (now above the fold)
   const spinsAvailable=state.rewards.spins||0;
-  html+='<div style="margin:0 20px 16px;background:white;border-radius:24px;padding:20px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.06)">'+
-    '<p style="font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);margin:0 0 14px">🎰 Spin to win</p>'+
-    '<div style="position:relative;width:220px;height:220px;margin:0 auto 14px">'+
-      '<div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:12px solid transparent;border-right:12px solid transparent;border-top:18px solid #1A1A1A;z-index:2;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3))"></div>'+
+  html+='<div style="margin:0 20px 14px;background:white;border-radius:24px;padding:18px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.06)">'+
+    '<p style="font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);margin:0 0 10px">🎰 Spin to win</p>'+
+    '<div style="position:relative;width:200px;height:200px;margin:0 auto 12px">'+
+      '<div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:11px solid transparent;border-right:11px solid transparent;border-top:16px solid #1A1A1A;z-index:2;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3))"></div>'+
       '<svg id="wheel" viewBox="0 0 220 220" style="width:100%;height:100%;transition:transform 4.5s cubic-bezier(0.17,0.67,0.21,0.99);transform-origin:50% 50%">'+
         '<path d="M110 110 L110 0 A110 110 0 0 1 187.78 32.22 Z" fill="#FF6B6B"/>'+
         '<path d="M110 110 L187.78 32.22 A110 110 0 0 1 220 110 Z" fill="#FFA06B"/>'+
@@ -1107,18 +1232,51 @@ function renderRewards(){
         '<text x="56" y="92" text-anchor="middle" font-size="11" font-weight="800" fill="white">+15</text>'+
         '<text x="88" y="58" text-anchor="middle" font-size="11" font-weight="800" fill="white">SPIN</text>'+
       '</svg>'+
-      '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:50px;height:50px;border-radius:50%;background:white;border:3px solid #1A1A1A;display:flex;align-items:center;justify-content:center;font-size:20px;z-index:1">🎰</div>'+
+      '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:46px;height:46px;border-radius:50%;background:white;border:3px solid #1A1A1A;display:flex;align-items:center;justify-content:center;font-size:18px;z-index:1">🎰</div>'+
     '</div>'+
-    '<p id="spins-available" style="font-size:13px;color:var(--text-dim);margin:0 0 12px">'+
+    '<p id="spins-available" style="font-size:12px;color:var(--text-dim);margin:0 0 10px">'+
       (spinsAvailable>0
         ?spinsAvailable+' spin'+(spinsAvailable===1?'':'s')+' available'
         :'Save a deal to earn spins (+1 per save)')+
     '</p>'+
-    '<button id="spin-btn" onclick="doSpin()" '+(spinsAvailable<1?'disabled':'')+' style="background:linear-gradient(135deg,#1A1A1A,#2A2A3E);color:white;padding:14px 32px;border-radius:999px;font-size:14px;font-weight:800;letter-spacing:0.5px;box-shadow:0 4px 12px rgba(0,0,0,0.2);'+(spinsAvailable<1?'opacity:0.5':'')+'">⚡ SPIN NOW</button>'+
-    '<p id="spin-result" style="margin-top:12px;font-size:14px;font-weight:700;color:var(--accent-dark);min-height:18px"></p>'+
+    '<button id="spin-btn" onclick="doSpin()" '+(spinsAvailable<1?'disabled':'')+' style="background:linear-gradient(135deg,#1A1A1A,#2A2A3E);color:white;padding:12px 28px;border-radius:999px;font-size:13px;font-weight:800;letter-spacing:0.5px;box-shadow:0 4px 12px rgba(0,0,0,0.2);'+(spinsAvailable<1?'opacity:0.5':'')+'">⚡ SPIN NOW</button>'+
+    '<p id="spin-result" style="margin-top:8px;font-size:13px;font-weight:700;color:var(--accent-dark);min-height:16px"></p>'+
   '</div>';
 
-  // 5) Surprise unlocks
+  // 4) Daily missions
+  const done=state.rewards.missions.done||{};
+  const completedCount=MISSION_TEMPLATES.filter(m=>done[m.id]).length;
+  html+='<div style="margin:0 20px 14px">'+
+    '<div style="display:flex;align-items:baseline;justify-content:space-between;padding:0 4px 8px">'+
+      '<p style="font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:white;margin:0">🎯 Daily missions</p>'+
+      '<p style="font-size:11px;color:rgba(255,255,255,0.85);margin:0;font-weight:600">'+completedCount+'/'+MISSION_TEMPLATES.length+' done</p>'+
+    '</div>'+
+    MISSION_TEMPLATES.map(m=>{
+      const isDone=!!done[m.id];
+      return '<div style="background:white;border-radius:14px;padding:12px;margin-bottom:6px;display:flex;align-items:center;gap:10px;'+(isDone?'opacity:0.55':'box-shadow:0 2px 8px rgba(0,0,0,0.06)')+'">'+
+        '<div style="width:38px;height:38px;border-radius:10px;background:'+m.gradient+';display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;'+(isDone?'filter:grayscale(0.5)':'')+'">'+m.emoji+'</div>'+
+        '<div style="flex:1;min-width:0">'+
+          '<p style="font-size:13px;font-weight:700;margin:0;'+(isDone?'text-decoration:line-through;color:var(--text-dim)':'')+'">'+escapeHtml(m.label)+'</p>'+
+          '<p style="font-size:11px;color:var(--text-dim);margin:1px 0 0">'+escapeHtml(m.sub)+'</p>'+
+        '</div>'+
+        '<div style="flex-shrink:0">'+
+          (isDone
+            ?'<span style="background:#EAFBF4;color:#065F46;font-size:10px;font-weight:800;padding:5px 9px;border-radius:999px">✓ Done</span>'
+            :'<span style="background:'+m.gradient+';color:white;font-size:10px;font-weight:800;padding:5px 9px;border-radius:999px">+'+m.pts+' pts</span>')+
+        '</div>'+
+      '</div>';
+    }).join('')+
+  '</div>';
+
+  // 5) Streak perk text (small footer line so user knows what their streak buys them)
+  if(streakCount>0){
+    html+='<div style="margin:0 20px 14px;padding:10px 14px;background:rgba(255,255,255,0.85);border-radius:12px;display:flex;align-items:center;gap:8px">'+
+      '<span style="font-size:14px">'+streak.emoji+'</span>'+
+      '<p style="font-size:11px;color:var(--text)";margin:0;font-weight:600;flex:1">'+escapeHtml(streak.perk)+'</p>'+
+    '</div>';
+  }
+
+  // 6) Surprise unlocks
   html+='<div style="margin:0 20px 16px">'+
     '<p style="font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:white;margin:0 4px 10px">🔓 Unlocks</p>'+
     UNLOCKS.map(u=>{
@@ -1134,7 +1292,7 @@ function renderRewards(){
         '</div>'+
         '<div style="flex-shrink:0">'+
           (unlocked
-            ?'<span style="background:rgba(255,255,255,0.25);color:white;font-size:10px;font-weight:800;padding:4px 8px;border-radius:999px">✓ UNLOCKED</span>'
+            ?'<span style="background:rgba(255,255,255,0.25);color:white;font-size:10px;font-weight:800;padding:4px 8px;border-radius:999px">✓ ACTIVE</span>'
             :'<span style="background:#1A1A1A;color:white;font-size:10px;font-weight:800;padding:4px 8px;border-radius:999px">'+remaining+' to go</span>')+
         '</div>'+
       '</div>';
@@ -1166,8 +1324,10 @@ window.doSpin=function(){
   document.getElementById('spin-result').textContent='';
   setTimeout(()=>{
     const slice=slices[idx];
-    const earned=slice.pts*streakBonus;
-    const label=streakBonus>1&&slice.pts>0?slice.label+' (×'+streakBonus+' streak!)':slice.label;
+    const earned=applyMultiplier(slice.pts*streakBonus);
+    let label=slice.label;
+    if(streakBonus>1&&slice.pts>0)label+=' (×'+streakBonus+' streak!)';
+    if(pointMultiplier()>1&&slice.pts>0)label+=' (Platinum boost)';
     const resultEl=document.getElementById('spin-result');
     if(resultEl)resultEl.textContent='🎉 '+label;
     state.rewards.points+=earned;
