@@ -1,0 +1,110 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'preview.html'
+      - 'preview-app.js'
+      - 'native-bridge.js'
+      - 'manifest.json'
+      - 'icon-*.png'
+      - 'apple-touch-icon.png'
+      - 'capacitor.config.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'android/**'
+      - 'scripts/build-native.js'
+      - '.github/workflows/android-build.yml'
+  workflow_dispatch:  # Allow manual trigger from GitHub UI
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Run gamification logic tests
+        run: |
+          node scripts/perq-gamif-test.js
+          node scripts/perq-load-test.js
+          node scripts/perq-migration-test.js
+          node scripts/perq-render-test.js
+
+      - name: Build native web bundle
+        run: npm run build:native
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Make gradlew executable
+        run: chmod +x ./android/gradlew
+
+      - name: Build debug APK
+        working-directory: ./android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Locate APK
+        id: locate
+        run: |
+          APK=$(find android/app/build/outputs/apk -name "*.apk" | head -n1)
+          echo "Found: $APK"
+          echo "apk_path=$APK" >> $GITHUB_OUTPUT
+          echo "apk_name=perq-debug-$(date +%Y%m%d)-${GITHUB_SHA::7}.apk" >> $GITHUB_OUTPUT
+
+      - name: Rename APK
+        run: cp "${{ steps.locate.outputs.apk_path }}" "${{ steps.locate.outputs.apk_name }}"
+
+      - name: Upload APK as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: perq-android-debug
+          path: ${{ steps.locate.outputs.apk_name }}
+          retention-days: 30
+
+      - name: Create GitHub Release with APK
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-build-${{ github.run_number }}
+          name: 'Perq Android · build ${{ github.run_number }}'
+          body: |
+            Auto-built debug APK for Perq.
+
+            **Commit:** ${{ github.sha }}
+            **Built:** ${{ github.event.head_commit.timestamp }}
+
+            ## Install on your Android phone
+
+            1. Tap the APK file below to download it on your phone
+            2. Android may warn "Install unknown apps" — allow for your browser
+            3. Open the downloaded file → Install
+            4. Open Perq, grant Camera + Notifications when prompted
+
+            ## What's new in this build
+
+            ${{ github.event.head_commit.message }}
+          files: ${{ steps.locate.outputs.apk_name }}
+          prerelease: true
+          make_latest: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
