@@ -156,6 +156,12 @@ input[type=range]:focus{outline:none}
 #toast.show{display:block}
 @keyframes slideUpToast{from{opacity:0;transform:translateX(-50%) translateY(20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 
+/* Gamification: confetti, flame pulse, tier celebration */
+@keyframes flamePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+@keyframes tierPop{0%{transform:scale(0.4) rotate(-12deg);opacity:0}60%{transform:scale(1.15) rotate(4deg);opacity:1}100%{transform:scale(1) rotate(0)}}
+.confetti-piece{position:absolute;top:-12px;width:8px;height:14px;border-radius:2px;animation-name:confettiFall;animation-timing-function:cubic-bezier(0.45,0,0.55,1);animation-fill-mode:forwards}
+@keyframes confettiFall{0%{transform:translateY(0) rotate(0)}100%{transform:translateY(110vh) rotate(720deg);opacity:0.6}}
+
 /* Wallet */
 .wallet-screen{background:#0A0A14;min-height:100%;padding-bottom:24px}
 .wallet-header{padding:0 20px 16px;display:flex;align-items:center;gap:12px;color:white}
@@ -281,51 +287,10 @@ input[type=range]:focus{outline:none}
 </div>
 </div>
 
-<!-- REWARDS (Spin/Points only — programs moved to Wallet) -->
+<!-- REWARDS (Gamified: missions, streak fire, surprise unlocks, animated tier celebrations) -->
 <div class="page" data-page="rewards">
 <div style="background:linear-gradient(180deg,#FF6B6B 0%,#FAF8F3 30%);min-height:100%;padding-top:14px;padding-bottom:24px">
-  <div style="padding:0 20px 16px;display:flex;align-items:center;gap:12px">
-    <button class="icon-btn" onclick="goPage('home')"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <h2 style="color:white;font-size:24px;font-weight:800;margin:0;flex:1">Rewards</h2>
-    <div id="streak-pill" style="background:rgba(255,255,255,0.2);backdrop-filter:blur(10px);padding:6px 12px;border-radius:999px;color:white;font-size:13px;font-weight:700">🔥 0 day streak</div>
-  </div>
-  <div style="margin:0 20px 20px;background:white;border-radius:28px;padding:28px 20px;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,0.06)">
-    <p style="font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin:0">Your points</p>
-    <h2 id="points-display" style="font-size:56px;font-weight:900;margin:4px 0 8px;letter-spacing:-2px;line-height:1">0</h2>
-    <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:16px">
-      <span id="tier-badge" style="background:linear-gradient(135deg,#A07248,#8B5A2B);color:white;font-size:11px;font-weight:800;padding:4px 12px;border-radius:999px">🥉 BRONZE</span>
-      <span id="next-tier-text" style="font-size:11px;color:var(--text-dim)">100 to Silver</span>
-    </div>
-    <div style="background:#f0f0f0;border-radius:999px;height:8px;overflow:hidden;margin-bottom:6px"><div id="progress-fill" style="background:linear-gradient(90deg,#A07248,#8B5A2B);height:100%;width:0%;border-radius:999px;transition:width .5s"></div></div>
-    <p style="font-size:11px;color:var(--text-dim)">Earn points by saving and sharing deals</p>
-  </div>
-  <div style="margin:0 20px;background:white;border-radius:28px;padding:20px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,0.06)">
-    <div style="position:relative;width:220px;height:220px;margin:8px auto 16px">
-      <div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:12px solid transparent;border-right:12px solid transparent;border-top:18px solid #1A1A1A;z-index:2;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3))"></div>
-      <svg id="wheel" viewBox="0 0 220 220" style="width:100%;height:100%;transition:transform 4.5s cubic-bezier(0.17,0.67,0.21,0.99);transform-origin:50% 50%">
-        <path d="M110 110 L110 0 A110 110 0 0 1 187.78 32.22 Z" fill="#FF6B6B"/>
-        <path d="M110 110 L187.78 32.22 A110 110 0 0 1 220 110 Z" fill="#FFA06B"/>
-        <path d="M110 110 L220 110 A110 110 0 0 1 187.78 187.78 Z" fill="#FFE16B"/>
-        <path d="M110 110 L187.78 187.78 A110 110 0 0 1 110 220 Z" fill="#4FACFE"/>
-        <path d="M110 110 L110 220 A110 110 0 0 1 32.22 187.78 Z" fill="#C084FC"/>
-        <path d="M110 110 L32.22 187.78 A110 110 0 0 1 0 110 Z" fill="#F472B6"/>
-        <path d="M110 110 L0 110 A110 110 0 0 1 32.22 32.22 Z" fill="#34D399"/>
-        <path d="M110 110 L32.22 32.22 A110 110 0 0 1 110 0 Z" fill="#FBBF24"/>
-        <text x="132" y="58" text-anchor="middle" font-size="11" font-weight="800" fill="white">+10</text>
-        <text x="164" y="92" text-anchor="middle" font-size="11" font-weight="800" fill="white">DEAL</text>
-        <text x="164" y="135" text-anchor="middle" font-size="11" font-weight="800" fill="white">+25</text>
-        <text x="132" y="166" text-anchor="middle" font-size="13" font-weight="800" fill="white">?</text>
-        <text x="88" y="166" text-anchor="middle" font-size="11" font-weight="800" fill="white">+5</text>
-        <text x="56" y="135" text-anchor="middle" font-size="11" font-weight="800" fill="white">JACK</text>
-        <text x="56" y="92" text-anchor="middle" font-size="11" font-weight="800" fill="white">+15</text>
-        <text x="88" y="58" text-anchor="middle" font-size="11" font-weight="800" fill="white">SPIN</text>
-      </svg>
-      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:50px;height:50px;border-radius:50%;background:white;border:3px solid #1A1A1A;display:flex;align-items:center;justify-content:center;font-size:20px;z-index:1">🎰</div>
-    </div>
-    <p id="spins-available" style="font-size:13px;color:var(--text-dim);margin:0 0 12px">Save a deal to earn your first spin</p>
-    <button id="spin-btn" onclick="doSpin()" disabled style="background:linear-gradient(135deg,#1A1A1A,#2A2A3E);color:white;padding:14px 32px;border-radius:999px;font-size:14px;font-weight:800;letter-spacing:0.5px;box-shadow:0 4px 12px rgba(0,0,0,0.2);opacity:0.5">⚡ SPIN NOW</button>
-    <p id="spin-result" style="margin-top:12px;font-size:14px;font-weight:700;color:var(--accent-dark);min-height:18px"></p>
-  </div>
+  <div id="rewards-root"></div>
 </div>
 </div>
 
@@ -455,8 +420,9 @@ input[type=range]:focus{outline:none}
 </style>
 
 <div id="toast"></div>
+<div id="confetti-root" style="position:fixed;inset:0;pointer-events:none;z-index:9998;overflow:hidden"></div>
 <input type="file" id="capture-input" accept="image/*" capture="environment" style="display:none">
 
-<script src="preview-app.js?v=14"></script>
+<script src="preview-app.js?v=15"></script>
 </body>
 </html>
