@@ -656,12 +656,31 @@ window.viewProgram=function(id){
 
 // -------- Browse --------
 function renderBrowse(){
+  const slider=document.getElementById('browse-radius');
+  const radius=slider?parseInt(slider.value):5;
+  const radiusVal=document.getElementById('radius-val');
+  if(radiusVal)radiusVal.textContent=radius+' mi';
+  // Update slider track fill (visual feedback)
+  if(slider){
+    const pct=((radius-1)/24)*100;
+    slider.style.background='linear-gradient(to right,#FFE16B 0%,#FFE16B '+pct+'%,#e5e5e5 '+pct+'%,#e5e5e5 100%)';
+    // Re-render local list when slider changes
+    if(!slider._wired){
+      slider._wired=true;
+      slider.addEventListener('input',renderBrowse);
+    }
+  }
+
   const local=document.getElementById('local-deals-list');
-  const sample=getSampleLocalDeals();
-  local.innerHTML='<p style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:0 0 12px">📍 '+sample.length+' deals nearby</p>'+sample.map(d=>{
+  const allLocal=getSampleLocalDeals();
+  // Filter by radius
+  const sample=allLocal.filter(d=>parseFloat(d.distance)<=radius);
+  local.innerHTML='<p style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:0 0 12px">📍 '+sample.length+' deal'+(sample.length===1?'':'s')+' within '+radius+' mi</p>'+
+    (sample.length===0?'<div style="background:white;border-radius:16px;padding:24px;text-align:center;color:var(--text-dim)"><div style="font-size:36px;margin-bottom:8px;opacity:0.4">📍</div><p style="font-size:13px;font-weight:600;color:#1A1A1A;margin:0 0 4px">Nothing within '+radius+' mi</p><p style="font-size:11px;margin:0">Try increasing the radius</p></div>':
+    sample.map(d=>{
     const grad=getGradient(d.category);
     return '<div style="background:white;border-radius:16px;padding:12px;margin-bottom:10px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04);text-align:left;'+(isBrowseDealClaimed(d.merchant,d.discount)?'opacity:0.7':'')+'"><div class="gradient-'+grad+'" style="width:56px;height:56px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:14px;flex-shrink:0">'+escapeHtml(d.discount.split(' ')[0])+'</div><div style="flex:1;min-width:0"><p style="font-size:14px;font-weight:700;margin:0">'+escapeHtml(d.merchant)+'</p><p style="font-size:12px;color:var(--text-dim);margin:2px 0 0">'+escapeHtml(d.discount)+'</p><p style="font-size:11px;color:var(--accent-dark);font-weight:700;margin:4px 0 0">📍 '+d.distance+' mi · '+d.time+'</p></div>'+(isBrowseDealClaimed(d.merchant,d.discount)?'<span style="background:#EAFBF4;color:#065F46;padding:8px 12px;border-radius:999px;font-size:11px;font-weight:700">✓ In wallet</span>':'<button onclick="claimBrowseDeal(\''+d.merchant+'\',\''+d.discount+'\',\''+d.category+'\',\''+(d.code||'')+'\',\''+d.expiry+'\')" style="background:var(--accent);color:#1A1A1A;border:none;padding:8px 14px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer">Claim</button>')+'</div>';
-  }).join('');
+  }).join(''));
 
   const onl=document.getElementById('online-deals-list');
   const od=getSampleOnlineDeals();
@@ -708,6 +727,7 @@ window.claimBrowseDeal=function(merchant,discount,category,code,expiry){
   save(K.deals,state.deals);save(K.rewards,state.rewards);
   toast('✓ Added to wallet · +1 spin');
   renderAll();
+  renderBrowse(); // Force Browse to update Claim → ✓ In wallet immediately
 };
 
 function parseValue(disc){
@@ -951,7 +971,7 @@ function openLoyaltyManualPrefilled(data,image){
     html+='<div style="background:#EAFBF4;border:1px solid #00C9A7;border-radius:12px;padding:10px 12px;margin-bottom:12px;display:flex;align-items:center;gap:8px;font-size:12px;color:#065F46;font-weight:600"><span style="font-size:16px">✨</span>AI extracted these details</div>';
   }
   html+='<div class="form-row"><label>Store name *</label><input id="lc-name" placeholder="Costco" value="'+escapeHtml(data.name||'')+'"></div>';
-  html+='<div class="form-row"><label>Card number *</label><input id="lc-number" placeholder="1234 5678 9012" value="'+escapeHtml(data.number||'')+'" inputmode="numeric"></div>';
+  html+='<div class="form-row"><label>Card / member number *</label><input id="lc-number" placeholder="Card number, member ID, or alphanumeric" value="'+escapeHtml(data.number||'')+'"></div>';
   html+='<div class="form-row"><label>Card color</label><div style="display:flex;gap:8px;flex-wrap:wrap" id="color-picker">'+
     colors.map((c,i)=>'<button data-color="'+c+'" style="width:40px;height:40px;border-radius:10px;background:'+c+';border:'+(i===0?'3px solid #1A1A1A':'3px solid transparent')+'"></button>').join('')+
   '</div></div>';
@@ -1340,7 +1360,7 @@ window.openLoyaltyManual=function(){
   const colors=['#DC2626','#059669','#7C3AED','#2563EB','#D97706','#1F2937'];
   const html='<div class="modal-handle"></div><h3 class="modal-title">Add loyalty card</h3>'+
     '<div class="form-row"><label>Store name *</label><input id="lc-name" placeholder="Costco, CVS ExtraCare"></div>'+
-    '<div class="form-row"><label>Card / member number *</label><input id="lc-number" placeholder="1234 5678 9012" inputmode="numeric"></div>'+
+    '<div class="form-row"><label>Card / member number *</label><input id="lc-number" placeholder="Card number, member ID, or alphanumeric"></div>'+
     '<div class="form-row"><label>Card color</label><div style="display:flex;gap:8px;flex-wrap:wrap" id="color-picker">'+
       colors.map((c,i)=>'<button data-color="'+c+'" style="width:40px;height:40px;border-radius:10px;background:'+c+';border:'+(i===0?'3px solid #1A1A1A':'3px solid transparent')+'"></button>').join('')+
     '</div></div>'+
