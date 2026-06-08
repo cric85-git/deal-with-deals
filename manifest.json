@@ -1,7 +1,7 @@
 {
   "name": "Perq",
   "short_name": "Perq",
-  "description": "Perq \u2014 Your AI savings agent",
+  "description": "Perq — Your AI savings agent",
   "start_url": "./index.html?source=pwa",
   "scope": "./",
   "display": "standalone",
@@ -10,8 +10,8 @@
     "minimal-ui"
   ],
   "orientation": "portrait",
-  "background_color": "#071B4D",
-  "theme_color": "#071B4D",
+  "background_color": "#0D1B2A",
+  "theme_color": "#0D1B2A",
   "icons": [
     {
       "src": "icon-192.png",
@@ -24,6 +24,12 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "categories": [
