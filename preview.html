@@ -45,6 +45,10 @@ button{border:none;background:none;cursor:pointer;color:inherit}
 .tabbar-snap{background:#1A1A1A;border-radius:50%;width:60px;height:60px;display:flex;align-items:center;justify-content:center;margin-top:-24px;box-shadow:0 6px 20px rgba(0,0,0,0.3);border:4px solid white}
 .tabbar-snap svg{width:28px;height:28px;fill:none;stroke:white;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:24px;height:24px;border-radius:50%;background:#1A1A1A;border:3px solid #FFE16B;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.3)}
+input[type=range]::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:#1A1A1A;border:3px solid #FFE16B;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.3)}
+input[type=range]:focus{outline:none}
+
 /* SVG icons (inline so always render) */
 .svg-icon{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
@@ -269,7 +273,7 @@ button{border:none;background:none;cursor:pointer;color:inherit}
         <p style="font-size:12px;font-weight:700;margin:0">Distance radius</p>
         <span id="radius-val" style="font-size:13px;font-weight:800;color:var(--accent-dark)">5 mi</span>
       </div>
-      <input type="range" min="1" max="25" value="5" oninput="document.getElementById('radius-val').textContent=this.value+' mi'" style="width:100%;height:4px;appearance:none;-webkit-appearance:none;background:#e5e5e5;border-radius:999px;outline:none">
+      <input type="range" id="browse-radius" min="1" max="25" value="5" style="width:100%;height:6px;appearance:none;-webkit-appearance:none;background:linear-gradient(to right,#FFE16B 0%,#FFE16B 16%,#e5e5e5 16%,#e5e5e5 100%);border-radius:999px;outline:none">
     </div>
     <div id="local-deals-list" style="padding:0 20px 16px"></div>
   </div>
@@ -453,6 +457,6 @@ button{border:none;background:none;cursor:pointer;color:inherit}
 <div id="toast"></div>
 <input type="file" id="capture-input" accept="image/*" capture="environment" style="display:none">
 
-<script src="preview-app.js?v=13"></script>
+<script src="preview-app.js?v=14"></script>
 </body>
 </html>
