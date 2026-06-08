@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0D1B2A">
+<title>Perq · Pocket Logo Themes</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{font-family:-apple-system,"SF Pro Display",BlinkMacSystemFont,system-ui,sans-serif;background:#F4F4F2;color:#1A1A1A;-webkit-font-smoothing:antialiased;min-height:100vh}
+.wrap{max-width:560px;margin:0 auto;padding:24px 16px 80px}
+.head{padding:8px 4px 24px}
+.kicker{font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#10B981;margin:0 0 6px}
+.title{font-size:28px;font-weight:900;letter-spacing:-0.6px;margin:0 0 8px;color:#0D1B2A}
+.subtitle{font-size:14px;color:#5B6373;line-height:1.55}
+
+.card{background:#FFFFFF;border-radius:24px;padding:20px;margin-bottom:16px;box-shadow:0 4px 20px rgba(0,0,0,0.05),0 0 0 1px rgba(0,0,0,0.04)}
+.card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:14px}
+.card-num{font-size:10px;font-weight:800;letter-spacing:1.5px;color:#9CA3AF;margin:0 0 4px}
+.card-name{font-size:18px;font-weight:900;letter-spacing:-0.3px;margin:0;color:#0D1B2A}
+.card-tag{font-size:9px;font-weight:800;padding:5px 9px;border-radius:999px;letter-spacing:0.5px;text-transform:uppercase;white-space:nowrap}
+.card-desc{font-size:12px;color:#5B6373;line-height:1.55;margin:0 0 14px}
+
+.icon-row{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.icon-tile{flex-shrink:0;border-radius:22px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px rgba(0,0,0,0.12),0 0 0 1px rgba(0,0,0,0.04)}
+.tile-512{width:140px;height:140px;border-radius:32px}
+.tile-192{width:74px;height:74px;border-radius:18px}
+.tile-180{width:54px;height:54px;border-radius:14px}
+.size-cap{font-size:9px;color:#9CA3AF;text-align:center;margin-top:6px;font-weight:600;letter-spacing:0.5px}
+
+.foot{padding:24px 8px;text-align:center;color:#5B6373;font-size:12px;line-height:1.6}
+.foot strong{color:#0D1B2A}
+.preview-link{display:inline-block;background:#0D1B2A;color:#FFFFFF;padding:12px 22px;border-radius:999px;font-weight:800;font-size:13px;text-decoration:none;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="head">
+  <p class="kicker">Brand · pocket direction</p>
+  <h1 class="title">Perq logo · color themes</h1>
+  <p class="subtitle">Same wallet/pocket DNA you liked — bill peeking out, dashed stitching, gradient wordmark — across ten color stories. Each shown at 512, 192, and 180 (Apple Touch). Pick one and we ship it as the real PWA assets.</p>
+</div>
+
+<!-- Reusable SVG defs: shared across themes (different colors injected per-theme) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <!-- The pocket+bill mark, parameterized by per-theme colors via mask + nested SVGs below -->
+  </defs>
+</svg>
+
+<!-- ===== THEME 1: Navy + Mint (the reference) ===== -->
+<div class="card">
+  <div class="card-head">
+    <div>
+      <p class="card-num">THEME 01</p>
+      <p class="card-name">Navy + Mint</p>
+    </div>
+    <span class="card-tag" style="background:#D1FAE5;color:#065F46">Reference · Premium</span>
+  </div>
+  <p class="card-desc">The look you liked. Deep navy says trust + finance. Fresh mint signals savings/growth without screaming bank. Most polished, most "real product."</p>
+  <div class="icon-row">
+    <div>
+      <div class="icon-tile tile-512" style="background:#0D1B2A">
+        <svg viewBox="0 0 200 200" width="120" height="120">
+          <!-- Pocket card -->
+          <path d="M40 78 L40 150 C40 158 47 165 55 165 L145 165 C153 165 160 158 160 150 L160 78 Q160 65 145 60 L100 50 L55 60 Q40 65 40 78 Z" fill="#FFFFFF"/>
+          <!-- Stitching -->
+          <path d="M52 86 L52 148 Q52 153 57 153 L143 153 Q148 153 148 148 L148 86 Q148 78 138 75 L100 65 L62 75 Q52 78 52 86 Z" fill="none" stroke="#10B981" stroke-width="1.5" stroke-dasharray="3 3"/>
+          <!-- Folded bill peeking -->
+          <path d="M88 30 L138 30 L138 78 Q138 88 128 88 L98 88 Q88 88 88 78 Z" fill="url(#mint-grad-1)"/>
+          <path d="M88 30 L138 30 L138 36 L88 36 Z" fill="rgba(255,255,255,0.18)"/>
+          <text x="113" y="68" font-family="-apple-system,sans-serif" font-size="22" font-weight="900" fill="#FFFFFF" text-anchor="middle">$</text>
+          <!-- Wordmark inside pocket -->
+          <text x="100" y="135" font-family="-apple-system,sans-serif" font-size="32" font-weight="900" fill="url(#mint-grad-2)" text-anchor="middle" letter-spacing="-1">Perq</text>
+          <defs>
+            <linearGradient id="mint-grad-1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#34D399"/><stop offset="1" stop-color="#059669"/></linearGradient>
+            <linearGradient id="mint-grad-2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#10B981"/><stop offset="1" stop-color="#059669"/></linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <p class="size-cap">512×512</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-192" style="background:#0D1B2A">
+        <svg viewBox="0 0 200 200" width="60" height="60">
+          <path d="M40 78 L40 150 C40 158 47 165 55 165 L145 165 C153 165 160 158 160 150 L160 78 Q160 65 145 60 L100 50 L55 60 Q40 65 40 78 Z" fill="#FFFFFF"/>
+          <path d="M52 86 L52 148 Q52 153 57 153 L143 153 Q148 153 148 148 L148 86 Q148 78 138 75 L100 65 L62 75 Q52 78 52 86 Z" fill="none" stroke="#10B981" stroke-width="1.5" stroke-dasharray="3 3"/>
+          <path d="M88 30 L138 30 L138 78 Q138 88 128 88 L98 88 Q88 88 88 78 Z" fill="#10B981"/>
+          <text x="113" y="68" font-family="-apple-system,sans-serif" font-size="22" font-weight="900" fill="#FFFFFF" text-anchor="middle">$</text>
+          <text x="100" y="135" font-family="-apple-system,sans-serif" font-size="32" font-weight="900" fill="#10B981" text-anchor="middle" letter-spacing="-1">Perq</text>
+        </svg>
+      </div>
+      <p class="size-cap">192×192</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-180" style="background:#0D1B2A">
+        <svg viewBox="0 0 200 200" width="44" height="44">
+          <path d="M40 78 L40 150 C40 158 47 165 55 165 L145 165 C153 165 160 158 160 150 L160 78 Q160 65 145 60 L100 50 L55 60 Q40 65 40 78 Z" fill="#FFFFFF"/>
+          <path d="M88 30 L138 30 L138 78 Q138 88 128 88 L98 88 Q88 88 88 78 Z" fill="#10B981"/>
+          <text x="113" y="68" font-family="-apple-system,sans-serif" font-size="22" font-weight="900" fill="#FFFFFF" text-anchor="middle">$</text>
+          <text x="100" y="135" font-family="-apple-system,sans-serif" font-size="32" font-weight="900" fill="#10B981" text-anchor="middle" letter-spacing="-1">Perq</text>
+        </svg>
+      </div>
+      <p class="size-cap">180×180</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== THEME 2: Midnight + Sunshine (current Perq palette) ===== -->
+<div class="card">
+  <div class="card-head">
+    <div>
+      <p class="card-num">THEME 02</p>
+      <p class="card-name">Midnight + Sunshine</p>
+    </div>
+    <span class="card-tag" style="background:#FEF3C7;color:#92400E">Current Perq palette</span>
+  </div>
+  <p class="card-desc">Same shape, your existing yellow accent on jet black. Maximum brand continuity — matches the in-app accent and current home-screen icon hint.</p>
+  <div class="icon-row">
+    <div>
+      <div class="icon-tile tile-512" style="background:#0F0F14">
+        <svg viewBox="0 0 200 200" width="120" height="120">
+          <path d="M40 78 L40 150 C40 158 47 165 55 165 L145 165 C153 165 160 158 160 150 L160 78 Q160 65 145 60 L100 50 L55 60 Q40 65 40 78 Z" fill="#FFFFFF"/>
+          <path d="M52 86 L52 148 Q52 153 57 153 L143 153 Q148 153 148 148 L148 86 Q148 78 138 75 L100 65 L62 75 Q52 78 52 86 Z" fill="none" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="3 3"/>
+          <path d="M88 30 L138 30 L138 78 Q138 88 128 88 L98 88 Q88 88 88 78 Z" fill="url(#sun-grad-1)"/>
+          <path d="M88 30 L138 30 L138 36 L88 36 Z" fill="rgba(255,255,255,0.25)"/>
+          <text x="113" y="68" font-family="-apple-system,sans-serif" font-size="22" font-weight="900" fill="#1A1A1A" text-anchor="middle">$</text>
+          <text x="100" y="135" font-family="-apple-system,sans-serif" font-size="32" font-weight="900" fill="url(#sun-grad-2)" text-anchor="middle" letter-spacing="-1">Perq</text>
+          <defs>
+            <linearGradient id="sun-grad-1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE16B"/><stop offset="1" stop-color="#F59E0B"/></linearGradient>
+            <linearGradient id="sun-grad-2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#F59E0B"/><stop offset="1" stop-color="#B45309"/></linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <p class="size-cap">512×512</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-192" style="background:#0F0F14">
+        <svg viewBox="0 0 200 200" width="60" height="60">
+          <path d="M40 78 L40 150 C40 158 47 165 55 165 L145 165 C153 165 160 158 160 150 L160 78 Q160 65 145 60 L100 50 L55 60 Q40 65 40 78 Z" fill="#FFFFFF"/>
+          <path d="M52 86 L52 148 Q52 153 57 153 L143 153 Q148 153 148 148 L148 86 Q148 78 138 75 L100 65 L62 75 Q52 78 52 86 Z" fill="none" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="3 3"/>
+          <path d="M88 30 L138 30 L138 78 Q138 88 128 88 L98 88 Q88 88 88 78 Z" fill="#FFE16B"/>
+          <text x="113" y="68" font-family="-apple-system,sans-serif" font-size="22" font-weight="900" fill="#1A1A1A" text-anchor="middle">$</text>
+          <text x="100" y="135" font-family="-apple-system,sans-serif" font-size="32" font-weight="900" fill="#B45309" text-anchor="middle" letter-spacing="-1">Perq</text>
+        </svg>
+      </div>
+      <p class="size-cap">192×192</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-180" style="background:#0F0F14">
+        <svg viewBox="0 0 200 200" width="44" height="44">
+          <path d="M40 78 L40 150 C40 158 47 165 55 165 L145 165 C153 165 160 158 160 150 L160 78 Q160 65 145 60 L100 50 L55 60 Q40 65 40 78 Z" fill="#FFFFFF"/>
+          <path d="M88 30 L138 30 L138 78 Q138 88 128 88 L98 88 Q88 88 88 78 Z" fill="#FFE16B"/>
+          <text x="113" y="68" font-family="-apple-system,sans-serif" font-size="22" font-weight="900" fill="#1A1A1A" text-anchor="middle">$</text>
+          <text x="100" y="135" font-family="-apple-system,sans-serif" font-size="32" font-weight="900" fill="#B45309" text-anchor="middle" letter-spacing="-1">Perq</text>
+        </svg>
+      </div>
+      <p class="size-cap">180×180</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== THEME 3: Cream + Forest ===== -->
+<div class="card">
+  <div class="card-head">
+    <div>
+      <p class="card-num">THEME 03</p>
+      <p class="card-name">Cream + Forest</p>
+    </div>
+    <span class="card-tag" style="background:#ECFDF5;color:#065F46">Warm · Friendly</span>
+  </div>
+  <p class="card-desc">Inverts the contrast — cream paper with forest green pocket. Feels organic and approachable, like a notebook or recipe card. Stands out from typical fintech.</p>
+  <div class="icon-row">
+    <div>
+      <div class="icon-tile tile-512" style="background:#FAF7F0">
+        <svg viewBox="0 0 200 200" width="120" height="120">
+          <path d="M40 78 L40 150 C40 158 47 165 55 165 L145 165 C153 165 160 158 160 150 L160 78 Q160 65 145 60 L100 50 L55 60 Q40 65 40 78 Z" fill="#064E3B"/>
+          <path d="M52 86 L52 148 Q52 153 57 153 L143 153 Q148 153 148 148 L148 86 Q148 78 138 75 L100 65 L62 75 Q52 78 52 86 Z" fill="none" stroke="#FAF7F0" stroke-width="1.5" stroke-dasharray="3 3" opacity="0.6"/>
+          <path d="M88 30 L138 30 L138 78 Q138 88 128 88 L98 88 Q88 88 88 78 Z" fill="url(#cream-grad-1)"/>
+          <path d="M88 30 L138 30 L138 36 L88 36 Z" fill="rgba(0,0,0,0.08)"/>
+          <text x="113" y="68" font-family="-apple-system,sans-serif" font-size="22" font-weight="900" fill="#064E3B" text-anchor="middle">$</text>
+          <text x="100" y="135" font-family="-apple-system,sans-serif" font-size="32" font-weight="900" fill="url(#cream-grad-2)" text-anchor="middle" letter-spacing="-1">Perq</text>
+          <defs>
+            <linearGradient id="cream-grad-1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FAF7F0"/><stop offset="1" stop-color="#E5DDC8"/></linearGradient>
+            <linearGradient id="cream-grad-2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FAF7F0"/><stop offset="1" stop-color="#FFE16B"/></linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <p class="size-cap">512×512</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-192" style="background:#FAF7F0">
+        <svg viewBox="0 0 200 200" width="60" height="60">
+          <path d="M40 78 L40 150 C40 158 47 165 55 165 L145 165 C153 165 160 158 160 150 L160 78 Q160 65 145 60 L100 50 L55 60 Q40 65 40 78 Z" fill="#064E3B"/>
+          <path d="M88 30 L138 30 L138 78 Q138 88 128 88 L98 88 Q88 88 88 78 Z" fill="#FAF7F0"/>
+          <text x="113" y="68" font-family="-apple-system,sans-serif" font-size="22" font-weight="900" fill="#064E3B" text-anchor="middle">$</text>
+          <text x="100" y="135" font-family="-apple-system,sans-serif" font-size="32" font-weight="900" fill="#FAF7F0" text-anchor="middle" letter-spacing="-1">Perq</text>
+        </svg>
+      </div>
+      <p class="size-cap">192×192</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-180" style="background:#FAF7F0">
+        <svg viewBox="0 0 200 200" width="44" height="44">
+          <path d="M40 78 L40 150 C40 158 47 165 55 165 L145 165 C153 165 160 158 160 150 L160 78 Q160 65 145 60 L100 50 L55 60 Q40 65 40 78 Z" fill="#064E3B"/>
+          <path d="M88 30 L138 30 L138 78 Q138 88 128 88 L98 88 Q88 88 88 78 Z" fill="#FAF7F0"/>
+          <text x="113" y="68" font-family="-apple-system,sans-serif" font-size="22" font-weight="900" fill="#064E3B" text-anchor="middle">$</text>
+          <text x="100" y="135" font-family="-apple-system,sans-serif" font-size="32" font-weight="900" fill="#FAF7F0" text-anchor="middle" letter-spacing="-1">Perq</text>
+        </svg>
+      </div>
+      <p class="size-cap">180×180</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== THEME 4: Sunset Gradient ===== -->
+<div class="card">
+  <div class="card-head">
+    <div>
+      <p class="card-num">THEME 04</p>
+      <p class="card-name">Sunset</p>
+    </div>
+    <span class="card-tag" style="background:#FFE4E1;color:#9F1239">Bold · Energetic</span>
+  </div>
+  <p class="card-desc">Coral-to-amber gradient background, white pocket. Reads young, optimistic, social. Pops on a cluttered home screen — high stand-out factor.</p>
+  <div class="icon-row">
+    <div>
+      <div class="icon-tile tile-512" style="background:linear-gradient(135deg,#FF6B6B 0%,#FFA06B 50%,#FFD200 100%)">
+        <svg viewBox="0 0 200 200" width="120" height="120">
+          <path d="M40 78 L40 150 C40 158 47 165 55 165 L145 165 C153 165 160 158 160 150 L160 78 Q160 65 145 60 L100 50 L55 60 Q40 65 40 78 Z" fill="#FFFFFF"/>
+          <path d="M52 86 L52 148 Q52 153 57 153 L143 153 Q148 153 148 148 L148 86 Q148 78 138 75 L100 65 L62 75 Q52 78 52 86 Z" fill="none" stroke="#FF6B6B" stroke-width="1.5" stroke-dasharray="3 3"/>
+          <path d="M88 30 L138 30 L138 78 Q138 88 128 88 L98 88 Q88 88 88 78 Z" fill="url(#sunset-grad-1)"/>
+          <path d="M88 30 L138 30 L138 36 L88 36 Z" fill="rgba(255,255,255,0.25)"/>
+          <text x="113" y="68" font-family="-apple-system,sans-serif" font-size="22" font-weight="900" fill="#FFFFFF" text-anchor="middle">$</text>
+          <text x="100" y="135" font-family="-apple-system,sans-serif" font-size="32" font-weight="900" fill="url(#sunset-grad-2)" text-anchor="middle" letter-spacing="-1">Perq</text>
+          <defs>
+            <linearGradient id="sunset-grad-1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF6B6B"/><stop offset="1" stop-color="#FF1A6B"/></linearGradient>
+            <linearGradient id="sunset-grad-2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FF6B6B"/><stop offset="1" stop-color="#B91C1C"/></linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <p class="size-cap">512×512</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-192" style="background:linear-gradient(135deg,#FF6B6B 0%,#FFA06B 50%,#FFD200 100%)">
+        <svg viewBox="0 0 200 200" width="60" height="60">
+          <path d="M40 78 L40 150 C40 158 47 165 55 165 L145 165 C153 165 160 158 160 150 L160 78 Q160 65 145 60 L100 50 L55 60 Q40 65 40 78 Z" fill="#FFFFFF"/>
+          <path d="M88 30 L138 30 L138 78 Q138 88 128 88 L98 88 Q88 88 88 78 Z" fill="#FF6B6B"/>
+          <text x="113" y="68" font-family="-apple-system,sans-serif" font-size="22" font-weight="900" fill="#FFFFFF" text-anchor="middle">$</text>
+          <text x="100" y="135" font-family="-apple-system,sans-serif" font-size="32" font-weight="900" fill="#B91C1C" text-anchor="middle" letter-spacing="-1">Perq</text>
+        </svg>
+      </div>
+      <p class="size-cap">192×192</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-180" style="background:linear-gradient(135deg,#FF6B6B 0%,#FFA06B 50%,#FFD200 100%)">
+        <svg viewBox="0 0 200 200" width="44" height="44">
+          <path d="M40 78 L40 150 C40 158 47 165 55 165 L145 165 C153 165 160 158 160 150 L160 78 Q160 65 145 60 L100 50 L55 60 Q40 65 40 78 Z" fill="#FFFFFF"/>
+          <path d="M88 30 L138 30 L138 78 Q138 88 128 88 L98 88 Q88 88 88 78 Z" fill="#FF6B6B"/>
+          <text x="113" y="68" font-family="-apple-system,sans-serif" font-size="22" font-weight="900" fill="#FFFFFF" text-anchor="middle">$</text>
+          <text x="100" y="135" font-family="-apple-system,sans-serif" font-size="32" font-weight="900" fill="#B91C1C" text-anchor="middle" letter-spacing="-1">Perq</text>
+        </svg>
+      </div>
+      <p class="size-cap">180×180</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== THEME 5: Plum + Gold (Premium) ===== -->
+<div class="card">
+  <div class="card-head">
+    <div>
+      <p class="card-num">THEME 05</p>
+      <p class="card-name">Plum + Gold</p>
+    </div>
+    <span class="card-tag" style="background:#FAE8FF;color:#86198F">Premium · Luxe</span>
+  </div>
+  <p class="card-desc">Deep plum with metallic gold accents. Reads premium-tier, "rewards-grade." Best for a future paid tier or a more affluent positioning.</p>
+  <div class="icon-row">
+    <div>
+      <div class="icon-tile tile-512" style="background:linear-gradient(135deg,#3B0764 0%,#581C87 100%)">
+        <svg viewBox="0 0 200 200" width="120" height="120">
+          <path d="M40 78 L40 150 C40 158 47 165 55 165 L145 165 C153 165 160 158 160 150 L160 78 Q160 65 145 60 L100 50 L55 60 Q40 65 40 78 Z" fill="#FFFFFF"/>
+          <path d="M52 86 L52 148 Q52 153 57 153 L143 153 Q148 153 148 148 L148 86 Q148 78 138 75 L100 65 L62 75 Q52 78 52 86 Z" fill="none" stroke="#D4A017" stroke-width="1.5" stroke-dasharray="3 3"/>
+          <path d="M88 30 L138 30 L138 78 Q138 88 128 88 L98 88 Q88 88 88 78 Z" fill="url(#plum-grad-1)"/>
+          <path d="M88 30 L138 30 L138 36 L88 36 Z" fill="rgba(255,255,255,0.3)"/>
+          <text x="113" y="68" font-family="-apple-system,sans-serif" font-size="22" font-weight="900" fill="#3B0764" text-anchor="middle">$</text>
+          <text x="100" y="135" font-family="-apple-system,sans-serif" font-size="32" font-weight="900" fill="url(#plum-grad-2)" text-anchor="middle" letter-spacing="-1">Perq</text>
+          <defs>
+            <linearGradient id="plum-grad-1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFD700"/><stop offset="1" stop-color="#D4A017"/></linearGradient>
+            <linearGradient id="plum-grad-2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#86198F"/><stop offset="1" stop-color="#3B0764"/></linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <p class="size-cap">512×512</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-192" style="background:linear-gradient(135deg,#3B0764 0%,#581C87 100%)">
+        <svg viewBox="0 0 200 200" width="60" height="60">
+          <path d="M40 78 L40 150 C40 158 47 165 55 165 L145 165 C153 165 160 158 160 150 L160 78 Q160 65 145 60 L100 50 L55 60 Q40 65 40 78 Z" fill="#FFFFFF"/>
+          <path d="M88 30 L138 30 L138 78 Q138 88 128 88 L98 88 Q88 88 88 78 Z" fill="#FFD700"/>
+          <text x="113" y="68" font-family="-apple-system,sans-serif" font-size="22" font-weight="900" fill="#3B0764" text-anchor="middle">$</text>
+          <text x="100" y="135" font-family="-apple-system,sans-serif" font-size="32" font-weight="900" fill="#3B0764" text-anchor="middle" letter-spacing="-1">Perq</text>
+        </svg>
+      </div>
+      <p class="size-cap">192×192</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-180" style="background:linear-gradient(135deg,#3B0764 0%,#581C87 100%)">
+        <svg viewBox="0 0 200 200" width="44" height="44">
+          <path d="M40 78 L40 150 C40 158 47 165 55 165 L145 165 C153 165 160 158 160 150 L160 78 Q160 65 145 60 L100 50 L55 60 Q40 65 40 78 Z" fill="#FFFFFF"/>
+          <path d="M88 30 L138 30 L138 78 Q138 88 128 88 L98 88 Q88 88 88 78 Z" fill="#FFD700"/>
+          <text x="113" y="68" font-family="-apple-system,sans-serif" font-size="22" font-weight="900" fill="#3B0764" text-anchor="middle">$</text>
+          <text x="100" y="135" font-family="-apple-system,sans-serif" font-size="32" font-weight="900" fill="#3B0764" text-anchor="middle" letter-spacing="-1">Perq</text>
+        </svg>
+      </div>
+      <p class="size-cap">180×180</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== THEME 6: Ocean + Lime ===== -->
+<div class="card">
+  <div class="card-head">
+    <div>
+      <p class="card-num">THEME 06</p>
+      <p class="card-name">Ocean + Lime</p>
+    </div>
+    <span class="card-tag" style="background:#DBEAFE;color:#1E40AF">Trustworthy · Tech</span>
+  </div>
+  <p class="card-desc">Deep ocean blue with fresh lime accents. Communicates trust, intelligence, and freshness — an "AI agent that's smart with your money."</p>
+  <div class="icon-row">
+    <div>
+      <div class="icon-tile tile-512" style="background:#0C2461">
+        <svg viewBox="0 0 200 200" width="120" height="120">
+          <path d="M40 78 L40 150 C40 158 47 165 55 165 L145 165 C153 165 160 158 160 150 L160 78 Q160 65 145 60 L100 50 L55 60 Q40 65 40 78 Z" fill="#FFFFFF"/>
+          <path d="M52 86 L52 148 Q52 153 57 153 L143 153 Q148 153 148 148 L148 86 Q148 78 138 75 L100 65 L62 75 Q52 78 52 86 Z" fill="none" stroke="#84CC16" stroke-width="1.5" stroke-dasharray="3 3"/>
+          <path d="M88 30 L138 30 L138 78 Q138 88 128 88 L98 88 Q88 88 88 78 Z" fill="url(#ocean-grad-1)"/>
+          <path d="M88 30 L138 30 L138 36 L88 36 Z" fill="rgba(255,255,255,0.2)"/>
+          <text x="113" y="68" font-family="-apple-system,sans-serif" font-size="22" font-weight="900" fill="#0C2461" text-anchor="middle">$</text>
+          <text x="100" y="135" font-family="-apple-system,sans-serif" font-size="32" font-weight="900" fill="url(#ocean-grad-2)" text-anchor="middle" letter-spacing="-1">Perq</text>
+          <defs>
+            <linearGradient id="ocean-grad-1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#A3E635"/><stop offset="1" stop-color="#65A30D"/></linearGradient>
+            <linearGradient id="ocean-grad-2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1E40AF"/><stop offset="1" stop-color="#0C2461"/></linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <p class="size-cap">512×512</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-192" style="background:#0C2461">
+        <svg viewBox="0 0 200 200" width="60" height="60">
+          <path d="M40 78 L40 150 C40 158 47 165 55 165 L145 165 C153 165 160 158 160 150 L160 78 Q160 65 145 60 L100 50 L55 60 Q40 65 40 78 Z" fill="#FFFFFF"/>
+          <path d="M88 30 L138 30 L138 78 Q138 88 128 88 L98 88 Q88 88 88 78 Z" fill="#A3E635"/>
+          <text x="113" y="68" font-family="-apple-system,sans-serif" font-size="22" font-weight="900" fill="#0C2461" text-anchor="middle">$</text>
+          <text x="100" y="135" font-family="-apple-system,sans-serif" font-size="32" font-weight="900" fill="#0C2461" text-anchor="middle" letter-spacing="-1">Perq</text>
+        </svg>
+      </div>
+      <p class="size-cap">192×192</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-180" style="background:#0C2461">
+        <svg viewBox="0 0 200 200" width="44" height="44">
+          <path d="M40 78 L40 150 C40 158 47 165 55 165 L145 165 C153 165 160 158 160 150 L160 78 Q160 65 145 60 L100 50 L55 60 Q40 65 40 78 Z" fill="#FFFFFF"/>
+          <path d="M88 30 L138 30 L138 78 Q138 88 128 88 L98 88 Q88 88 88 78 Z" fill="#A3E635"/>
+          <text x="113" y="68" font-family="-apple-system,sans-serif" font-size="22" font-weight="900" fill="#0C2461" text-anchor="middle">$</text>
+          <text x="100" y="135" font-family="-apple-system,sans-serif" font-size="32" font-weight="900" fill="#0C2461" text-anchor="middle" letter-spacing="-1">Perq</text>
+        </svg>
+      </div>
+      <p class="size-cap">180×180</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== THEME 7: All Black (Mono Premium) ===== -->
+<div class="card">
+  <div class="card-head">
+    <div>
+      <p class="card-num">THEME 07</p>
+      <p class="card-name">Mono Black</p>
+    </div>
+    <span class="card-tag" style="background:#F3F4F6;color:#1F2937">Minimal · Editorial</span>
+  </div>
+  <p class="card-desc">Pure black background, cream pocket, monochrome ink wordmark. Editorial, designer, very Apple-like. Will look great next to any other app icon.</p>
+  <div class="icon-row">
+    <div>
+      <div class="icon-tile tile-512" style="background:#0A0A0A">
+        <svg viewBox="0 0 200 200" width="120" height="120">
+          <path d="M40 78 L40 150 C40 158 47 165 55 165 L145 165 C153 165 160 158 160 150 L160 78 Q160 65 145 60 L100 50 L55 60 Q40 65 40 78 Z" fill="#F5F5F0"/>
+          <path d="M52 86 L52 148 Q52 153 57 153 L143 153 Q148 153 148 148 L148 86 Q148 78 138 75 L100 65 L62 75 Q52 78 52 86 Z" fill="none" stroke="#0A0A0A" stroke-width="1.5" stroke-dasharray="3 3" opacity="0.4"/>
+          <path d="M88 30 L138 30 L138 78 Q138 88 128 88 L98 88 Q88 88 88 78 Z" fill="#0A0A0A"/>
+          <path d="M88 30 L138 30 L138 36 L88 36 Z" fill="rgba(255,255,255,0.18)"/>
+          <text x="113" y="68" font-family="-apple-system,sans-serif" font-size="22" font-weight="900" fill="#F5F5F0" text-anchor="middle">$</text>
+          <text x="100" y="135" font-family="-apple-system,sans-serif" font-size="32" font-weight="900" fill="#0A0A0A" text-anchor="middle" letter-spacing="-1">Perq</text>
+        </svg>
+      </div>
+      <p class="size-cap">512×512</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-192" style="background:#0A0A0A">
+        <svg viewBox="0 0 200 200" width="60" height="60">
+          <path d="M40 78 L40 150 C40 158 47 165 55 165 L145 165 C153 165 160 158 160 150 L160 78 Q160 65 145 60 L100 50 L55 60 Q40 65 40 78 Z" fill="#F5F5F0"/>
+          <path d="M88 30 L138 30 L138 78 Q138 88 128 88 L98 88 Q88 88 88 78 Z" fill="#0A0A0A"/>
+          <text x="113" y="68" font-family="-apple-system,sans-serif" font-size="22" font-weight="900" fill="#F5F5F0" text-anchor="middle">$</text>
+          <text x="100" y="135" font-family="-apple-system,sans-serif" font-size="32" font-weight="900" fill="#0A0A0A" text-anchor="middle" letter-spacing="-1">Perq</text>
+        </svg>
+      </div>
+      <p class="size-cap">192×192</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-180" style="background:#0A0A0A">
+        <svg viewBox="0 0 200 200" width="44" height="44">
+          <path d="M40 78 L40 150 C40 158 47 165 55 165 L145 165 C153 165 160 158 160 150 L160 78 Q160 65 145 60 L100 50 L55 60 Q40 65 40 78 Z" fill="#F5F5F0"/>
+          <path d="M88 30 L138 30 L138 78 Q138 88 128 88 L98 88 Q88 88 88 78 Z" fill="#0A0A0A"/>
+          <text x="113" y="68" font-family="-apple-system,sans-serif" font-size="22" font-weight="900" fill="#F5F5F0" text-anchor="middle">$</text>
+          <text x="100" y="135" font-family="-apple-system,sans-serif" font-size="32" font-weight="900" fill="#0A0A0A" text-anchor="middle" letter-spacing="-1">Perq</text>
+        </svg>
+      </div>
+      <p class="size-cap">180×180</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== THEME 8: Berry + Cream ===== -->
+<div class="card">
+  <div class="card-head">
+    <div>
+      <p class="card-num">THEME 08</p>
+      <p class="card-name">Berry + Cream</p>
+    </div>
+    <span class="card-tag" style="background:#FCE7F3;color:#9D174D">Playful · Modern</span>
+  </div>
+  <p class="card-desc">Hot pink to berry gradient, cream pocket. Lifestyle-app energy — feels closer to Notion/Linear than to a bank. Great for a younger demographic.</p>
+  <div class="icon-row">
+    <div>
+      <div class="icon-tile tile-512" style="background:linear-gradient(135deg,#EC4899 0%,#BE185D 100%)">
+        <svg viewBox="0 0 200 200" width="120" height="120">
+          <path d="M40 78 L40 150 C40 158 47 165 55 165 L145 165 C153 165 160 158 160 150 L160 78 Q160 65 145 60 L100 50 L55 60 Q40 65 40 78 Z" fill="#FFF5F7"/>
+          <path d="M52 86 L52 148 Q52 153 57 153 L143 153 Q148 153 148 148 L148 86 Q148 78 138 75 L100 65 L62 75 Q52 78 52 86 Z" fill="none" stroke="#EC4899" stroke-width="1.5" stroke-dasharray="3 3"/>
+          <path d="M88 30 L138 30 L138 78 Q138 88 128 88 L98 88 Q88 88 88 78 Z" fill="url(#berry-grad-1)"/>
+          <path d="M88 30 L138 30 L138 36 L88 36 Z" fill="rgba(255,255,255,0.25)"/>
+          <text x="113" y="68" font-family="-apple-system,sans-serif" font-size="22" font-weight="900" fill="#FFFFFF" text-anchor="middle">$</text>
+          <text x="100" y="135" font-family="-apple-system,sans-serif" font-size="32" font-weight="900" fill="url(#berry-grad-2)" text-anchor="middle" letter-spacing="-1">Perq</text>
+          <defs>
+            <linearGradient id="berry-grad-1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F472B6"/><stop offset="1" stop-color="#BE185D"/></linearGradient>
+            <linearGradient id="berry-grad-2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#BE185D"/><stop offset="1" stop-color="#831843"/></linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <p class="size-cap">512×512</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-192" style="background:linear-gradient(135deg,#EC4899 0%,#BE185D 100%)">
+        <svg viewBox="0 0 200 200" width="60" height="60">
+          <path d="M40 78 L40 150 C40 158 47 165 55 165 L145 165 C153 165 160 158 160 150 L160 78 Q160 65 145 60 L100 50 L55 60 Q40 65 40 78 Z" fill="#FFF5F7"/>
+          <path d="M88 30 L138 30 L138 78 Q138 88 128 88 L98 88 Q88 88 88 78 Z" fill="#F472B6"/>
+          <text x="113" y="68" font-family="-apple-system,sans-serif" font-size="22" font-weight="900" fill="#FFFFFF" text-anchor="middle">$</text>
+          <text x="100" y="135" font-family="-apple-system,sans-serif" font-size="32" font-weight="900" fill="#831843" text-anchor="middle" letter-spacing="-1">Perq</text>
+        </svg>
+      </div>
+      <p class="size-cap">192×192</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-180" style="background:linear-gradient(135deg,#EC4899 0%,#BE185D 100%)">
+        <svg viewBox="0 0 200 200" width="44" height="44">
+          <path d="M40 78 L40 150 C40 158 47 165 55 165 L145 165 C153 165 160 158 160 150 L160 78 Q160 65 145 60 L100 50 L55 60 Q40 65 40 78 Z" fill="#FFF5F7"/>
+          <path d="M88 30 L138 30 L138 78 Q138 88 128 88 L98 88 Q88 88 88 78 Z" fill="#F472B6"/>
+          <text x="113" y="68" font-family="-apple-system,sans-serif" font-size="22" font-weight="900" fill="#FFFFFF" text-anchor="middle">$</text>
+          <text x="100" y="135" font-family="-apple-system,sans-serif" font-size="32" font-weight="900" fill="#831843" text-anchor="middle" letter-spacing="-1">Perq</text>
+        </svg>
+      </div>
+      <p class="size-cap">180×180</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== THEME 9: Forest + Lime (All-Green Stack) ===== -->
+<div class="card">
+  <div class="card-head">
+    <div>
+      <p class="card-num">THEME 09</p>
+      <p class="card-name">Forest + Lime</p>
+    </div>
+    <span class="card-tag" style="background:#DCFCE7;color:#166534">Money · Growth</span>
+  </div>
+  <p class="card-desc">Two-tone green — pure money signaling. Deep forest with vibrant lime peek. The most "savings" reading at a glance, no ambiguity about category.</p>
+  <div class="icon-row">
+    <div>
+      <div class="icon-tile tile-512" style="background:#14532D">
+        <svg viewBox="0 0 200 200" width="120" height="120">
+          <path d="M40 78 L40 150 C40 158 47 165 55 165 L145 165 C153 165 160 158 160 150 L160 78 Q160 65 145 60 L100 50 L55 60 Q40 65 40 78 Z" fill="#FFFFFF"/>
+          <path d="M52 86 L52 148 Q52 153 57 153 L143 153 Q148 153 148 148 L148 86 Q148 78 138 75 L100 65 L62 75 Q52 78 52 86 Z" fill="none" stroke="#22C55E" stroke-width="1.5" stroke-dasharray="3 3"/>
+          <path d="M88 30 L138 30 L138 78 Q138 88 128 88 L98 88 Q88 88 88 78 Z" fill="url(#forest-grad-1)"/>
+          <path d="M88 30 L138 30 L138 36 L88 36 Z" fill="rgba(255,255,255,0.25)"/>
+          <text x="113" y="68" font-family="-apple-system,sans-serif" font-size="22" font-weight="900" fill="#FFFFFF" text-anchor="middle">$</text>
+          <text x="100" y="135" font-family="-apple-system,sans-serif" font-size="32" font-weight="900" fill="url(#forest-grad-2)" text-anchor="middle" letter-spacing="-1">Perq</text>
+          <defs>
+            <linearGradient id="forest-grad-1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#84CC16"/><stop offset="1" stop-color="#15803D"/></linearGradient>
+            <linearGradient id="forest-grad-2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#15803D"/><stop offset="1" stop-color="#14532D"/></linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <p class="size-cap">512×512</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-192" style="background:#14532D">
+        <svg viewBox="0 0 200 200" width="60" height="60">
+          <path d="M40 78 L40 150 C40 158 47 165 55 165 L145 165 C153 165 160 158 160 150 L160 78 Q160 65 145 60 L100 50 L55 60 Q40 65 40 78 Z" fill="#FFFFFF"/>
+          <path d="M88 30 L138 30 L138 78 Q138 88 128 88 L98 88 Q88 88 88 78 Z" fill="#84CC16"/>
+          <text x="113" y="68" font-family="-apple-system,sans-serif" font-size="22" font-weight="900" fill="#FFFFFF" text-anchor="middle">$</text>
+          <text x="100" y="135" font-family="-apple-system,sans-serif" font-size="32" font-weight="900" fill="#15803D" text-anchor="middle" letter-spacing="-1">Perq</text>
+        </svg>
+      </div>
+      <p class="size-cap">192×192</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-180" style="background:#14532D">
+        <svg viewBox="0 0 200 200" width="44" height="44">
+          <path d="M40 78 L40 150 C40 158 47 165 55 165 L145 165 C153 165 160 158 160 150 L160 78 Q160 65 145 60 L100 50 L55 60 Q40 65 40 78 Z" fill="#FFFFFF"/>
+          <path d="M88 30 L138 30 L138 78 Q138 88 128 88 L98 88 Q88 88 88 78 Z" fill="#84CC16"/>
+          <text x="113" y="68" font-family="-apple-system,sans-serif" font-size="22" font-weight="900" fill="#FFFFFF" text-anchor="middle">$</text>
+          <text x="100" y="135" font-family="-apple-system,sans-serif" font-size="32" font-weight="900" fill="#15803D" text-anchor="middle" letter-spacing="-1">Perq</text>
+        </svg>
+      </div>
+      <p class="size-cap">180×180</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== THEME 10: Charcoal + Coral (Modern Editorial) ===== -->
+<div class="card">
+  <div class="card-head">
+    <div>
+      <p class="card-num">THEME 10</p>
+      <p class="card-name">Charcoal + Coral</p>
+    </div>
+    <span class="card-tag" style="background:#FFE4E6;color:#9F1239">Modern · Editorial</span>
+  </div>
+  <p class="card-desc">Soft charcoal background with coral pocket detail. Quiet confidence. Reads like Stripe, Linear, Things — a designer's app icon, not a finance bro icon.</p>
+  <div class="icon-row">
+    <div>
+      <div class="icon-tile tile-512" style="background:#1F2937">
+        <svg viewBox="0 0 200 200" width="120" height="120">
+          <path d="M40 78 L40 150 C40 158 47 165 55 165 L145 165 C153 165 160 158 160 150 L160 78 Q160 65 145 60 L100 50 L55 60 Q40 65 40 78 Z" fill="#FFFBF5"/>
+          <path d="M52 86 L52 148 Q52 153 57 153 L143 153 Q148 153 148 148 L148 86 Q148 78 138 75 L100 65 L62 75 Q52 78 52 86 Z" fill="none" stroke="#FB7185" stroke-width="1.5" stroke-dasharray="3 3"/>
+          <path d="M88 30 L138 30 L138 78 Q138 88 128 88 L98 88 Q88 88 88 78 Z" fill="url(#coral-grad-1)"/>
+          <path d="M88 30 L138 30 L138 36 L88 36 Z" fill="rgba(255,255,255,0.25)"/>
+          <text x="113" y="68" font-family="-apple-system,sans-serif" font-size="22" font-weight="900" fill="#FFFFFF" text-anchor="middle">$</text>
+          <text x="100" y="135" font-family="-apple-system,sans-serif" font-size="32" font-weight="900" fill="url(#coral-grad-2)" text-anchor="middle" letter-spacing="-1">Perq</text>
+          <defs>
+            <linearGradient id="coral-grad-1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FB7185"/><stop offset="1" stop-color="#E11D48"/></linearGradient>
+            <linearGradient id="coral-grad-2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1F2937"/><stop offset="1" stop-color="#374151"/></linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <p class="size-cap">512×512</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-192" style="background:#1F2937">
+        <svg viewBox="0 0 200 200" width="60" height="60">
+          <path d="M40 78 L40 150 C40 158 47 165 55 165 L145 165 C153 165 160 158 160 150 L160 78 Q160 65 145 60 L100 50 L55 60 Q40 65 40 78 Z" fill="#FFFBF5"/>
+          <path d="M88 30 L138 30 L138 78 Q138 88 128 88 L98 88 Q88 88 88 78 Z" fill="#FB7185"/>
+          <text x="113" y="68" font-family="-apple-system,sans-serif" font-size="22" font-weight="900" fill="#FFFFFF" text-anchor="middle">$</text>
+          <text x="100" y="135" font-family="-apple-system,sans-serif" font-size="32" font-weight="900" fill="#1F2937" text-anchor="middle" letter-spacing="-1">Perq</text>
+        </svg>
+      </div>
+      <p class="size-cap">192×192</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-180" style="background:#1F2937">
+        <svg viewBox="0 0 200 200" width="44" height="44">
+          <path d="M40 78 L40 150 C40 158 47 165 55 165 L145 165 C153 165 160 158 160 150 L160 78 Q160 65 145 60 L100 50 L55 60 Q40 65 40 78 Z" fill="#FFFBF5"/>
+          <path d="M88 30 L138 30 L138 78 Q138 88 128 88 L98 88 Q88 88 88 78 Z" fill="#FB7185"/>
+          <text x="113" y="68" font-family="-apple-system,sans-serif" font-size="22" font-weight="900" fill="#FFFFFF" text-anchor="middle">$</text>
+          <text x="100" y="135" font-family="-apple-system,sans-serif" font-size="32" font-weight="900" fill="#1F2937" text-anchor="middle" letter-spacing="-1">Perq</text>
+        </svg>
+      </div>
+      <p class="size-cap">180×180</p>
+    </div>
+  </div>
+</div>
+
+<div class="foot">
+  <p style="margin-bottom:14px">Tell me <strong>"go with theme N"</strong> and I'll wire it through everything: <code>icon-512.png</code>, <code>icon-192.png</code>, Apple Touch icon, manifest <code>theme_color</code>, in-app onboarding mark, and splash background. Maskable variant included.</p>
+  <p>Want a custom mix? <strong>"Theme 9 background with theme 1 accent"</strong> works. Want a different shape (round badge, hexagon, ticket)? Say so.</p>
+  <a href="preview.html?v=16" class="preview-link">← Back to app</a>
+</div>
+
+</div>
+</body>
+</html>
