@@ -136,7 +136,7 @@ function renderInstallInstructions(){
     el.innerHTML=
       step(1,shareIcon,'Tap the <strong>Share</strong> icon in Safari\'s bottom bar')+
       step(2,plusIcon,'Scroll down and tap <strong>Add to Home Screen</strong>')+
-      '<div style="display:flex;align-items:center;gap:12px;padding:10px 0"><div style="width:28px;height:28px;border-radius:50%;background:#1A1A1A;color:#FFE16B;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0">3</div><div style="width:22px;height:22px;background:#FFE16B;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#1A1A1A;font-weight:900;font-size:13px;flex-shrink:0">P</div><p style="font-size:13px;margin:0;line-height:1.4;flex:1">Tap <strong>Add</strong> — Perq lives on your home screen</p></div>';
+      '<div style="display:flex;align-items:center;gap:12px;padding:10px 0"><div style="width:28px;height:28px;border-radius:50%;background:#1A1A1A;color:#FFE16B;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0">3</div><img src="icon-192.png" alt="Perq" style="width:24px;height:24px;border-radius:6px;flex-shrink:0"><p style="font-size:13px;margin:0;line-height:1.4;flex:1">Tap <strong>Add</strong> — Perq lives on your home screen</p></div>';
   } else if(platform==='ios-other'){
     sub.textContent='Switch to Safari to install Perq on your home screen.';
     el.innerHTML=
@@ -148,7 +148,7 @@ function renderInstallInstructions(){
     el.innerHTML=
       step(1,dotsIcon,'Tap the <strong>⋮ menu</strong> in Chrome\'s top-right')+
       step(2,plusIcon,'Tap <strong>Install app</strong> or <strong>Add to Home screen</strong>')+
-      '<div style="display:flex;align-items:center;gap:12px;padding:10px 0"><div style="width:28px;height:28px;border-radius:50%;background:#1A1A1A;color:#FFE16B;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0">3</div><div style="width:22px;height:22px;background:#FFE16B;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#1A1A1A;font-weight:900;font-size:13px;flex-shrink:0">P</div><p style="font-size:13px;margin:0;line-height:1.4;flex:1">Confirm <strong>Install</strong> — Perq joins your app drawer</p></div>';
+      '<div style="display:flex;align-items:center;gap:12px;padding:10px 0"><div style="width:28px;height:28px;border-radius:50%;background:#1A1A1A;color:#FFE16B;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0">3</div><img src="icon-192.png" alt="Perq" style="width:24px;height:24px;border-radius:6px;flex-shrink:0"><p style="font-size:13px;margin:0;line-height:1.4;flex:1">Confirm <strong>Install</strong> — Perq joins your app drawer</p></div>';
   } else if(platform==='installed'){
     sub.textContent='You\'re all set!';
     el.innerHTML='<div style="text-align:center;padding:12px"><p style="font-size:32px;margin:0">✅</p><p style="font-size:14px;font-weight:700;margin:8px 0 4px">Perq is already installed</p><p style="font-size:12px;color:var(--text-dim);margin:0">You\'re running in app mode.</p></div>';
