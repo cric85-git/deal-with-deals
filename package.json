@@ -10,7 +10,7 @@
     "cap:sync": "npm run build:native && npx cap sync",
     "cap:open:ios": "npm run cap:sync && npx cap open ios",
     "cap:open:android": "npm run cap:sync && npx cap open android",
-    "test": "node scripts/perq-gamif-test.js && node scripts/perq-load-test.js && node scripts/perq-migration-test.js && node scripts/perq-render-test.js",
+    "test": "node scripts/perq-gamif-test.js && node scripts/perq-load-test.js && node scripts/perq-migration-test.js && node scripts/perq-render-test.js && node scripts/perq-brand-test.js",
     "test:smoke": "playwright test tests/perq-smoke.spec.js"
   },
   "devDependencies": {

@@ -138,6 +138,101 @@ function getGradient(cat){
   const map={Groceries:'green',Dining:'warm',Apparel:'pink',Travel:'purple',Beauty:'pink',Home:'warm',Electronics:'purple',Other:'green'};
   return map[cat]||'warm';
 }
+
+// -------- Merchant Brands --------
+// Real brand colors for known merchants. Used everywhere a deal card is rendered.
+// For unknown merchants we fall back to PERQ_GENERIC_BRAND (mint/emerald).
+// Always paired with a subtle white outline + drop shadow on dark backgrounds
+// so the card never blends into the navy app bg, even for darker brand colors.
+const MERCHANT_BRANDS={
+  // Coffee & dining
+  'starbucks':       {bg:'#00754A',bg2:'#1E3932',text:'#FFFFFF',accent:'#D4E9E2',mono:'★'},
+  'panera':          {bg:'#007936',bg2:'#005D29',text:'#FFFFFF',accent:'#FFD200',mono:'P'},
+  'panera bread':    {bg:'#007936',bg2:'#005D29',text:'#FFFFFF',accent:'#FFD200',mono:'P'},
+  'chipotle':        {bg:'#A81612',bg2:'#7A0D0A',text:'#FAF3E0',accent:'#FAF3E0',mono:'C'},
+  'mcdonalds':       {bg:'#FFC72C',bg2:'#DA291C',text:'#1A1A1A',accent:'#1A1A1A',mono:'M'},
+  'mcdonald\'s':     {bg:'#FFC72C',bg2:'#DA291C',text:'#1A1A1A',accent:'#1A1A1A',mono:'M'},
+  'dunkin':          {bg:'#FF671F',bg2:'#DA1884',text:'#1A1A1A',accent:'#FFFFFF',mono:'D'},
+  'subway':          {bg:'#008C15',bg2:'#FFC600',text:'#FFFFFF',accent:'#FFC600',mono:'S'},
+  // Grocery
+  'trader joe\'s':   {bg:'#C8102E',bg2:'#9A0E22',text:'#FFFFFF',accent:'#FFEB7A',mono:'TJ'},
+  'trader joes':     {bg:'#C8102E',bg2:'#9A0E22',text:'#FFFFFF',accent:'#FFEB7A',mono:'TJ'},
+  'whole foods':     {bg:'#1DAB47',bg2:'#095728',text:'#FFFFFF',accent:'#FFFFFF',mono:'WF'},
+  'kroger':          {bg:'#004D9E',bg2:'#002F66',text:'#FFFFFF',accent:'#FFFFFF',mono:'K'},
+  'safeway':         {bg:'#E1251B',bg2:'#9C1812',text:'#FFFFFF',accent:'#FFFFFF',mono:'S'},
+  'aldi':            {bg:'#00549A',bg2:'#003366',text:'#FFFFFF',accent:'#FFB600',mono:'A'},
+  'costco':          {bg:'#E31837',bg2:'#B30E27',text:'#FFFFFF',accent:'#0060AC',mono:'C'},
+  'costco online':   {bg:'#E31837',bg2:'#B30E27',text:'#FFFFFF',accent:'#0060AC',mono:'C'},
+  // Big box / general
+  'target':          {bg:'#CC0000',bg2:'#990000',text:'#FFFFFF',accent:'#FFFFFF',mono:'⊙'},
+  'target circle':   {bg:'#CC0000',bg2:'#990000',text:'#FFFFFF',accent:'#FFFFFF',mono:'⊙'},
+  'walmart':         {bg:'#0071CE',bg2:'#004F8C',text:'#FFC220',accent:'#FFC220',mono:'W'},
+  'amazon':          {bg:'#FF9900',bg2:'#CC7A00',text:'#232F3E',accent:'#232F3E',mono:'a'},
+  'amazon prime':    {bg:'#0F1111',bg2:'#232F3E',text:'#FF9900',accent:'#00A8E1',mono:'P'},
+  // Drugstore
+  'cvs':             {bg:'#CC0000',bg2:'#A30000',text:'#FFFFFF',accent:'#FFFFFF',mono:'CVS'},
+  'cvs extracare':   {bg:'#CC0000',bg2:'#A30000',text:'#FFFFFF',accent:'#FFFFFF',mono:'CVS'},
+  'walgreens':       {bg:'#E11B22',bg2:'#9A1117',text:'#FFFFFF',accent:'#FFFFFF',mono:'W'},
+  'rite aid':        {bg:'#0046A8',bg2:'#002F73',text:'#FFFFFF',accent:'#E91E26',mono:'R'},
+  // Beauty
+  'sephora':                 {bg:'#1A1A1A',bg2:'#000000',text:'#FFFFFF',accent:'#FF0048',mono:'S'},
+  'sephora beauty insider':  {bg:'#1A1A1A',bg2:'#000000',text:'#FFFFFF',accent:'#FF0048',mono:'S'},
+  'sephora online':          {bg:'#1A1A1A',bg2:'#000000',text:'#FFFFFF',accent:'#FF0048',mono:'S'},
+  'ulta':            {bg:'#3B0F4D',bg2:'#1F0828',text:'#FFFFFF',accent:'#FFFFFF',mono:'U'},
+  // Apparel
+  'nike':            {bg:'#1A1A1A',bg2:'#0A0A0A',text:'#FFFFFF',accent:'#FFFFFF',mono:'✓'},
+  'old navy':        {bg:'#0257B8',bg2:'#003B7A',text:'#FFFFFF',accent:'#FF8800',mono:'ON'},
+  'gap':             {bg:'#002B5C',bg2:'#001A38',text:'#FFFFFF',accent:'#FFFFFF',mono:'G'},
+  'lululemon':       {bg:'#D12631',bg2:'#A21D26',text:'#FFFFFF',accent:'#FFFFFF',mono:'LL'},
+  'h&m':             {bg:'#E50010',bg2:'#A50009',text:'#FFFFFF',accent:'#FFFFFF',mono:'H'},
+  // Electronics
+  'best buy':        {bg:'#0046BE',bg2:'#003494',text:'#FFFFFF',accent:'#FFD52A',mono:'BB'},
+  'apple':                   {bg:'#1A1A1A',bg2:'#0A0A0A',text:'#FFFFFF',accent:'#FFFFFF',mono:''},
+  'apple watch trade-in':    {bg:'#1A1A1A',bg2:'#0A0A0A',text:'#FFFFFF',accent:'#FFFFFF',mono:''},
+  // Travel & Hotels
+  'marriott':        {bg:'#1A5380',bg2:'#003E5F',text:'#FFFFFF',accent:'#A0855B',mono:'M'},
+  'marriott bonvoy': {bg:'#1A5380',bg2:'#003E5F',text:'#FFFFFF',accent:'#A0855B',mono:'M'},
+  'hilton':          {bg:'#104C97',bg2:'#0A3973',text:'#FFFFFF',accent:'#FFFFFF',mono:'H'},
+  'hilton honors':   {bg:'#104C97',bg2:'#0A3973',text:'#FFFFFF',accent:'#FFFFFF',mono:'H'},
+  // Food delivery
+  'uber eats':       {bg:'#06C167',bg2:'#057E48',text:'#000000',accent:'#000000',mono:'U'},
+  'doordash':        {bg:'#FF3008',bg2:'#C92500',text:'#FFFFFF',accent:'#FFFFFF',mono:'D'},
+  'doordash dashpass': {bg:'#FF3008',bg2:'#C92500',text:'#FFFFFF',accent:'#FFFFFF',mono:'D'},
+  'grubhub':         {bg:'#F1502F',bg2:'#C13E22',text:'#FFFFFF',accent:'#FFFFFF',mono:'G'},
+  // Subscriptions / streaming
+  'spotify':         {bg:'#1DB954',bg2:'#118C40',text:'#000000',accent:'#000000',mono:'S'},
+  'spotify premium': {bg:'#1DB954',bg2:'#118C40',text:'#000000',accent:'#000000',mono:'S'},
+  'youtube':         {bg:'#FF0000',bg2:'#CC0000',text:'#FFFFFF',accent:'#FFFFFF',mono:'▶'},
+  'youtube premium': {bg:'#FF0000',bg2:'#CC0000',text:'#FFFFFF',accent:'#FFFFFF',mono:'▶'},
+  'netflix':         {bg:'#E50914',bg2:'#831010',text:'#FFFFFF',accent:'#FFFFFF',mono:'N'},
+  'disney+':         {bg:'#113CCF',bg2:'#0A2585',text:'#FFFFFF',accent:'#FFFFFF',mono:'D+'},
+  'disney plus':     {bg:'#113CCF',bg2:'#0A2585',text:'#FFFFFF',accent:'#FFFFFF',mono:'D+'}
+};
+// Generic Perq theme for unknown merchants — bright mint to emerald.
+// High contrast vs navy app background so cards never blend in.
+const PERQ_GENERIC_BRAND={bg:'#059669',bg2:'#047857',text:'#FFFFFF',accent:'#A7F3D0',mono:'P'};
+
+function getBrandFor(merchant){
+  if(!merchant)return PERQ_GENERIC_BRAND;
+  const key=String(merchant).toLowerCase().trim();
+  if(MERCHANT_BRANDS[key])return MERCHANT_BRANDS[key];
+  // Fuzzy: longest matching merchant key wins (e.g. "Sephora online" -> "sephora online")
+  let best=null,bestLen=0;
+  for(const k in MERCHANT_BRANDS){
+    if((key.includes(k)||k.includes(key))&&k.length>bestLen){best=k;bestLen=k.length;}
+  }
+  if(best)return MERCHANT_BRANDS[best];
+  return PERQ_GENERIC_BRAND;
+}
+
+function brandGradientCss(brand){
+  return 'linear-gradient(135deg,'+brand.bg+','+brand.bg2+')';
+}
+// Card framing on dark navy bg — subtle white outline so brand colors never
+// blend into the page background, plus depth shadow.
+function brandCardShadow(){
+  return '0 0 0 1px rgba(255,255,255,0.12),0 8px 24px rgba(0,0,0,0.4)';
+}
 function getGradStyle(g){
   return {warm:'linear-gradient(135deg,#FF6B6B,#FFA06B)',green:'linear-gradient(135deg,#00C9A7,#4FACFE)',purple:'linear-gradient(135deg,#6366F1,#C084FC)',pink:'linear-gradient(135deg,#F472B6,#FB923C)',yellow:'linear-gradient(135deg,#FFD700,#FFA500)'}[g]||'linear-gradient(135deg,#FF6B6B,#FFA06B)';
 }
@@ -427,8 +522,9 @@ function renderWallet(){
 
   // Hook up wallet pass interactions
   document.querySelectorAll('.wpass').forEach(p=>{
-    const g=p.getAttribute('class-grad');
-    p.style.background=getGradStyle(g);
+    const bg=p.getAttribute('data-brand-bg')||'#10B981';
+    const bg2=p.getAttribute('data-brand-bg2')||'#047857';
+    p.style.background='linear-gradient(135deg,'+bg+','+bg2+')';
   });
 }
 
@@ -477,24 +573,26 @@ function renderCommunity(){
 function renderDealsList(active){
   let html='';
   active.forEach((d,i)=>{
-    const grad=getGradient(d.category);
+    const brand=getBrandFor(d.merchant);
+    const bgCss=brandGradientCss(brand);
+    const txt=brand.text;
     const du=daysUntil(d.expiry);
     const expText=du===null?'No expiry':du===0?'Expires TODAY':du===1?'Expires tomorrow':du<0?'Expired':'Expires in '+du+' days';
     const isLast=i===active.length-1;
-    html+='<div class="wpass" data-deal-id="'+d.id+'" onclick="togglePass(this)" class-grad="'+grad+'" style="border-radius:18px;padding:18px 20px;'+(isLast?'margin-bottom:14px':'margin-bottom:-90px')+';position:relative;box-shadow:0 8px 24px rgba(0,0,0,0.4);color:white;cursor:pointer">';
+    html+='<div class="wpass" data-deal-id="'+d.id+'" onclick="togglePass(this)" data-brand-bg="'+brand.bg+'" data-brand-bg2="'+brand.bg2+'" data-brand-text="'+brand.text+'" style="border-radius:18px;padding:18px 20px;'+(isLast?'margin-bottom:14px':'margin-bottom:-90px')+';position:relative;box-shadow:'+brandCardShadow()+';color:'+txt+';background:'+bgCss+';cursor:pointer">';
     html+='<div class="pcoll" style="display:flex;flex-direction:column;gap:60px">';
     const sharedBadge=d.shared?'<span style="background:rgba(0,0,0,0.3);padding:3px 8px;border-radius:6px;font-size:9px;font-weight:700;letter-spacing:0.5px">SHARED</span>':'';
     const sourceBadge=d.source==='local'?'<span style="background:rgba(255,255,255,0.25);padding:3px 8px;border-radius:6px;font-size:9px;font-weight:700;letter-spacing:0.5px">📍 LOCAL DEAL</span>':d.source==='online'?'<span style="background:rgba(255,255,255,0.25);padding:3px 8px;border-radius:6px;font-size:9px;font-weight:700;letter-spacing:0.5px">🌐 ONLINE DEAL</span>':d.fromCommunity?'<span style="background:rgba(255,255,255,0.25);padding:3px 8px;border-radius:6px;font-size:9px;font-weight:700;letter-spacing:0.5px">👥 COMMUNITY</span>':'';
     const badges=[sharedBadge,sourceBadge].filter(b=>b).join(' ');
-    html+='<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px"><div style="flex:1;min-width:0"><p style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;opacity:0.9;margin:0">'+escapeHtml(d.category||'Deal')+'</p><h3 style="font-size:16px;font-weight:700;margin:2px 0 0">'+escapeHtml(d.merchant)+'</h3></div><div style="display:flex;flex-direction:column;gap:3px;align-items:flex-end;flex-shrink:0">'+badges+'</div></div>';
+    html+='<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px"><div style="flex:1;min-width:0"><p style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;opacity:0.85;margin:0">'+escapeHtml(d.category||'Deal')+'</p><h3 style="font-size:16px;font-weight:700;margin:2px 0 0">'+escapeHtml(d.merchant)+'</h3></div><div style="display:flex;flex-direction:column;gap:3px;align-items:flex-end;flex-shrink:0">'+badges+'</div></div>';
     html+='<div style="display:flex;justify-content:space-between;align-items:flex-end"><div><p style="font-size:22px;font-weight:800;margin:0">'+escapeHtml(d.discount)+'</p><p style="font-size:11px;opacity:0.9;margin:2px 0 0">'+expText+'</p></div>';
     if(d.code)html+='<span style="background:rgba(0,0,0,0.25);padding:4px 10px;border-radius:6px;font-family:ui-monospace,monospace;font-size:11px;font-weight:600">'+escapeHtml(d.code)+'</span>';
     html+='</div></div>';
     // Expanded
     html+='<div class="pexp" style="display:none">';
-    html+='<div class="gradient-'+grad+'" style="height:140px;padding:18px;display:flex;flex-direction:column;justify-content:space-between;margin:-18px -20px 0">';
+    html+='<div style="height:140px;padding:18px;display:flex;flex-direction:column;justify-content:space-between;margin:-18px -20px 0;background:'+bgCss+';color:'+txt+'">';
     html+='<span style="background:rgba(255,255,255,0.95);color:#1A1A1A;font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;padding:5px 10px;border-radius:999px;align-self:flex-start">'+escapeHtml(d.category)+' · '+expText+'</span>';
-    html+='<h2 style="color:white;font-size:32px;font-weight:900;margin:0;letter-spacing:-1px;line-height:1">'+escapeHtml(d.discount)+'</h2></div>';
+    html+='<h2 style="font-size:32px;font-weight:900;margin:0;letter-spacing:-1px;line-height:1">'+escapeHtml(d.discount)+'</h2></div>';
     html+='<div style="padding:14px 18px 18px;background:white;color:#1A1A1A;margin:0 -20px -18px">';
     html+='<h3 style="font-size:18px;font-weight:800;margin:0">'+escapeHtml(d.merchant)+'</h3>';
     if(d.notes)html+='<p style="font-size:12px;color:#777;margin:4px 0 10px">'+escapeHtml(d.notes)+'</p>';
@@ -786,8 +884,10 @@ function collapsePass(el){
   el.querySelector('.pcoll').style.flexDirection='column';
   el.querySelector('.pexp').style.display='none';
   el.style.padding='18px 20px';
-  el.style.background=getGradStyle(el.getAttribute('class-grad'));
-  el.style.color='white';
+  const bg=el.getAttribute('data-brand-bg')||'#10B981';
+  const bg2=el.getAttribute('data-brand-bg2')||'#047857';
+  el.style.background='linear-gradient(135deg,'+bg+','+bg2+')';
+  el.style.color=el.getAttribute('data-brand-text')||'#FFFFFF';
   el.style.borderRadius='18px';
   el.style.overflow='visible';
   const all=document.querySelectorAll('.wpass');
@@ -1066,17 +1166,19 @@ function renderBrowse(){
   local.innerHTML='<p style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.7);margin:0 0 12px">📍 '+sample.length+' deal'+(sample.length===1?'':'s')+' within '+radius+' mi</p>'+
     (sample.length===0?'<div style="background:rgba(255,255,255,0.95);border-radius:16px;padding:24px;text-align:center;color:var(--text-dim)"><div style="font-size:36px;margin-bottom:8px;opacity:0.4">📍</div><p style="font-size:13px;font-weight:600;color:#1A1A1A;margin:0 0 4px">Nothing within '+radius+' mi</p><p style="font-size:11px;margin:0">Try increasing the radius</p></div>':
     sample.map(d=>{
-    const grad=getGradient(d.category);
+    const brand=getBrandFor(d.merchant);
+    const bgCss=brandGradientCss(brand);
     const claimed=isBrowseDealClaimed(d.merchant,d.discount);
-    return '<div onclick="viewBrowseDeal(\''+escapeAttr(d.id)+'\',\'local\')" style="background:white;border-radius:16px;padding:12px;margin-bottom:10px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 14px rgba(0,0,0,0.08);text-align:left;cursor:pointer;'+(claimed?'opacity:0.7':'')+'"><div class="gradient-'+grad+'" style="width:56px;height:56px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:14px;flex-shrink:0">'+escapeHtml(d.discount.split(' ')[0])+'</div><div style="flex:1;min-width:0"><p style="font-size:14px;font-weight:700;margin:0">'+escapeHtml(d.merchant)+'</p><p style="font-size:12px;color:var(--text-dim);margin:2px 0 0">'+escapeHtml(d.discount)+'</p><p style="font-size:11px;color:#047857;font-weight:700;margin:4px 0 0">📍 '+d.distance+' mi · '+d.time+'</p></div>'+(claimed?'<span style="background:#EAFBF4;color:#065F46;padding:8px 12px;border-radius:999px;font-size:11px;font-weight:700">✓ In wallet</span>':'<button onclick="event.stopPropagation();claimBrowseDeal(\''+escapeAttr(d.id)+'\',\'local\')" style="background:#10B981;color:white;border:none;padding:8px 14px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer">Claim</button>')+'</div>';
+    return '<div onclick="viewBrowseDeal(\''+escapeAttr(d.id)+'\',\'local\')" style="background:white;border-radius:16px;padding:12px;margin-bottom:10px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 14px rgba(0,0,0,0.08);text-align:left;cursor:pointer;'+(claimed?'opacity:0.7':'')+'"><div style="background:'+bgCss+';width:56px;height:56px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:'+brand.text+';font-weight:800;font-size:18px;flex-shrink:0">'+escapeHtml(brand.mono||d.merchant.charAt(0).toUpperCase())+'</div><div style="flex:1;min-width:0"><p style="font-size:14px;font-weight:700;margin:0">'+escapeHtml(d.merchant)+'</p><p style="font-size:12px;color:var(--text-dim);margin:2px 0 0">'+escapeHtml(d.discount)+'</p><p style="font-size:11px;color:#047857;font-weight:700;margin:4px 0 0">📍 '+d.distance+' mi · '+d.time+'</p></div>'+(claimed?'<span style="background:#EAFBF4;color:#065F46;padding:8px 12px;border-radius:999px;font-size:11px;font-weight:700">✓ In wallet</span>':'<button onclick="event.stopPropagation();claimBrowseDeal(\''+escapeAttr(d.id)+'\',\'local\')" style="background:#10B981;color:white;border:none;padding:8px 14px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer">Claim</button>')+'</div>';
   }).join(''));
 
   const onl=document.getElementById('online-deals-list');
   const od=getSampleOnlineDeals();
   onl.innerHTML='<p style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.7);margin:0 0 12px">🌐 '+od.length+' online deals · no distance limit</p><div style="columns:2;column-gap:8px">'+od.map(d=>{
-    const grad=getGradient(d.category);
+    const brand=getBrandFor(d.merchant);
+    const bgCss=brandGradientCss(brand);
     const claimed=isBrowseDealClaimed(d.merchant,d.discount);
-    return '<div onclick="viewBrowseDeal(\''+escapeAttr(d.id)+'\',\'online\')" style="break-inside:avoid;margin-bottom:8px;border-radius:16px;overflow:hidden;position:relative;width:100%;display:block;cursor:pointer;'+(claimed?'opacity:0.7':'')+'"><div class="gradient-'+grad+'" style="height:'+d.h+'px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:30px">'+escapeHtml(d.short)+'</div><div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(180deg,transparent,rgba(0,0,0,0.85));padding:24px 10px 10px;color:white"><p style="font-size:13px;font-weight:700;margin:0">'+escapeHtml(d.merchant)+'</p><p style="font-size:11px;opacity:0.9;margin:0 0 8px">'+escapeHtml(d.subtitle)+'</p>'+(claimed?'<span style="display:block;background:rgba(255,255,255,0.95);color:#065F46;padding:6px;border-radius:8px;font-size:11px;font-weight:700;text-align:center">✓ In wallet</span>':'<button onclick="event.stopPropagation();claimBrowseDeal(\''+escapeAttr(d.id)+'\',\'online\')" style="display:block;width:100%;background:#10B981;color:white;border:none;padding:6px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">Claim</button>')+'</div></div>';
+    return '<div onclick="viewBrowseDeal(\''+escapeAttr(d.id)+'\',\'online\')" style="break-inside:avoid;margin-bottom:8px;border-radius:16px;overflow:hidden;position:relative;width:100%;display:block;cursor:pointer;box-shadow:'+brandCardShadow()+';'+(claimed?'opacity:0.7':'')+'"><div style="background:'+bgCss+';height:'+d.h+'px;display:flex;align-items:center;justify-content:center;color:'+brand.text+';font-weight:800;font-size:'+(brand.mono.length>2?'24px':'48px')+'">'+escapeHtml(brand.mono||d.short)+'</div><div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(180deg,transparent,rgba(0,0,0,0.85));padding:24px 10px 10px;color:white"><p style="font-size:13px;font-weight:700;margin:0">'+escapeHtml(d.merchant)+'</p><p style="font-size:11px;opacity:0.9;margin:0 0 8px">'+escapeHtml(d.subtitle)+'</p>'+(claimed?'<span style="display:block;background:rgba(255,255,255,0.95);color:#065F46;padding:6px;border-radius:8px;font-size:11px;font-weight:700;text-align:center">✓ In wallet</span>':'<button onclick="event.stopPropagation();claimBrowseDeal(\''+escapeAttr(d.id)+'\',\'online\')" style="display:block;width:100%;background:#10B981;color:white;border:none;padding:6px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">Claim</button>')+'</div></div>';
   }).join('')+'</div>';
 }
 
@@ -1128,10 +1230,11 @@ window.viewBrowseDeal=function(id,source){
   const d=list.find(x=>x.id===id);
   if(!d)return;
   const claimed=isBrowseDealClaimed(d.merchant,d.discount);
-  const grad=getGradient(d.category);
+  const brand=getBrandFor(d.merchant);
+  const bgCss=brandGradientCss(brand);
   const sourceLabel=source==='local'?'📍 Local · '+d.distance+' mi · '+d.time:'🌐 Online · no location needed';
   const html='<div class="modal-handle"></div>'+
-    '<div class="gradient-'+grad+'" style="border-radius:16px;padding:18px;color:white;margin-bottom:14px;text-align:center">'+
+    '<div style="background:'+bgCss+';border-radius:16px;padding:18px;color:'+brand.text+';margin-bottom:14px;text-align:center;box-shadow:'+brandCardShadow()+'">'+
       '<p style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;opacity:0.85;margin:0">'+escapeHtml(d.category)+'</p>'+
       '<h3 style="font-size:22px;font-weight:800;margin:6px 0 4px">'+escapeHtml(d.merchant)+'</h3>'+
       '<p style="font-size:18px;font-weight:700;margin:0">'+escapeHtml(d.discount)+'</p>'+
