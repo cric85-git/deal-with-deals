@@ -421,7 +421,9 @@ function renderDealsList(active){
     html+='<div class="wpass" data-deal-id="'+d.id+'" onclick="togglePass(this)" class-grad="'+grad+'" style="border-radius:18px;padding:18px 20px;'+(isLast?'margin-bottom:14px':'margin-bottom:-90px')+';position:relative;box-shadow:0 8px 24px rgba(0,0,0,0.4);color:white;cursor:pointer">';
     html+='<div class="pcoll" style="display:flex;flex-direction:column;gap:60px">';
     const sharedBadge=d.shared?'<span style="background:rgba(0,0,0,0.3);padding:3px 8px;border-radius:6px;font-size:9px;font-weight:700;letter-spacing:0.5px">SHARED</span>':'';
-    html+='<div style="display:flex;justify-content:space-between;align-items:flex-start"><div><p style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;opacity:0.9;margin:0">'+escapeHtml(d.category||'Deal')+'</p><h3 style="font-size:16px;font-weight:700;margin:2px 0 0">'+escapeHtml(d.merchant)+'</h3></div>'+sharedBadge+'</div>';
+    const sourceBadge=d.source==='local'?'<span style="background:rgba(255,255,255,0.25);padding:3px 8px;border-radius:6px;font-size:9px;font-weight:700;letter-spacing:0.5px">📍 LOCAL DEAL</span>':d.source==='online'?'<span style="background:rgba(255,255,255,0.25);padding:3px 8px;border-radius:6px;font-size:9px;font-weight:700;letter-spacing:0.5px">🌐 ONLINE DEAL</span>':d.fromCommunity?'<span style="background:rgba(255,255,255,0.25);padding:3px 8px;border-radius:6px;font-size:9px;font-weight:700;letter-spacing:0.5px">👥 COMMUNITY</span>':'';
+    const badges=[sharedBadge,sourceBadge].filter(b=>b).join(' ');
+    html+='<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px"><div style="flex:1;min-width:0"><p style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;opacity:0.9;margin:0">'+escapeHtml(d.category||'Deal')+'</p><h3 style="font-size:16px;font-weight:700;margin:2px 0 0">'+escapeHtml(d.merchant)+'</h3></div><div style="display:flex;flex-direction:column;gap:3px;align-items:flex-end;flex-shrink:0">'+badges+'</div></div>';
     html+='<div style="display:flex;justify-content:space-between;align-items:flex-end"><div><p style="font-size:22px;font-weight:800;margin:0">'+escapeHtml(d.discount)+'</p><p style="font-size:11px;opacity:0.9;margin:2px 0 0">'+expText+'</p></div>';
     if(d.code)html+='<span style="background:rgba(0,0,0,0.25);padding:4px 10px;border-radius:6px;font-family:ui-monospace,monospace;font-size:11px;font-weight:600">'+escapeHtml(d.code)+'</span>';
     html+='</div></div>';
@@ -907,9 +909,10 @@ function renderBrowse(){
   if(radiusVal)radiusVal.textContent=radius+' mi';
   // Update slider track fill (visual feedback)
   if(slider){
-    const pct=((radius-1)/24)*100;
-    slider.style.background='linear-gradient(to right,#FFE16B 0%,#FFE16B '+pct+'%,#e5e5e5 '+pct+'%,#e5e5e5 100%)';
-    // Re-render local list when slider changes
+    const max=parseInt(slider.max||'20');
+    const min=parseInt(slider.min||'1');
+    const pct=((radius-min)/(max-min))*100;
+    slider.style.background='linear-gradient(to right,#10B981 0%,#10B981 '+pct+'%,#e5e5e5 '+pct+'%,#e5e5e5 100%)';
     if(!slider._wired){
       slider._wired=true;
       slider.addEventListener('input',renderBrowse);
@@ -918,55 +921,121 @@ function renderBrowse(){
 
   const local=document.getElementById('local-deals-list');
   const allLocal=getSampleLocalDeals();
-  // Filter by radius
   const sample=allLocal.filter(d=>parseFloat(d.distance)<=radius);
-  local.innerHTML='<p style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:0 0 12px">📍 '+sample.length+' deal'+(sample.length===1?'':'s')+' within '+radius+' mi</p>'+
-    (sample.length===0?'<div style="background:white;border-radius:16px;padding:24px;text-align:center;color:var(--text-dim)"><div style="font-size:36px;margin-bottom:8px;opacity:0.4">📍</div><p style="font-size:13px;font-weight:600;color:#1A1A1A;margin:0 0 4px">Nothing within '+radius+' mi</p><p style="font-size:11px;margin:0">Try increasing the radius</p></div>':
+  local.innerHTML='<p style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.7);margin:0 0 12px">📍 '+sample.length+' deal'+(sample.length===1?'':'s')+' within '+radius+' mi</p>'+
+    (sample.length===0?'<div style="background:rgba(255,255,255,0.95);border-radius:16px;padding:24px;text-align:center;color:var(--text-dim)"><div style="font-size:36px;margin-bottom:8px;opacity:0.4">📍</div><p style="font-size:13px;font-weight:600;color:#1A1A1A;margin:0 0 4px">Nothing within '+radius+' mi</p><p style="font-size:11px;margin:0">Try increasing the radius</p></div>':
     sample.map(d=>{
     const grad=getGradient(d.category);
-    return '<div style="background:white;border-radius:16px;padding:12px;margin-bottom:10px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04);text-align:left;'+(isBrowseDealClaimed(d.merchant,d.discount)?'opacity:0.7':'')+'"><div class="gradient-'+grad+'" style="width:56px;height:56px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:14px;flex-shrink:0">'+escapeHtml(d.discount.split(' ')[0])+'</div><div style="flex:1;min-width:0"><p style="font-size:14px;font-weight:700;margin:0">'+escapeHtml(d.merchant)+'</p><p style="font-size:12px;color:var(--text-dim);margin:2px 0 0">'+escapeHtml(d.discount)+'</p><p style="font-size:11px;color:var(--accent-dark);font-weight:700;margin:4px 0 0">📍 '+d.distance+' mi · '+d.time+'</p></div>'+(isBrowseDealClaimed(d.merchant,d.discount)?'<span style="background:#EAFBF4;color:#065F46;padding:8px 12px;border-radius:999px;font-size:11px;font-weight:700">✓ In wallet</span>':'<button onclick="claimBrowseDeal(\''+d.merchant+'\',\''+d.discount+'\',\''+d.category+'\',\''+(d.code||'')+'\',\''+d.expiry+'\')" style="background:var(--accent);color:#1A1A1A;border:none;padding:8px 14px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer">Claim</button>')+'</div>';
+    const claimed=isBrowseDealClaimed(d.merchant,d.discount);
+    return '<div onclick="viewBrowseDeal(\''+escapeAttr(d.id)+'\',\'local\')" style="background:white;border-radius:16px;padding:12px;margin-bottom:10px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 14px rgba(0,0,0,0.08);text-align:left;cursor:pointer;'+(claimed?'opacity:0.7':'')+'"><div class="gradient-'+grad+'" style="width:56px;height:56px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:14px;flex-shrink:0">'+escapeHtml(d.discount.split(' ')[0])+'</div><div style="flex:1;min-width:0"><p style="font-size:14px;font-weight:700;margin:0">'+escapeHtml(d.merchant)+'</p><p style="font-size:12px;color:var(--text-dim);margin:2px 0 0">'+escapeHtml(d.discount)+'</p><p style="font-size:11px;color:#047857;font-weight:700;margin:4px 0 0">📍 '+d.distance+' mi · '+d.time+'</p></div>'+(claimed?'<span style="background:#EAFBF4;color:#065F46;padding:8px 12px;border-radius:999px;font-size:11px;font-weight:700">✓ In wallet</span>':'<button onclick="event.stopPropagation();claimBrowseDeal(\''+escapeAttr(d.id)+'\',\'local\')" style="background:#10B981;color:white;border:none;padding:8px 14px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer">Claim</button>')+'</div>';
   }).join(''));
 
   const onl=document.getElementById('online-deals-list');
   const od=getSampleOnlineDeals();
-  onl.innerHTML='<p style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:0 0 12px">🌐 Top online deals</p><div style="columns:2;column-gap:8px">'+od.map(d=>{
+  onl.innerHTML='<p style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.7);margin:0 0 12px">🌐 '+od.length+' online deals · no distance limit</p><div style="columns:2;column-gap:8px">'+od.map(d=>{
     const grad=getGradient(d.category);
-    return '<div style="break-inside:avoid;margin-bottom:8px;border-radius:16px;overflow:hidden;position:relative;width:100%;display:block;'+(isBrowseDealClaimed(d.merchant,d.discount)?'opacity:0.7':'')+'"><div class="gradient-'+grad+'" style="height:'+d.h+'px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:30px">'+escapeHtml(d.short)+'</div><div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(180deg,transparent,rgba(0,0,0,0.85));padding:24px 10px 10px;color:white"><p style="font-size:13px;font-weight:700;margin:0">'+escapeHtml(d.merchant)+'</p><p style="font-size:11px;opacity:0.9;margin:0 0 8px">'+escapeHtml(d.subtitle)+'</p>'+(isBrowseDealClaimed(d.merchant,d.discount)?'<span style="display:block;background:rgba(255,255,255,0.95);color:#065F46;padding:6px;border-radius:8px;font-size:11px;font-weight:700;text-align:center">✓ In wallet</span>':'<button onclick="claimBrowseDeal(\''+d.merchant+'\',\''+d.discount+'\',\''+d.category+'\',\''+(d.code||'')+'\',\''+d.expiry+'\')" style="display:block;width:100%;background:var(--accent);color:#1A1A1A;border:none;padding:6px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">Claim</button>')+'</div></div>';
+    const claimed=isBrowseDealClaimed(d.merchant,d.discount);
+    return '<div onclick="viewBrowseDeal(\''+escapeAttr(d.id)+'\',\'online\')" style="break-inside:avoid;margin-bottom:8px;border-radius:16px;overflow:hidden;position:relative;width:100%;display:block;cursor:pointer;'+(claimed?'opacity:0.7':'')+'"><div class="gradient-'+grad+'" style="height:'+d.h+'px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:30px">'+escapeHtml(d.short)+'</div><div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(180deg,transparent,rgba(0,0,0,0.85));padding:24px 10px 10px;color:white"><p style="font-size:13px;font-weight:700;margin:0">'+escapeHtml(d.merchant)+'</p><p style="font-size:11px;opacity:0.9;margin:0 0 8px">'+escapeHtml(d.subtitle)+'</p>'+(claimed?'<span style="display:block;background:rgba(255,255,255,0.95);color:#065F46;padding:6px;border-radius:8px;font-size:11px;font-weight:700;text-align:center">✓ In wallet</span>':'<button onclick="event.stopPropagation();claimBrowseDeal(\''+escapeAttr(d.id)+'\',\'online\')" style="display:block;width:100%;background:#10B981;color:white;border:none;padding:6px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">Claim</button>')+'</div></div>';
   }).join('')+'</div>';
-
-  // Community pool moved to Wallet → Shared tab
-  // Browse tab now only has Local + Online
 }
+
+function escapeAttr(s){return String(s||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');}
 
 function isBrowseDealClaimed(merchant,discount){
   return state.deals.some(d=>d.merchant===merchant&&d.discount===discount);
 }
 
+// NOTE: These are curated sample deals representative of real well-known
+// recurring promotions. Live deal-feed integration (RetailMeNot / Honey
+// API / direct merchant partnerships) is on the roadmap for v2.
+// For the beta, treat these as realistic placeholders, not live data.
 function getSampleLocalDeals(){
   return [
-    {merchant:'Starbucks',discount:'FREE grande drink',category:'Dining',code:'BD2026',expiry:futureDate(7),distance:'0.3',time:'5 min walk'},
-    {merchant:'Whole Foods',discount:'20% off produce',category:'Groceries',code:'FRESH20',expiry:futureDate(10),distance:'0.8',time:'3 min drive'},
-    {merchant:'Target',discount:'$10 off $50',category:'Home',code:'SAVE10',expiry:futureDate(14),distance:'1.2',time:'5 min drive'},
-    {merchant:'Nike',discount:'25% off sale',category:'Apparel',code:'EXTRA25',expiry:futureDate(5),distance:'2.1',time:'8 min drive'},
-    {merchant:'Sephora',discount:'Free shipping',category:'Beauty',code:'BEAUTY3',expiry:futureDate(8),distance:'2.8',time:'10 min drive'},
-    {merchant:'Old Navy',discount:'40% off everything',category:'Apparel',code:'FORTY',expiry:futureDate(3),distance:'3.4',time:'12 min drive'}
-  ];
-}
-function getSampleOnlineDeals(){
-  return [
-    {merchant:'Amazon',discount:'15% off',category:'Home',code:'HOME15',expiry:futureDate(7),short:'15%',subtitle:'Household items',h:200},
-    {merchant:'Best Buy',discount:'$50 off',category:'Electronics',code:'LAP50',expiry:futureDate(10),short:'$50',subtitle:'Laptops $500+',h:240},
-    {merchant:'Marriott',discount:'$50 off',category:'Travel',code:'WKND50',expiry:futureDate(14),short:'$50',subtitle:'Weekend stays',h:180},
-    {merchant:'Sephora',discount:'30% off',category:'Beauty',code:'GLOW30',expiry:futureDate(5),short:'30%',subtitle:'Skincare sale',h:220},
-    {merchant:'Costco',discount:'$25 off',category:'Groceries',code:'SAVE25',expiry:futureDate(12),short:'$25',subtitle:'$250+ orders',h:160},
-    {merchant:'Nike',discount:'25% off',category:'Apparel',code:'EXTRA25',expiry:futureDate(8),short:'25%',subtitle:'Sale items',h:200}
+    {id:'l-sb',merchant:'Starbucks',discount:'Free birthday drink',category:'Dining',code:'BD2026',expiry:futureDate(7),distance:'0.4',time:'2 min walk',description:'Any handcrafted drink free on your birthday week. Must be a Starbucks Rewards member.',terms:'Valid in-store only. One per member per year. Loyalty card required.',url:'https://www.starbucks.com/rewards'},
+    {id:'l-tj',merchant:'Trader Joe\'s',discount:'$5 off $30 produce',category:'Groceries',code:'FRESH5',expiry:futureDate(10),distance:'0.7',time:'3 min drive',description:'Save $5 on any produce purchase of $30 or more. Cashier scans the code.',terms:'Excludes alcohol. One per visit. In-store only.',url:''},
+    {id:'l-tg',merchant:'Target',discount:'5% off everything',category:'Home',code:'CIRCLE',expiry:futureDate(30),distance:'1.1',time:'5 min drive',description:'5% off every purchase with Target Circle (free to join). Stacks with Cartwheel offers.',terms:'Members get 5% off year-round. Sign up at target.com/circle.',url:'https://www.target.com/circle'},
+    {id:'l-cv',merchant:'CVS ExtraCare',discount:'$3 off $15',category:'Beauty',code:'EXTRA3',expiry:futureDate(5),distance:'1.5',time:'7 min drive',description:'Spend $15+ on health & beauty, get $3 off automatically with ExtraCare card.',terms:'Excludes Rx, alcohol, gift cards.',url:'https://www.cvs.com/extracare'},
+    {id:'l-ch',merchant:'Chipotle',discount:'Free guac with entrée',category:'Dining',code:'GUACFAM',expiry:futureDate(14),distance:'2.0',time:'8 min drive',description:'Free side of guacamole with any entrée order. Add to mobile app cart.',terms:'In-app order only. Once per Chipotle Rewards account.',url:'https://www.chipotle.com/rewards'},
+    {id:'l-pn',merchant:'Panera',discount:'Free pastry MyPanera',category:'Dining',code:'MYPANERA',expiry:futureDate(7),distance:'2.6',time:'10 min drive',description:'Free pastry with any cafe order. MyPanera membership required (free).',terms:'Limit one. New members only this month.',url:'https://www.panerabread.com/mypanera'},
+    {id:'l-bb',merchant:'Best Buy',discount:'$10 off $50',category:'Electronics',code:'TECHSAVE',expiry:futureDate(10),distance:'4.2',time:'14 min drive',description:'$10 off your $50+ purchase. My Best Buy members get early access.',terms:'Excludes Apple, gaming consoles. One per member.',url:'https://www.bestbuy.com'},
+    {id:'l-wf',merchant:'Whole Foods',discount:'10% off Prime members',category:'Groceries',code:'PRIME10',expiry:futureDate(30),distance:'5.8',time:'18 min drive',description:'10% off select sale items every day with Amazon Prime + Whole Foods app.',terms:'Prime membership required. Scan app at checkout.',url:'https://www.amazon.com/wholefoods'},
+    {id:'l-on',merchant:'Old Navy',discount:'30% off everything',category:'Apparel',code:'THIRTY',expiry:futureDate(3),distance:'7.2',time:'22 min drive',description:'30% off your purchase, including markdowns. Online + in-store.',terms:'Excludes Hotel Collection. One use per customer.',url:'https://oldnavy.gap.com'},
+    {id:'l-sp',merchant:'Sephora Beauty Insider',discount:'Free shipping any order',category:'Beauty',code:'SHIPPED',expiry:futureDate(8),distance:'9.4',time:'28 min drive',description:'Free shipping with no minimum for Beauty Insider members (free to join).',terms:'Standard shipping only. Online orders.',url:'https://www.sephora.com/beauty-insider'},
+    {id:'l-ll',merchant:'Lululemon',discount:'Free hemming',category:'Apparel',code:'HEM',expiry:futureDate(60),distance:'12.5',time:'35 min drive',description:'Free hemming on any pant or short purchase, in-store only.',terms:'Original purchase from Lululemon required. No expiration once active.',url:'https://shop.lululemon.com'},
+    {id:'l-aw',merchant:'Apple Watch trade-in',discount:'Up to $200 credit',category:'Electronics',code:'TRADEUP',expiry:futureDate(45),distance:'15.0',time:'45 min drive',description:'Trade in any working Apple Watch toward a new model. Quote from apple.com first.',terms:'Trade-in value depends on model + condition. Valid in-store + online.',url:'https://www.apple.com/shop/trade-in'}
   ];
 }
 
-window.claimBrowseDeal=function(merchant,discount,category,code,expiry){
+function getSampleOnlineDeals(){
+  return [
+    {id:'o-az',merchant:'Amazon Prime',discount:'30 days free trial',category:'Home',code:'PRIME30',expiry:futureDate(60),short:'FREE',subtitle:'30-day Prime trial',h:200,description:'Free 30-day Amazon Prime trial — free shipping, Prime Video, Music, Reading, more. New members only.',terms:'Cancel anytime before trial ends. Must be a new Prime member.',url:'https://www.amazon.com/prime'},
+    {id:'o-bb',merchant:'Best Buy',discount:'$50 off laptops',category:'Electronics',code:'LAP50',expiry:futureDate(10),short:'$50',subtitle:'Laptops $500+',h:240,description:'Save $50 on any laptop $500 and above. My Best Buy member exclusive.',terms:'Online only. One per member. Excludes Apple.',url:'https://www.bestbuy.com'},
+    {id:'o-mr',merchant:'Marriott Bonvoy',discount:'5,000 bonus points',category:'Travel',code:'WKND5K',expiry:futureDate(14),short:'5K',subtitle:'2-night weekend stays',h:180,description:'Earn 5,000 bonus points on weekend stays of 2+ nights at participating hotels. Register before booking.',terms:'Must register at marriott.com/bonus. Stay must complete by deadline.',url:'https://www.marriott.com/bonvoy'},
+    {id:'o-sp',merchant:'Sephora online',discount:'30% off skincare',category:'Beauty',code:'GLOW30',expiry:futureDate(5),short:'30%',subtitle:'Sale skincare',h:220,description:'30% off skincare on the sale page. Code applies at checkout.',terms:'Online only. Excludes brands like Drunk Elephant.',url:'https://www.sephora.com/sale'},
+    {id:'o-cs',merchant:'Costco online',discount:'$25 off $250',category:'Groceries',code:'COSTCO25',expiry:futureDate(12),short:'$25',subtitle:'Online orders $250+',h:160,description:'Save $25 on Costco.com orders of $250+. Members only.',terms:'Costco membership required. Excludes alcohol, gift cards.',url:'https://www.costco.com'},
+    {id:'o-nk',merchant:'Nike',discount:'25% off sale items',category:'Apparel',code:'EXTRA25',expiry:futureDate(8),short:'25%',subtitle:'Sale section',h:200,description:'Extra 25% off sale items at Nike.com with member account (free to join).',terms:'Excludes Jordan, Yeezy, recent releases.',url:'https://www.nike.com/membership'},
+    {id:'o-ub',merchant:'Uber Eats',discount:'$10 off $25',category:'Dining',code:'EATS10',expiry:futureDate(7),short:'$10',subtitle:'Order $25+',h:190,description:'$10 off any Uber Eats order of $25 or more. New customers only.',terms:'New users only. Some restaurants excluded.',url:'https://www.ubereats.com'},
+    {id:'o-sf',merchant:'Spotify Premium',discount:'3 months free',category:'Other',code:'SPOT3',expiry:futureDate(30),short:'3MO',subtitle:'Premium trial',h:170,description:'3 months free Spotify Premium for new subscribers. Auto-converts to paid after trial.',terms:'New Premium subscribers only. Cancel anytime.',url:'https://www.spotify.com/premium'},
+    {id:'o-dd',merchant:'DoorDash DashPass',discount:'$10 off first order',category:'Dining',code:'DASH10',expiry:futureDate(14),short:'$10',subtitle:'New customer deal',h:180,description:'$10 off your first DoorDash order with DashPass trial. Free trial included.',terms:'New customers only. DashPass auto-renews after trial.',url:'https://www.doordash.com/dashpass'},
+    {id:'o-yt',merchant:'YouTube Premium',discount:'1 month free',category:'Other',code:'YTPREM',expiry:futureDate(30),short:'1MO',subtitle:'Ad-free streaming',h:160,description:'1 month free YouTube Premium — ad-free, background play, YouTube Music included.',terms:'New subscribers only. Auto-renews unless cancelled.',url:'https://www.youtube.com/premium'}
+  ];
+}
+
+// View deal details (Local or Online tap-through)
+window.viewBrowseDeal=function(id,source){
+  const list=source==='local'?getSampleLocalDeals():getSampleOnlineDeals();
+  const d=list.find(x=>x.id===id);
+  if(!d)return;
+  const claimed=isBrowseDealClaimed(d.merchant,d.discount);
+  const grad=getGradient(d.category);
+  const sourceLabel=source==='local'?'📍 Local · '+d.distance+' mi · '+d.time:'🌐 Online · no location needed';
+  const html='<div class="modal-handle"></div>'+
+    '<div class="gradient-'+grad+'" style="border-radius:16px;padding:18px;color:white;margin-bottom:14px;text-align:center">'+
+      '<p style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;opacity:0.85;margin:0">'+escapeHtml(d.category)+'</p>'+
+      '<h3 style="font-size:22px;font-weight:800;margin:6px 0 4px">'+escapeHtml(d.merchant)+'</h3>'+
+      '<p style="font-size:18px;font-weight:700;margin:0">'+escapeHtml(d.discount)+'</p>'+
+    '</div>'+
+    '<p style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--text-dim);text-transform:uppercase;margin:0 0 6px">'+sourceLabel+'</p>'+
+    '<p style="font-size:14px;color:#1A1A1A;line-height:1.5;margin:0 0 14px">'+escapeHtml(d.description||d.subtitle||'')+'</p>'+
+    (d.terms?'<div style="background:#F8F8F8;border-radius:10px;padding:12px;margin-bottom:14px"><p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-dim);margin:0 0 4px">Terms</p><p style="font-size:12px;color:#333;margin:0;line-height:1.5">'+escapeHtml(d.terms)+'</p></div>':'')+
+    (d.code?'<div style="background:#F0F9FF;border:1px dashed #2563EB;border-radius:10px;padding:12px;margin-bottom:14px;text-align:center"><p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#1E40AF;margin:0 0 4px">Code</p><p style="font-family:ui-monospace,monospace;font-size:18px;font-weight:800;color:#1A1A1A;margin:0;letter-spacing:2px">'+escapeHtml(d.code)+'</p></div>':'')+
+    '<p style="font-size:11px;color:var(--text-dim);margin:0 0 12px">⏰ Expires '+fmtDate(d.expiry)+'</p>'+
+    (d.url?'<a href="'+escapeHtml(d.url)+'" target="_blank" rel="noopener" style="display:block;text-align:center;width:100%;padding:12px;border-radius:12px;background:#F0F0F0;color:#333;font-size:13px;font-weight:700;text-decoration:none;margin-bottom:10px">Visit merchant ↗</a>':'')+
+    (claimed
+      ?'<button disabled style="width:100%;background:#EAFBF4;color:#065F46;border:none;padding:14px;border-radius:14px;font-size:14px;font-weight:700;cursor:not-allowed">✓ Already in your wallet</button>'
+      :'<button onclick="claimBrowseDeal(\''+escapeAttr(d.id)+'\',\''+source+'\');closeModal();" style="width:100%;background:#10B981;color:white;border:none;padding:14px;border-radius:14px;font-size:14px;font-weight:800;cursor:pointer">Claim deal · +1 spin</button>');
+  openModal(html);
+};
+
+window.claimBrowseDeal=function(idOrMerchant,source,maybeDiscount,maybeCategory,maybeCode,maybeExpiry){
+  // Backward-compatible: old call signature was (merchant, discount, category, code, expiry)
+  // New signature: (id, source) — looks up the full deal record
+  let d;
+  if(maybeDiscount===undefined){
+    // New signature
+    const list=source==='local'?getSampleLocalDeals():getSampleOnlineDeals();
+    d=list.find(x=>x.id===idOrMerchant);
+    if(!d){toast('Deal not found');return;}
+  } else {
+    // Legacy signature — synthesize a record
+    d={merchant:idOrMerchant,discount:source,category:maybeDiscount,code:maybeCategory,expiry:maybeCode};
+    source=null;
+  }
   state.deals.push({
-    id:uid(),merchant,discount,category,code:code||'',expiry,
-    value:parseValue(discount),notes:'Claimed from Browse',redeemed:false,createdAt:Date.now()
+    id:uid(),
+    merchant:d.merchant,
+    discount:d.discount,
+    category:d.category,
+    code:d.code||'',
+    expiry:d.expiry,
+    address:d.address||'',
+    url:d.url||'',
+    value:parseValue(d.discount),
+    notes:d.description||'Claimed from Browse',
+    source:source||null,                 // 'local' | 'online' | null (legacy)
+    sourceMeta:source==='local'?{distance:d.distance,time:d.time}:null,
+    redeemed:false,
+    createdAt:Date.now()
   });
   state.rewards.spins+=1;
   save(K.deals,state.deals);save(K.rewards,state.rewards);
@@ -975,7 +1044,7 @@ window.claimBrowseDeal=function(merchant,discount,category,code,expiry){
   checkTierUp();
   scheduleReminders();
   renderAll();
-  renderBrowse(); // Force Browse to update Claim → ✓ In wallet immediately
+  renderBrowse();
 };
 
 function parseValue(disc){
