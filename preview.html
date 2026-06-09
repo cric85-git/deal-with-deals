@@ -53,9 +53,17 @@ button{border:none;background:none;cursor:pointer;color:inherit}
 .tabbar-snap{background:#1A1A1A;border-radius:50%;width:60px;height:60px;display:flex;align-items:center;justify-content:center;margin-top:-24px;box-shadow:0 6px 20px rgba(0,0,0,0.3);border:4px solid white}
 .tabbar-snap svg{width:28px;height:28px;fill:none;stroke:white;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:24px;height:24px;border-radius:50%;background:#1A1A1A;border:3px solid #FFE16B;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.3)}
-input[type=range]::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:#1A1A1A;border:3px solid #FFE16B;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.3)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:24px;height:24px;border-radius:50%;background:#10B981;border:3px solid #FFFFFF;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.3)}
+input[type=range]::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:#10B981;border:3px solid #FFFFFF;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.3)}
 input[type=range]:focus{outline:none}
+
+/* Inline notch slider for Settings (3-step) */
+.setting-slider-row{margin-top:10px;padding-top:8px;border-top:1px dashed var(--border)}
+.setting-slider-row input[type=range]{width:100%;height:6px;appearance:none;-webkit-appearance:none;background:#E5E7EB;border-radius:999px;outline:none;margin:6px 0 4px}
+.setting-slider-row input[type=range]::-webkit-slider-thumb{width:22px;height:22px;background:#10B981;border:3px solid #FFFFFF;box-shadow:0 2px 8px rgba(16,185,129,0.4)}
+.setting-slider-row input[type=range]::-moz-range-thumb{width:22px;height:22px;background:#10B981;border:3px solid #FFFFFF;box-shadow:0 2px 8px rgba(16,185,129,0.4)}
+.setting-slider-ticks{display:flex;justify-content:space-between;font-size:10px;font-weight:700;color:var(--text-dim);padding:0 6px;margin-bottom:2px}
+.setting-slider-unit{font-size:10px;color:var(--text-dim);margin:0;text-align:right}
 
 /* SVG icons (inline so always render) */
 .svg-icon{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -200,22 +208,22 @@ input[type=range]:focus{outline:none}
   </div>
   <div class="ob-step active" data-step="1">
     <div class="ob-logo-mark">
-      <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
         <defs>
-          <linearGradient id="ob-bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0D1B2A"/><stop offset="1" stop-color="#06111C"/></linearGradient>
-          <linearGradient id="ob-bill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#34D399"/><stop offset="1" stop-color="#059669"/></linearGradient>
-          <linearGradient id="ob-word" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#10B981"/><stop offset="1" stop-color="#047857"/></linearGradient>
-          <filter id="ob-shadow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur in="SourceAlpha" stdDeviation="2"/><feOffset dx="0" dy="2"/><feComponentTransfer><feFuncA type="linear" slope="0.3"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          <linearGradient id="ob-bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#082b6f"/><stop offset="1" stop-color="#020817"/></linearGradient>
+          <linearGradient id="ob-mint" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#9cffdf"/><stop offset="1" stop-color="#00c9a7"/></linearGradient>
+          <filter id="ob-shadow" x="-10%" y="-10%" width="120%" height="120%"><feDropShadow dx="0" dy="14" stdDeviation="14" flood-opacity="0.35"/></filter>
         </defs>
-        <rect width="200" height="200" rx="44" fill="url(#ob-bg)"/>
-        <g filter="url(#ob-shadow)">
-          <path d="M85 32 L135 32 Q140 32 140 38 L140 82 Q140 90 132 90 L93 90 Q85 90 85 82 Z" fill="url(#ob-bill)"/>
-          <path d="M85 32 L140 32 L140 38 L85 38 Z" fill="rgba(255,255,255,0.18)"/>
-          <text x="112" y="76" font-family="-apple-system,'SF Pro Display',sans-serif" font-size="33" font-weight="900" fill="#FFFFFF" text-anchor="middle">$</text>
-        </g>
-        <path d="M35 78 L35 154 Q35 165 45 165 L155 165 Q165 165 165 154 L165 78 Q165 65 152 60 L100 50 L48 60 Q35 65 35 78 Z" fill="#FFFFFF"/>
-        <path d="M48 86 L48 152 Q48 156 52 156 L148 156 Q152 156 152 152 L152 86 Q152 78 142 75 L100 65 L58 75 Q48 78 48 86 Z" fill="none" stroke="#10B981" stroke-width="1.5" stroke-dasharray="3 3"/>
-        <text x="100" y="135" font-family="-apple-system,'SF Pro Display',sans-serif" font-size="32" font-weight="900" fill="url(#ob-word)" text-anchor="middle" letter-spacing="-1">Perq</text>
+        <rect width="512" height="512" rx="96" fill="url(#ob-bg)"/>
+        <rect x="150" y="105" width="210" height="130" rx="24" fill="url(#ob-mint)" transform="rotate(-9 256 170)" opacity="0.95"/>
+        <text x="255" y="195" font-family="-apple-system,'SF Pro Display',sans-serif" font-size="72" font-weight="800" fill="#FFFFFF" text-anchor="middle">$</text>
+        <path d="M112 178 Q112 145 145 145 H367 Q400 145 400 178 V350 Q400 395 355 395 H157 Q112 395 112 350 Z" fill="#071b4d" filter="url(#ob-shadow)"/>
+        <path d="M112 178 Q112 145 145 145 H367 Q400 145 400 178" fill="none" stroke="#174073" stroke-width="8"/>
+        <rect x="350" y="245" width="58" height="78" rx="20" fill="#08265f"/>
+        <circle cx="378" cy="284" r="13" fill="url(#ob-mint)"/>
+        <rect x="200" y="225" width="40" height="150" rx="6" fill="#FFFFFF"/>
+        <circle cx="280" cy="270" r="48" fill="#FFFFFF"/>
+        <circle cx="284" cy="270" r="20" fill="#071b4d"/>
       </svg>
     </div>
     <h1 class="ob-title">Welcome to Perq</h1>
@@ -249,15 +257,17 @@ input[type=range]:focus{outline:none}
   </div>
   <div class="ob-step" data-step="4">
     <div class="ob-logo-mark small">
-      <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-        <rect width="200" height="200" rx="44" fill="url(#ob-bg)"/>
-        <g filter="url(#ob-shadow)">
-          <path d="M85 32 L135 32 Q140 32 140 38 L140 82 Q140 90 132 90 L93 90 Q85 90 85 82 Z" fill="url(#ob-bill)"/>
-          <path d="M85 32 L140 32 L140 38 L85 38 Z" fill="rgba(255,255,255,0.18)"/>
-          <text x="112" y="76" font-family="-apple-system,'SF Pro Display',sans-serif" font-size="33" font-weight="900" fill="#FFFFFF" text-anchor="middle">$</text>
-        </g>
-        <path d="M35 78 L35 154 Q35 165 45 165 L155 165 Q165 165 165 154 L165 78 Q165 65 152 60 L100 50 L48 60 Q35 65 35 78 Z" fill="#FFFFFF"/>
-        <text x="100" y="135" font-family="-apple-system,'SF Pro Display',sans-serif" font-size="32" font-weight="900" fill="url(#ob-word)" text-anchor="middle" letter-spacing="-1">Perq</text>
+      <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+        <rect width="512" height="512" rx="96" fill="url(#ob-bg)"/>
+        <rect x="150" y="105" width="210" height="130" rx="24" fill="url(#ob-mint)" transform="rotate(-9 256 170)" opacity="0.95"/>
+        <text x="255" y="195" font-family="-apple-system,'SF Pro Display',sans-serif" font-size="72" font-weight="800" fill="#FFFFFF" text-anchor="middle">$</text>
+        <path d="M112 178 Q112 145 145 145 H367 Q400 145 400 178 V350 Q400 395 355 395 H157 Q112 395 112 350 Z" fill="#071b4d" filter="url(#ob-shadow)"/>
+        <path d="M112 178 Q112 145 145 145 H367 Q400 145 400 178" fill="none" stroke="#174073" stroke-width="8"/>
+        <rect x="350" y="245" width="58" height="78" rx="20" fill="#08265f"/>
+        <circle cx="378" cy="284" r="13" fill="url(#ob-mint)"/>
+        <rect x="200" y="225" width="40" height="150" rx="6" fill="#FFFFFF"/>
+        <circle cx="280" cy="270" r="48" fill="#FFFFFF"/>
+        <circle cx="284" cy="270" r="20" fill="#071b4d"/>
       </svg>
     </div>
     <h1 class="ob-title">Install Perq on your home screen</h1>
@@ -364,15 +374,31 @@ input[type=range]:focus{outline:none}
     </div>
     <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.6);margin:14px 0 8px">Notifications</p>
     <div class="settings-group">
-      <div class="settings-row" onclick="openReminderSettings(event)">
+      <div class="settings-row">
         <div class="settings-icon-sm" style="background:#D1FAE5;color:#065F46"><svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg></div>
-        <div class="settings-info"><p class="settings-row-title">Expiry reminders</p><p class="settings-row-sub" id="reminders-sub">2 days before · evening · day-of</p></div>
-        <button class="toggle on" data-setting="reminders" onclick="event.stopPropagation();toggleSetting(this,'reminders')"></button>
+        <div class="settings-info">
+          <p class="settings-row-title">Expiry reminders</p>
+          <p class="settings-row-sub" id="reminders-sub">Remind me <strong id="reminders-days-val">2</strong> days before, in the evening</p>
+          <div class="setting-slider-row" id="reminders-slider-row">
+            <div class="setting-slider-ticks"><span>1</span><span>2</span><span>3</span></div>
+            <input type="range" id="reminders-days-slider" min="1" max="3" step="1" value="2" oninput="setReminderDays(parseInt(this.value))">
+            <p class="setting-slider-unit">days before expiry</p>
+          </div>
+        </div>
+        <button class="toggle on" data-setting="reminders" onclick="toggleSetting(this,'reminders')"></button>
       </div>
-      <div class="settings-row" onclick="openProximitySettings(event)">
+      <div class="settings-row">
         <div class="settings-icon-sm" style="background:#D1FAE5;color:#065F46"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
-        <div class="settings-info"><p class="settings-row-title">Proximity alerts</p><p class="settings-row-sub" id="proximity-sub">Notify within 2 mi of a store</p></div>
-        <button class="toggle on" data-setting="proximity" onclick="event.stopPropagation();toggleSetting(this,'proximity')"></button>
+        <div class="settings-info">
+          <p class="settings-row-title">Proximity alerts</p>
+          <p class="settings-row-sub" id="proximity-sub">Notify within <strong id="proximity-miles-val">1</strong> mi of a saved deal</p>
+          <div class="setting-slider-row" id="proximity-slider-row">
+            <div class="setting-slider-ticks"><span>1</span><span>2</span><span>3</span></div>
+            <input type="range" id="proximity-miles-slider" min="1" max="3" step="1" value="1" oninput="setProximityMiles(parseInt(this.value))">
+            <p class="setting-slider-unit">miles</p>
+          </div>
+        </div>
+        <button class="toggle on" data-setting="proximity" onclick="toggleSetting(this,'proximity')"></button>
       </div>
       <div class="settings-row">
         <div class="settings-icon-sm" style="background:#FCE7F3;color:#BE185D"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></div>
@@ -475,6 +501,6 @@ input[type=range]:focus{outline:none}
 <div id="confetti-root" style="position:fixed;inset:0;pointer-events:none;z-index:9998;overflow:hidden"></div>
 <input type="file" id="capture-input" accept="image/*" capture="environment" style="display:none">
 
-<script src="preview-app.js?v=20"></script>
+<script src="preview-app.js?v=21"></script>
 </body>
 </html>

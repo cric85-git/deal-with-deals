@@ -22,7 +22,7 @@ let state={
   programs:load(K.programs,[]),
   loyalty:load(K.loyalty,[]),
   rewards:load(K.rewards,{points:0,spins:0,streak:0,saved:0,lastClaim:null,missions:{date:null,done:{}},lastSeenTier:'BRONZE',unlocksSeen:[]}),
-  settings:load(K.settings,{reminders:true,proximity:true,social:false,reminderDays:2,proximityMiles:2}),
+  settings:load(K.settings,{reminders:true,proximity:true,social:false,reminderDays:2,proximityMiles:1}),
   selectedPrefs:[]
 };
 
