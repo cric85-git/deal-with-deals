@@ -82,34 +82,23 @@ async function rescheduleExpiryReminders(deals, settings) {
   const toSchedule = [];
 
   const active = (deals || []).filter(d => !d.redeemed && d.expiry);
+  // User-configurable lead time (1, 2, or 3 days). Default 2.
+  const leadDays = (settings && settings.reminderDays) || 2;
   for (const d of active) {
     const expiryMs = new Date(d.expiry + 'T23:59:59').getTime();
     if (isNaN(expiryMs) || expiryMs <= now) continue;
 
-    // 3-day-out reminder at 6 PM local
-    const t3 = atHour(expiryMs - 3*DAY, 18);
-    if (t3 > now + 60_000) {
+    // Lead-time reminder at 6 PM local
+    const tLead = atHour(expiryMs - leadDays*DAY, 18);
+    if (tLead > now + 60_000) {
       toSchedule.push({
-        id: notifIdFor(d.id, '3d'),
-        title: '⏰ Deal expires in 3 days',
+        id: notifIdFor(d.id, 'lead'),
+        title: `⏰ Deal expires in ${leadDays} ${leadDays === 1 ? 'day' : 'days'}`,
         body: `${d.merchant} · ${d.discount} expires ${fmtShortDate(d.expiry)}. Don't forget to use it.`,
-        schedule: { at: new Date(t3) },
-        extra: { dealId: d.id, kind: '3d' },
+        schedule: { at: new Date(tLead) },
+        extra: { dealId: d.id, kind: 'lead' },
         smallIcon: 'ic_stat_perq',
         iconColor: '#10B981'
-      });
-    }
-    // 1-day-out reminder at 6 PM local
-    const t1 = atHour(expiryMs - 1*DAY, 18);
-    if (t1 > now + 60_000) {
-      toSchedule.push({
-        id: notifIdFor(d.id, '1d'),
-        title: '⚠️ Last chance — expires tomorrow',
-        body: `${d.merchant} · ${d.discount}. Tomorrow is the last day to use this deal.`,
-        schedule: { at: new Date(t1) },
-        extra: { dealId: d.id, kind: '1d' },
-        smallIcon: 'ic_stat_perq',
-        iconColor: '#F59E0B'
       });
     }
     // Day-of at 10 AM local

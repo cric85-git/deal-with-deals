@@ -22,7 +22,7 @@ let state={
   programs:load(K.programs,[]),
   loyalty:load(K.loyalty,[]),
   rewards:load(K.rewards,{points:0,spins:0,streak:0,saved:0,lastClaim:null,missions:{date:null,done:{}},lastSeenTier:'BRONZE',unlocksSeen:[]}),
-  settings:load(K.settings,{reminders:true,proximity:true,social:false}),
+  settings:load(K.settings,{reminders:true,proximity:true,social:false,reminderDays:2,proximityMiles:2}),
   selectedPrefs:[]
 };
 
@@ -40,6 +40,15 @@ let currentBrowseTab='local';
   if(!r.lastSundaySpin)r.lastSundaySpin=null;
   state.rewards=r;
   save(K.rewards,state.rewards);
+})();
+
+// Migration: ensure new settings fields for reminder days + proximity radius
+(function migrateSettings(){
+  const s=state.settings||{};
+  if(s.reminderDays===undefined)s.reminderDays=2;
+  if(s.proximityMiles===undefined)s.proximityMiles=2;
+  state.settings=s;
+  save(K.settings,state.settings);
 })();
 
 // Sunday bonus spin perk — runs once per Sunday for users with the double_spin unlock
@@ -92,6 +101,11 @@ window.nextStep=function(){
     if(state.selectedPrefs.length>0&&state.profile){
       state.profile.preferences=state.selectedPrefs;
       save(K.profile,state.profile);
+    }
+    // If running as a native app, the install step is meaningless — finish onboarding now.
+    if(window.PerqNative&&window.PerqNative.isNative){
+      finishOnboarding();
+      return;
     }
   }
   onboardStep++;
@@ -175,6 +189,15 @@ window.finishOnboarding=function(){
 function checkOnboarding(){
   const onboarded=load(K.onboarded,false);
   document.getElementById('onboarding').classList.toggle('hidden',onboarded);
+  // On native, hide the install-instructions step + its progress dot — irrelevant.
+  if(window.PerqNative&&window.PerqNative.isNative){
+    const installStep=document.querySelector('.ob-step[data-step="4"]');
+    if(installStep)installStep.style.display='none';
+    document.querySelectorAll('.ob-dot-install').forEach(d=>d.style.display='none');
+    // Update step 3 button label to "Start using Perq" since it's now the final step
+    const step3btn=document.querySelector('.ob-step[data-step="3"] .ob-btn:not(.secondary)');
+    if(step3btn)step3btn.textContent='Start using Perq';
+  }
 }
 
 document.querySelectorAll('.ob-pref').forEach(btn=>{
@@ -1280,9 +1303,9 @@ function renderRewards(){
 
   // 5) Streak perk text (small footer line so user knows what their streak buys them)
   if(streakCount>0){
-    html+='<div style="margin:0 20px 14px;padding:10px 14px;background:rgba(255,255,255,0.85);border-radius:12px;display:flex;align-items:center;gap:8px">'+
+    html+='<div style="margin:0 20px 14px;padding:10px 14px;background:rgba(255,255,255,0.95);border-radius:12px;display:flex;align-items:center;gap:8px">'+
       '<span style="font-size:14px">'+streak.emoji+'</span>'+
-      '<p style="font-size:11px;color:var(--text)";margin:0;font-weight:600;flex:1">'+escapeHtml(streak.perk)+'</p>'+
+      '<p style="font-size:11px;color:var(--text);margin:0;font-weight:600;flex:1">'+escapeHtml(streak.perk)+'</p>'+
     '</div>';
   }
 
@@ -1294,7 +1317,7 @@ function renderRewards(){
       const remaining=u.pts-state.rewards.points;
       const unlockPct=Math.min(100,(state.rewards.points/u.pts)*100);
       return '<div style="background:'+(unlocked?u.gradient:'rgba(255,255,255,0.95)')+';border-radius:18px;padding:14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;color:'+(unlocked?'white':'#1A1A1A')+';'+(unlocked?'box-shadow:0 6px 18px rgba(0,0,0,0.15)':'box-shadow:0 2px 8px rgba(0,0,0,0.06)')+';position:relative;overflow:hidden">'+
-        (!unlocked?'<div style="position:absolute;left:0;bottom:0;height:3px;width:'+unlockPct+'%;background:linear-gradient(90deg,#FFE16B,#FFA06B);transition:width .5s"></div>':'')+
+        (!unlocked?'<div style="position:absolute;left:0;bottom:0;height:3px;width:'+unlockPct+'%;background:linear-gradient(90deg,#10B981,#059669);transition:width .5s"></div>':'')+
         '<div style="width:44px;height:44px;border-radius:12px;background:'+(unlocked?'rgba(255,255,255,0.25)':u.gradient)+';display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;'+(!unlocked?'filter:grayscale(0.4) opacity(0.85)':'')+'">'+u.emoji+'</div>'+
         '<div style="flex:1;min-width:0">'+
           '<p style="font-size:14px;font-weight:800;margin:0">'+escapeHtml(u.title)+'</p>'+
@@ -1980,6 +2003,51 @@ window.toggleSetting=function(el,key){
   save(K.settings,state.settings);
   toast(el.classList.contains('on')?'Enabled':'Disabled');
   if(key==='reminders')scheduleReminders();
+};
+
+window.openReminderSettings=function(){
+  const cur=state.settings.reminderDays||2;
+  const opts=[1,2,3];
+  const html='<div class="modal-handle"></div>'+
+    '<h3 class="modal-title">Expiry reminders</h3>'+
+    '<p style="font-size:13px;color:var(--text-dim);text-align:center;margin:0 0 16px;line-height:1.5">How many days before a deal expires should we remind you?</p>'+
+    '<div style="display:flex;gap:10px;margin-bottom:16px">'+
+      opts.map(d=>'<button onclick="setReminderDays('+d+')" style="flex:1;padding:18px 0;border-radius:14px;font-size:18px;font-weight:800;border:2px solid '+(cur===d?'#10B981':'#E5E7EB')+';background:'+(cur===d?'#D1FAE5':'#FFFFFF')+';color:'+(cur===d?'#065F46':'#1A1A1A')+'">'+d+(d===1?' day':' days')+'</button>').join('')+
+    '</div>'+
+    '<p style="font-size:11px;color:var(--text-dim);text-align:center;margin:0 0 16px">Plus a same-day reminder at 10 AM as a final nudge.</p>'+
+    '<button onclick="closeModal()" style="width:100%;background:#1A1A1A;color:white;padding:14px;border-radius:14px;font-size:14px;font-weight:800">Done</button>';
+  openModal(html);
+};
+window.setReminderDays=function(d){
+  state.settings.reminderDays=d;
+  save(K.settings,state.settings);
+  const sub=document.getElementById('reminders-sub');
+  if(sub)sub.textContent=d+(d===1?' day':' days')+' before · evening · day-of';
+  scheduleReminders();
+  closeModal();
+  toast('Reminders set to '+d+(d===1?' day':' days')+' before');
+};
+
+window.openProximitySettings=function(){
+  const cur=state.settings.proximityMiles||2;
+  const opts=[1,2,3];
+  const html='<div class="modal-handle"></div>'+
+    '<h3 class="modal-title">Proximity alerts</h3>'+
+    '<p style="font-size:13px;color:var(--text-dim);text-align:center;margin:0 0 16px;line-height:1.5">Notify you when you\'re near a store with a saved deal — within how many miles?</p>'+
+    '<div style="display:flex;gap:10px;margin-bottom:16px">'+
+      opts.map(m=>'<button onclick="setProximityMiles('+m+')" style="flex:1;padding:18px 0;border-radius:14px;font-size:18px;font-weight:800;border:2px solid '+(cur===m?'#10B981':'#E5E7EB')+';background:'+(cur===m?'#D1FAE5':'#FFFFFF')+';color:'+(cur===m?'#065F46':'#1A1A1A')+'">'+m+' mi</button>').join('')+
+    '</div>'+
+    '<p style="font-size:11px;color:var(--text-dim);text-align:center;margin:0 0 16px">Foreground geolocation only. Battery impact: minimal.</p>'+
+    '<button onclick="closeModal()" style="width:100%;background:#1A1A1A;color:white;padding:14px;border-radius:14px;font-size:14px;font-weight:800">Done</button>';
+  openModal(html);
+};
+window.setProximityMiles=function(m){
+  state.settings.proximityMiles=m;
+  save(K.settings,state.settings);
+  const sub=document.getElementById('proximity-sub');
+  if(sub)sub.textContent='Notify within '+m+' mi of a store';
+  closeModal();
+  toast('Proximity set to '+m+' mi');
 };
 
 // Native bridge: schedule expiry notifications via Capacitor LocalNotifications
