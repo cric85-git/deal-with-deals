@@ -95,27 +95,37 @@ input[type=range]:focus{outline:none}
 .h-cta{display:block;width:100%;margin-top:10px;background:var(--accent);color:#1A1A1A;border-radius:12px;padding:10px;font-size:12px;font-weight:700;text-align:center}
 
 /* ---- Onboarding ---- */
-.onboarding{position:fixed;inset:0;background:linear-gradient(180deg,#FFE16B 0%,#FAF8F3 60%);z-index:1000;display:flex;flex-direction:column;padding:calc(40px + var(--safe-top)) 24px calc(20px + var(--safe-bottom))}
+.onboarding{position:fixed;inset:0;background:linear-gradient(180deg,#0D1B2A 0%,#1B3A5B 60%,#FAF8F3 100%);z-index:1000;display:flex;flex-direction:column;padding:calc(40px + var(--safe-top)) 24px calc(20px + var(--safe-bottom))}
 .onboarding.hidden{display:none}
 .ob-step{display:none;flex:1;flex-direction:column;justify-content:center;text-align:center;animation:fadeIn .3s}
 .ob-step.active{display:flex}
 .ob-emoji{font-size:80px;margin-bottom:24px;line-height:1}
-.ob-logo-mark{width:140px;height:140px;border-radius:32px;background:#0D1B2A;display:flex;align-items:center;justify-content:center;margin:0 auto 28px;box-shadow:0 16px 40px rgba(13,27,42,0.35),0 0 0 6px rgba(16,185,129,0.15);position:relative;overflow:hidden;padding:14px}
-.ob-logo-mark.small{width:96px;height:96px;border-radius:22px;margin-bottom:20px;padding:10px;box-shadow:0 10px 24px rgba(13,27,42,0.25),0 0 0 4px rgba(16,185,129,0.12)}
-.ob-logo-mark img{width:100%;height:100%;display:block}
-.ob-title{font-size:30px;font-weight:900;letter-spacing:-0.6px;margin:0 0 12px;line-height:1.1}
-.ob-sub{font-size:15px;color:var(--text-dim);line-height:1.5;margin:0 0 32px;max-width:300px;align-self:center}
+.ob-logo-mark{width:140px;height:140px;margin:0 auto 28px;filter:drop-shadow(0 16px 40px rgba(13,27,42,0.45));position:relative}
+.ob-logo-mark.small{width:96px;height:96px;margin-bottom:20px;filter:drop-shadow(0 10px 24px rgba(13,27,42,0.35))}
+.ob-logo-mark svg{width:100%;height:100%;display:block;border-radius:32px}
+.ob-logo-mark.small svg{border-radius:22px}
+.ob-title{font-size:30px;font-weight:900;letter-spacing:-0.6px;margin:0 0 12px;line-height:1.1;color:#FFFFFF;text-shadow:0 2px 8px rgba(0,0,0,0.2)}
+.ob-step[data-step="2"] .ob-title,
+.ob-step[data-step="3"] .ob-title,
+.ob-step[data-step="4"] .ob-title{color:var(--text);text-shadow:none}
+.ob-sub{font-size:15px;line-height:1.5;margin:0 0 32px;max-width:300px;align-self:center;color:rgba(255,255,255,0.85)}
+.ob-step[data-step="2"] .ob-sub,
+.ob-step[data-step="3"] .ob-sub,
+.ob-step[data-step="4"] .ob-sub{color:var(--text-dim)}
+.ob-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.25)}
+.ob-dot.active{background:#10B981;width:20px;border-radius:6px;transition:all .3s}
 .ob-input{width:100%;background:white;border:2px solid transparent;border-radius:14px;padding:14px 16px;font-size:15px;outline:none;margin-bottom:12px;text-align:center}
 .ob-input:focus{border-color:#1A1A1A}
 .ob-prefs{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:0 0 24px}
 .ob-pref{background:white;border:2px solid transparent;border-radius:999px;padding:10px 16px;font-size:13px;font-weight:700;color:var(--text-dim)}
 .ob-pref.active{background:#1A1A1A;color:white;border-color:#1A1A1A}
 .ob-actions{display:flex;flex-direction:column;gap:8px;margin-top:auto}
-.ob-btn{width:100%;background:#1A1A1A;color:white;border-radius:14px;padding:16px;font-size:15px;font-weight:800}
-.ob-btn.secondary{background:transparent;color:var(--text-dim);font-weight:600}
+.ob-btn{width:100%;background:linear-gradient(135deg,#10B981,#059669);color:white;border-radius:14px;padding:16px;font-size:15px;font-weight:800;box-shadow:0 6px 20px rgba(16,185,129,0.35)}
+.ob-btn.secondary{background:transparent;color:rgba(255,255,255,0.8);font-weight:600;box-shadow:none}
+.ob-step[data-step="2"] .ob-btn.secondary,
+.ob-step[data-step="3"] .ob-btn.secondary,
+.ob-step[data-step="4"] .ob-btn.secondary{color:var(--text-dim)}
 .ob-progress{display:flex;gap:6px;justify-content:center;margin-bottom:24px}
-.ob-dot{width:6px;height:6px;border-radius:50%;background:rgba(0,0,0,0.15)}
-.ob-dot.active{background:#1A1A1A;width:20px;border-radius:6px;transition:all .3s}
 
 /* ---- Modal ---- */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:300;display:none;align-items:flex-end}
@@ -194,7 +204,25 @@ input[type=range]:focus{outline:none}
     <div class="ob-dot"></div>
   </div>
   <div class="ob-step active" data-step="1">
-    <div class="ob-logo-mark"><img src="icon-512.png" alt="Perq"></div>
+    <div class="ob-logo-mark">
+      <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="ob-bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0D1B2A"/><stop offset="1" stop-color="#06111C"/></linearGradient>
+          <linearGradient id="ob-bill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#34D399"/><stop offset="1" stop-color="#059669"/></linearGradient>
+          <linearGradient id="ob-word" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#10B981"/><stop offset="1" stop-color="#047857"/></linearGradient>
+          <filter id="ob-shadow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur in="SourceAlpha" stdDeviation="2"/><feOffset dx="0" dy="2"/><feComponentTransfer><feFuncA type="linear" slope="0.3"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+        <rect width="200" height="200" rx="44" fill="url(#ob-bg)"/>
+        <g filter="url(#ob-shadow)">
+          <path d="M85 32 L135 32 Q140 32 140 38 L140 82 Q140 90 132 90 L93 90 Q85 90 85 82 Z" fill="url(#ob-bill)"/>
+          <path d="M85 32 L140 32 L140 38 L85 38 Z" fill="rgba(255,255,255,0.18)"/>
+          <text x="112" y="76" font-family="-apple-system,'SF Pro Display',sans-serif" font-size="33" font-weight="900" fill="#FFFFFF" text-anchor="middle">$</text>
+        </g>
+        <path d="M35 78 L35 154 Q35 165 45 165 L155 165 Q165 165 165 154 L165 78 Q165 65 152 60 L100 50 L48 60 Q35 65 35 78 Z" fill="#FFFFFF"/>
+        <path d="M48 86 L48 152 Q48 156 52 156 L148 156 Q152 156 152 152 L152 86 Q152 78 142 75 L100 65 L58 75 Q48 78 48 86 Z" fill="none" stroke="#10B981" stroke-width="1.5" stroke-dasharray="3 3"/>
+        <text x="100" y="135" font-family="-apple-system,'SF Pro Display',sans-serif" font-size="32" font-weight="900" fill="url(#ob-word)" text-anchor="middle" letter-spacing="-1">Perq</text>
+      </svg>
+    </div>
     <h1 class="ob-title">Welcome to Perq</h1>
     <p class="ob-sub">Snap a coupon, forget about it. We'll remind you before it expires and alert you when you're nearby.</p>
     <div class="ob-actions"><button class="ob-btn" onclick="nextStep()">Get started</button></div>
@@ -225,7 +253,18 @@ input[type=range]:focus{outline:none}
     <div class="ob-actions"><button class="ob-btn" onclick="nextStep()">Continue</button></div>
   </div>
   <div class="ob-step" data-step="4">
-    <div class="ob-logo-mark small"><img src="icon-512.png" alt="Perq"></div>
+    <div class="ob-logo-mark small">
+      <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <rect width="200" height="200" rx="44" fill="url(#ob-bg)"/>
+        <g filter="url(#ob-shadow)">
+          <path d="M85 32 L135 32 Q140 32 140 38 L140 82 Q140 90 132 90 L93 90 Q85 90 85 82 Z" fill="url(#ob-bill)"/>
+          <path d="M85 32 L140 32 L140 38 L85 38 Z" fill="rgba(255,255,255,0.18)"/>
+          <text x="112" y="76" font-family="-apple-system,'SF Pro Display',sans-serif" font-size="33" font-weight="900" fill="#FFFFFF" text-anchor="middle">$</text>
+        </g>
+        <path d="M35 78 L35 154 Q35 165 45 165 L155 165 Q165 165 165 154 L165 78 Q165 65 152 60 L100 50 L48 60 Q35 65 35 78 Z" fill="#FFFFFF"/>
+        <text x="100" y="135" font-family="-apple-system,'SF Pro Display',sans-serif" font-size="32" font-weight="900" fill="url(#ob-word)" text-anchor="middle" letter-spacing="-1">Perq</text>
+      </svg>
+    </div>
     <h1 class="ob-title">Install Perq on your home screen</h1>
     <p class="ob-sub" id="install-platform-sub">Run Perq like a real app — full-screen, instant launch.</p>
     <div id="install-instructions" style="background:white;border-radius:18px;padding:18px;margin:0 0 20px;text-align:left;box-shadow:0 4px 16px rgba(0,0,0,0.06)"></div>
@@ -441,6 +480,6 @@ input[type=range]:focus{outline:none}
 <div id="confetti-root" style="position:fixed;inset:0;pointer-events:none;z-index:9998;overflow:hidden"></div>
 <input type="file" id="capture-input" accept="image/*" capture="environment" style="display:none">
 
-<script src="preview-app.js?v=18"></script>
+<script src="preview-app.js?v=19"></script>
 </body>
 </html>
