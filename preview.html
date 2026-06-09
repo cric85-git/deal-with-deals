@@ -386,6 +386,14 @@ input[type=range]:focus{outline:none}
         <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--text-dim);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
     </div>
+    <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.6);margin:14px 0 8px">Refer &amp; Earn</p>
+    <div class="settings-group">
+      <div class="settings-row" onclick="openReferralSheet()">
+        <div class="settings-icon-sm" style="background:#D1FAE5;color:#065F46"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></svg></div>
+        <div class="settings-info"><p class="settings-row-title">Invite friends · earn 50 pts each</p><p class="settings-row-sub" id="referral-stats">0 friends joined</p></div>
+        <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--text-dim);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+    </div>
     <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.6);margin:14px 0 8px">Notifications</p>
     <div class="settings-group">
       <div class="settings-row">
@@ -515,6 +523,6 @@ input[type=range]:focus{outline:none}
 <div id="confetti-root" style="position:fixed;inset:0;pointer-events:none;z-index:9998;overflow:hidden"></div>
 <input type="file" id="capture-input" accept="image/*" capture="environment" style="display:none">
 
-<script src="preview-app.js?v=25"></script>
+<script src="preview-app.js?v=26"></script>
 </body>
 </html>

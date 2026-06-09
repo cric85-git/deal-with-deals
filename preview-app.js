@@ -51,6 +51,35 @@ let currentBrowseTab='local';
   save(K.settings,state.settings);
 })();
 
+// Migration: every profile gets a referralCode + referral counter
+(function migrateProfile(){
+  const p=state.profile;
+  if(!p)return;
+  let dirty=false;
+  if(!p.referralCode){p.referralCode=genReferralCode(p.name);dirty=true;}
+  if(typeof p.referralCount!=='number'){p.referralCount=0;dirty=true;}
+  if(dirty){state.profile=p;save(K.profile,state.profile);}
+})();
+
+// Capture inbound ?ref= on first open. Stored locally — true cross-device
+// crediting requires a backend (roadmap v2). For now we award the new user a
+// small welcome bonus and persist the referrer code so we can backfill later.
+(function captureIncomingReferral(){
+  try{
+    const params=new URLSearchParams(location.search||'');
+    const ref=params.get('ref');
+    if(ref){
+      const existing=load('perq-mvp:referredBy',null);
+      if(!existing){
+        save('perq-mvp:referredBy',ref);
+        state.rewards.points=(state.rewards.points||0)+10;
+        save(K.rewards,state.rewards);
+        setTimeout(()=>toast('🎁 Welcome via '+ref+' · +10 pts'),1500);
+      }
+    }
+  }catch(e){}
+})();
+
 // Sunday bonus spin perk — runs once per Sunday for users with the double_spin unlock
 (function grantSundayBonus(){
   if(!(state.rewards.unlocksSeen||[]).includes('double_spin'))return;
@@ -71,6 +100,40 @@ function todayStr(){const d=new Date();d.setHours(0,0,0,0);return d.toISOString(
 function fmtDate(s){if(!s)return '—';return new Date(s).toLocaleDateString(undefined,{month:'short',day:'numeric'});}
 function daysUntil(s){if(!s)return null;return Math.round((new Date(s).getTime()-new Date(todayStr()).getTime())/86400000);}
 function escapeHtml(s){if(s==null)return '';return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+// -------- Referral + sharing infrastructure --------
+const PERQ_PUBLIC_URL='https://cric85-git.github.io/deal-with-deals/preview.html';
+
+function genReferralCode(name){
+  const seed=(name||'PERQ').toUpperCase().replace(/[^A-Z]/g,'').slice(0,3)||'PRQ';
+  const rand=Math.random().toString(36).toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,4)||'X1Y2';
+  return seed+rand;
+}
+
+function getReferralLink(){
+  const code=state.profile&&state.profile.referralCode;
+  return PERQ_PUBLIC_URL+(code?'?ref='+encodeURIComponent(code):'');
+}
+
+// Build a clean, shareable text for a deal — uses merchant URL when present,
+// always appends the user's Perq referral link so recipients can install + earn.
+function buildShareText(d){
+  const lines=[];
+  lines.push(d.merchant+': '+d.discount);
+  if(d.code)lines.push('Code: '+d.code);
+  if(d.expiry)lines.push('Expires '+fmtDate(d.expiry));
+  if(d.url)lines.push('🛒 '+d.url);
+  lines.push('');
+  lines.push('🎟️ Saved with Perq — get the app: '+getReferralLink());
+  return lines.join('\n');
+}
+
+// Build an SMS / WhatsApp / Email URL safely. We deliberately use only a `body=`
+// parameter (no second URL) so SMS clients don't render the WebView's
+// capacitor://localhost as a broken link.
+function buildSmsHref(text){return 'sms:?&body='+encodeURIComponent(text);}
+function buildWhatsAppHref(text){return 'https://wa.me/?text='+encodeURIComponent(text);}
+function buildMailtoHref(subject,text){return 'mailto:?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(text);}
 function getGradient(cat){
   const map={Groceries:'green',Dining:'warm',Apparel:'pink',Travel:'purple',Beauty:'pink',Home:'warm',Electronics:'purple',Other:'green'};
   return map[cat]||'warm';
@@ -93,7 +156,7 @@ window.nextStep=function(){
   if(onboardStep===2){
     const name=document.getElementById('ob-name').value.trim();
     if(!name){toast('Enter your name or skip');return;}
-    state.profile={name,createdAt:Date.now(),preferences:[]};
+    state.profile={name,createdAt:Date.now(),preferences:[],referralCode:genReferralCode(name),referralCount:0};
     save(K.profile,state.profile);
   }
   if(onboardStep===3){
@@ -178,7 +241,7 @@ window.finishOnboarding=function(){
     save(K.profile,state.profile);
   }
   if(!state.profile){
-    state.profile={name:'You',createdAt:Date.now(),preferences:state.selectedPrefs};
+    state.profile={name:'You',createdAt:Date.now(),preferences:state.selectedPrefs,referralCode:genReferralCode('You'),referralCount:0};
     save(K.profile,state.profile);
   }
   save(K.onboarded,true);
@@ -762,9 +825,8 @@ window.shareDeal=function(id){
   const sharedAlready=d.shared;
   const fromCommunity=d.fromCommunity;
 
-  const text=d.merchant+': '+d.discount+(d.code?' (code '+d.code+')':'')+(d.expiry?' — expires '+fmtDate(d.expiry):'');
+  const text=buildShareText(d);
   const encodedText=encodeURIComponent(text);
-  const shareUrl=encodeURIComponent(location.origin+location.pathname);
 
   let html='<div class="modal-handle"></div><h3 class="modal-title">Share this deal</h3>';
 
@@ -804,14 +866,14 @@ window.shareDeal=function(id){
   // Social share options (always available)
   html+='<p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:8px 0 8px">Or share with someone specific</p>';
   html+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px">'+
-    '<a href="sms:?body='+encodedText+'%20'+shareUrl+'" style="text-decoration:none;background:#F0F0F0;border-radius:14px;padding:14px 8px;text-align:center;color:#1A1A1A">'+
+    '<a href="'+buildSmsHref(text)+'" style="text-decoration:none;background:#F0F0F0;border-radius:14px;padding:14px 8px;text-align:center;color:#1A1A1A">'+
       '<div style="width:36px;height:36px;border-radius:50%;background:#34D399;color:white;margin:0 auto 6px;display:flex;align-items:center;justify-content:center">'+
       '<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'+
       '</div><span style="font-size:11px;font-weight:600">Message</span></a>'+
-    '<a href="https://wa.me/?text='+encodedText+'%20'+shareUrl+'" target="_blank" rel="noopener" style="text-decoration:none;background:#F0F0F0;border-radius:14px;padding:14px 8px;text-align:center;color:#1A1A1A">'+
+    '<a href="'+buildWhatsAppHref(text)+'" target="_blank" rel="noopener" style="text-decoration:none;background:#F0F0F0;border-radius:14px;padding:14px 8px;text-align:center;color:#1A1A1A">'+
       '<div style="width:36px;height:36px;border-radius:50%;background:#25D366;color:white;margin:0 auto 6px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900">W</div>'+
       '<span style="font-size:11px;font-weight:600">WhatsApp</span></a>'+
-    '<a href="mailto:?subject=Deal%20on%20Perq&body='+encodedText+'%0A%0A'+shareUrl+'" style="text-decoration:none;background:#F0F0F0;border-radius:14px;padding:14px 8px;text-align:center;color:#1A1A1A">'+
+    '<a href="'+buildMailtoHref('Deal on Perq',text)+'" style="text-decoration:none;background:#F0F0F0;border-radius:14px;padding:14px 8px;text-align:center;color:#1A1A1A">'+
       '<div style="width:36px;height:36px;border-radius:50%;background:#4FACFE;color:white;margin:0 auto 6px;display:flex;align-items:center;justify-content:center">'+
       '<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>'+
       '</div><span style="font-size:11px;font-weight:600">Email</span></a>'+
@@ -828,15 +890,94 @@ window.shareDeal=function(id){
 window.copyShareText=function(id){
   const d=state.deals.find(x=>x.id===id);
   if(!d)return;
-  const text=d.merchant+': '+d.discount+(d.code?' (code '+d.code+')':'')+(d.expiry?' — expires '+fmtDate(d.expiry):'')+'\n\n'+location.origin+location.pathname;
+  const text=buildShareText(d);
   // Prefer native share sheet on iOS/Android
   if(window.PerqNative&&window.PerqNative.isNative){
-    window.PerqNative.nativeShare({title:'Perq deal',text,url:location.origin+location.pathname})
+    window.PerqNative.nativeShare({title:'Perq deal',text,url:d.url||getReferralLink()})
       .then(ok=>{if(ok)toast('Shared');else toast('Share cancelled');});
     return;
   }
   if(navigator.clipboard){
     navigator.clipboard.writeText(text).then(()=>toast('Copied to clipboard')).catch(()=>toast('Copy failed'));
+  } else {
+    toast('Copy not supported');
+  }
+};
+
+// -------- Refer & Earn --------
+window.openReferralSheet=function(){
+  // Ensure we have a code (defensive)
+  if(state.profile&&!state.profile.referralCode){
+    state.profile.referralCode=genReferralCode(state.profile.name);
+    save(K.profile,state.profile);
+  }
+  const code=state.profile&&state.profile.referralCode||'PERQXX';
+  const link=getReferralLink();
+  const friendsCount=(state.profile&&state.profile.referralCount)||0;
+  const text='Try Perq — snap a coupon, forget about it, save money. Use my invite code '+code+' for +10 bonus points: '+link;
+
+  const html='<div class="modal-handle"></div>'+
+    '<h3 class="modal-title" style="margin-bottom:6px">🎁 Invite friends</h3>'+
+    '<p style="font-size:13px;color:var(--text-dim);text-align:center;margin:0 0 18px;line-height:1.5">Share your code. When a friend joins via your link, you both earn rewards.</p>'+
+    // Code display
+    '<div style="background:linear-gradient(135deg,#10B981,#047857);border-radius:18px;padding:18px;margin-bottom:14px;text-align:center;color:white">'+
+      '<p style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;opacity:0.85;margin:0">Your invite code</p>'+
+      '<p style="font-family:ui-monospace,monospace;font-size:32px;font-weight:900;letter-spacing:4px;margin:8px 0 4px">'+escapeHtml(code)+'</p>'+
+      '<p style="font-size:11px;opacity:0.85;margin:0;word-break:break-all">'+escapeHtml(link)+'</p>'+
+    '</div>'+
+    // Stats
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">'+
+      '<div style="background:#F8F8F8;border-radius:12px;padding:12px;text-align:center">'+
+        '<p style="font-size:24px;font-weight:900;margin:0;color:#1A1A1A">'+friendsCount+'</p>'+
+        '<p style="font-size:10px;color:var(--text-dim);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin:2px 0 0">Friends joined</p>'+
+      '</div>'+
+      '<div style="background:#F8F8F8;border-radius:12px;padding:12px;text-align:center">'+
+        '<p style="font-size:24px;font-weight:900;margin:0;color:#10B981">+'+(friendsCount*50)+'</p>'+
+        '<p style="font-size:10px;color:var(--text-dim);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin:2px 0 0">Pts earned</p>'+
+      '</div>'+
+    '</div>'+
+    // Reward breakdown
+    '<div style="background:#F0F9FF;border:1px solid #4FACFE;border-radius:12px;padding:12px;margin-bottom:14px">'+
+      '<p style="font-size:12px;font-weight:700;color:#075985;margin:0 0 6px">How it works</p>'+
+      '<p style="font-size:12px;color:#0c4a6e;margin:0;line-height:1.6">'+
+        '• Friend installs via your link → <strong>+50 pts to you</strong><br>'+
+        '• Friend gets <strong>+10 welcome pts</strong> automatically<br>'+
+        '• Bonus: every 5 friends → <strong>+1 spin</strong>'+
+      '</p>'+
+    '</div>'+
+    // Share buttons
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px">'+
+      '<a href="'+buildSmsHref(text)+'" style="text-decoration:none;background:#F0F0F0;border-radius:14px;padding:14px 8px;text-align:center;color:#1A1A1A">'+
+        '<div style="width:36px;height:36px;border-radius:50%;background:#34D399;color:white;margin:0 auto 6px;display:flex;align-items:center;justify-content:center">'+
+        '<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'+
+        '</div><span style="font-size:11px;font-weight:600">Message</span></a>'+
+      '<a href="'+buildWhatsAppHref(text)+'" target="_blank" rel="noopener" style="text-decoration:none;background:#F0F0F0;border-radius:14px;padding:14px 8px;text-align:center;color:#1A1A1A">'+
+        '<div style="width:36px;height:36px;border-radius:50%;background:#25D366;color:white;margin:0 auto 6px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900">W</div>'+
+        '<span style="font-size:11px;font-weight:600">WhatsApp</span></a>'+
+      '<a href="'+buildMailtoHref('Try Perq · save with me',text)+'" style="text-decoration:none;background:#F0F0F0;border-radius:14px;padding:14px 8px;text-align:center;color:#1A1A1A">'+
+        '<div style="width:36px;height:36px;border-radius:50%;background:#4FACFE;color:white;margin:0 auto 6px;display:flex;align-items:center;justify-content:center">'+
+        '<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>'+
+        '</div><span style="font-size:11px;font-weight:600">Email</span></a>'+
+      '<button onclick="copyReferralLink()" style="background:#F0F0F0;border:none;border-radius:14px;padding:14px 8px;text-align:center;color:#1A1A1A;cursor:pointer">'+
+        '<div style="width:36px;height:36px;border-radius:50%;background:#6366F1;color:white;margin:0 auto 6px;display:flex;align-items:center;justify-content:center">'+
+        '<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>'+
+        '</div><span style="font-size:11px;font-weight:600">Copy link</span></button>'+
+    '</div>'+
+    '<button onclick="closeModal()" style="width:100%;padding:14px;border-radius:14px;font-size:14px;font-weight:700;background:#F0F0F0;color:#333;border:none">Close</button>';
+  openModal(html);
+};
+
+window.copyReferralLink=function(){
+  const link=getReferralLink();
+  const code=state.profile&&state.profile.referralCode||'';
+  const text='Try Perq — snap a coupon, forget about it, save money. Use my invite code '+code+' for +10 bonus points: '+link;
+  if(window.PerqNative&&window.PerqNative.isNative){
+    window.PerqNative.nativeShare({title:'Try Perq',text,url:link})
+      .then(ok=>{if(ok)toast('Shared');});
+    return;
+  }
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(text).then(()=>toast('Invite copied to clipboard')).catch(()=>toast('Copy failed'));
   } else {
     toast('Copy not supported');
   }
@@ -2040,6 +2181,12 @@ function renderSettings(){
     document.getElementById('profile-avatar').textContent=initial;
     document.getElementById('profile-name-display').textContent=state.profile.name;
     document.getElementById('profile-email-display').textContent=state.profile.email||'Tap to add email';
+  }
+  // Referral stats
+  const refStatsEl=document.getElementById('referral-stats');
+  if(refStatsEl){
+    const n=(state.profile&&state.profile.referralCount)||0;
+    refStatsEl.textContent=n===0?'Tap to share your invite code':n+' friend'+(n===1?'':'s')+' joined · earned '+(n*50)+' pts';
   }
   document.querySelectorAll('.toggle').forEach(t=>{
     const k=t.getAttribute('data-setting');
