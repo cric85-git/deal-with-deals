@@ -284,15 +284,14 @@ input[type=range]:focus{outline:none}
   <div style="padding-top:14px"></div>
   <div class="wallet-header">
     <div class="home-logo" style="flex:1">
-      <div class="home-logo-mark" style="background:transparent;padding:0;overflow:hidden;width:40px;height:40px">
-        <svg viewBox="0 0 512 512" style="width:100%;height:100%;display:block;border-radius:10px">
+      <div style="width:42px;height:42px;flex-shrink:0">
+        <svg viewBox="0 0 512 512" style="width:100%;height:100%;display:block;overflow:visible">
           <defs>
-            <linearGradient id="wh-bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#082b6f"/><stop offset="1" stop-color="#020817"/></linearGradient>
             <linearGradient id="wh-card" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#A7F3D0"/><stop offset="1" stop-color="#FCD34D"/></linearGradient>
             <linearGradient id="wh-wallet" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#10B981"/><stop offset="1" stop-color="#047857"/></linearGradient>
             <linearGradient id="wh-clasp" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#FCD34D"/><stop offset="1" stop-color="#F59E0B"/></linearGradient>
           </defs>
-          <rect width="512" height="512" rx="96" fill="url(#wh-bg)"/>
+          <!-- No background tile - just the wallet shape -->
           <rect x="150" y="105" width="210" height="130" rx="24" fill="url(#wh-card)" transform="rotate(-9 256 170)" opacity="0.95"/>
           <text x="255" y="195" font-family="-apple-system,sans-serif" font-size="72" font-weight="800" fill="#0F172A" text-anchor="middle">$</text>
           <path d="M112 178 Q112 145 145 145 H367 Q400 145 400 178 V350 Q400 395 355 395 H157 Q112 395 112 350 Z" fill="url(#wh-wallet)"/>
@@ -356,7 +355,7 @@ input[type=range]:focus{outline:none}
         <p style="font-size:12px;font-weight:700;margin:0">Distance radius</p>
         <span id="radius-val" style="font-size:13px;font-weight:800;color:#047857">5 mi</span>
       </div>
-      <input type="range" id="browse-radius" min="1" max="25" value="5" style="width:100%;height:6px;appearance:none;-webkit-appearance:none;background:linear-gradient(to right,#10B981 0%,#10B981 16%,#e5e5e5 16%,#e5e5e5 100%);border-radius:999px;outline:none">
+      <input type="range" id="browse-radius" min="1" max="20" value="5" step="1" style="width:100%;height:6px;appearance:none;-webkit-appearance:none;background:linear-gradient(to right,#10B981 0%,#10B981 21%,#e5e5e5 21%,#e5e5e5 100%);border-radius:999px;outline:none">
     </div>
     <div id="local-deals-list" style="padding:0 20px 16px"></div>
   </div>
@@ -516,6 +515,6 @@ input[type=range]:focus{outline:none}
 <div id="confetti-root" style="position:fixed;inset:0;pointer-events:none;z-index:9998;overflow:hidden"></div>
 <input type="file" id="capture-input" accept="image/*" capture="environment" style="display:none">
 
-<script src="preview-app.js?v=24"></script>
+<script src="preview-app.js?v=25"></script>
 </body>
 </html>
