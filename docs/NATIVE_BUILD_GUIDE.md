@@ -46,7 +46,7 @@ Once you have those, here's the build:
 2. Install Xcode from the Mac App Store (free, but ~10GB download)
 3. Open Xcode → Preferences → Accounts → add your Apple ID
 4. Create an App ID + Provisioning profile in https://developer.apple.com/account
-5. App Store Connect → My Apps → New App (bundle ID: `com.perq.app`)
+5. App Store Connect → My Apps → New App (bundle ID: `com.perqwallet.app`)
 
 ### Local build (one-time per release)
 ```bash
