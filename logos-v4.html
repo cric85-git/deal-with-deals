@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0A1428">
+<title>Perq · Wallet + P · v4</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{font-family:-apple-system,"SF Pro Display",BlinkMacSystemFont,system-ui,sans-serif;background:#0A1428;color:#FFFFFF;-webkit-font-smoothing:antialiased;min-height:100vh}
+.wrap{max-width:600px;margin:0 auto;padding:24px 16px 80px}
+.head{padding:8px 4px 32px}
+.kicker{font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#34D399;margin:0 0 6px}
+.title{font-size:30px;font-weight:900;letter-spacing:-0.6px;margin:0 0 8px}
+.subtitle{font-size:14px;color:#94A3B8;line-height:1.55;max-width:480px}
+
+.card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:24px;padding:18px;margin-bottom:14px}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+.card-name{font-size:17px;font-weight:800;letter-spacing:-0.3px;margin:0;color:#FFFFFF}
+.card-num{font-size:9px;font-weight:800;letter-spacing:1.5px;color:#34D399;margin:0 0 3px}
+.card-tag{font-size:9px;font-weight:800;padding:5px 9px;border-radius:999px;letter-spacing:0.5px;text-transform:uppercase;white-space:nowrap;background:rgba(52,211,153,0.12);color:#6EE7B7}
+.card-desc{font-size:12px;color:#94A3B8;line-height:1.55;margin:0 0 14px}
+
+.icon-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.icon-tile{flex-shrink:0;display:flex;align-items:center;justify-content:center;box-shadow:0 12px 32px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.08)}
+.tile-app{width:140px;height:140px;border-radius:32px}
+.tile-mid{width:74px;height:74px;border-radius:18px}
+.tile-fav{width:48px;height:48px;border-radius:12px}
+.size-cap{font-size:9px;color:#475569;text-align:center;margin-top:6px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase}
+
+.foot{padding:24px 8px;text-align:center;color:#64748B;font-size:12px;line-height:1.6}
+.foot strong{color:#34D399}
+.preview-link{display:inline-block;background:linear-gradient(135deg,#10B981,#059669);color:#FFFFFF;padding:12px 22px;border-radius:999px;font-weight:800;font-size:13px;text-decoration:none;margin-top:12px;box-shadow:0 6px 20px rgba(16,185,129,0.4)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="head">
+  <p class="kicker">Brand · v4 · wallet + P</p>
+  <h1 class="title">Ten new concepts in the navy + mint family</h1>
+  <p class="subtitle">All built in the visual language you liked: deep navy tile, layered mint wallet, bold P. Each rendered at the three sizes that matter — 140 × 140 (home screen), 74 × 74 (spotlight), 48 × 48 (settings/notifications). Pay attention to the smallest one.</p>
+</div>
+
+<!-- ============ 01. Soft Bifold ============ -->
+<div class="card">
+  <div class="card-head">
+    <div>
+      <p class="card-num">CONCEPT 01</p>
+      <p class="card-name">Soft Bifold</p>
+    </div>
+    <span class="card-tag">Friendly · Polished</span>
+  </div>
+  <p class="card-desc">Rounded leather bifold in two-tone mint with a card peeking out and a confident filled P on the front. Most "wallet-y" — instantly readable as a money app.</p>
+  <div class="icon-row">
+    <div>
+      <div class="icon-tile tile-app" style="background:linear-gradient(135deg,#0F1F35,#0A1428)">
+        <svg viewBox="0 0 200 200" width="120" height="120">
+          <defs>
+            <linearGradient id="c1-body" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#34D399"/><stop offset="1" stop-color="#10B981"/></linearGradient>
+            <linearGradient id="c1-shadow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#059669"/><stop offset="1" stop-color="#047857"/></linearGradient>
+            <linearGradient id="c1-card" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#A7F3D0"/><stop offset="1" stop-color="#6EE7B7"/></linearGradient>
+          </defs>
+          <!-- Card peeking from top -->
+          <rect x="86" y="32" width="52" height="40" rx="4" fill="url(#c1-card)"/>
+          <rect x="86" y="32" width="52" height="6" rx="4" fill="rgba(255,255,255,0.4)"/>
+          <!-- Wallet body -->
+          <rect x="32" y="60" width="136" height="100" rx="14" fill="url(#c1-body)"/>
+          <!-- Bottom darker fold -->
+          <rect x="32" y="110" width="136" height="50" rx="14" fill="url(#c1-shadow)"/>
+          <!-- Clasp on right -->
+          <rect x="160" y="100" width="14" height="22" rx="3" fill="url(#c1-shadow)"/>
+          <circle cx="167" cy="111" r="3" fill="#A7F3D0"/>
+          <!-- Stitching -->
+          <rect x="40" y="68" width="120" height="84" rx="8" fill="none" stroke="rgba(0,0,0,0.18)" stroke-width="1" stroke-dasharray="3 2"/>
+          <!-- Big P -->
+          <path d="M68 82 L68 142 L84 142 L84 122 L102 122 C118 122 130 113 130 102 C130 91 118 82 102 82 Z M84 96 L102 96 C107 96 112 99 112 102 C112 105 107 108 102 108 L84 108 Z" fill="#FFFFFF"/>
+        </svg>
+      </div>
+      <p class="size-cap">Home</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-mid" style="background:#0A1428">
+        <svg viewBox="0 0 200 200" width="60" height="60">
+          <rect x="86" y="32" width="52" height="40" rx="4" fill="#6EE7B7"/>
+          <rect x="32" y="60" width="136" height="100" rx="14" fill="#10B981"/>
+          <rect x="32" y="110" width="136" height="50" rx="14" fill="#047857"/>
+          <rect x="160" y="100" width="14" height="22" rx="3" fill="#047857"/>
+          <path d="M68 82 L68 142 L84 142 L84 122 L102 122 C118 122 130 113 130 102 C130 91 118 82 102 82 Z M84 96 L102 96 C107 96 112 99 112 102 C112 105 107 108 102 108 L84 108 Z" fill="#FFFFFF"/>
+        </svg>
+      </div>
+      <p class="size-cap">Spotlight</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-fav" style="background:#0A1428">
+        <svg viewBox="0 0 200 200" width="40" height="40">
+          <rect x="32" y="60" width="136" height="100" rx="14" fill="#10B981"/>
+          <rect x="32" y="110" width="136" height="50" rx="14" fill="#047857"/>
+          <path d="M68 82 L68 142 L84 142 L84 122 L102 122 C118 122 130 113 130 102 C130 91 118 82 102 82 Z M84 96 L102 96 C107 96 112 99 112 102 C112 105 107 108 102 108 L84 108 Z" fill="#FFFFFF"/>
+        </svg>
+      </div>
+      <p class="size-cap">Favicon</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 02. Outline Bifold ============ -->
+<div class="card">
+  <div class="card-head">
+    <div>
+      <p class="card-num">CONCEPT 02</p>
+      <p class="card-name">Outline Bifold</p>
+    </div>
+    <span class="card-tag">Minimal · Editorial</span>
+  </div>
+  <p class="card-desc">Line-art wallet, the P drawn in the same stroke weight. Lighter, more editorial, less shouty. Reads premium-tech.</p>
+  <div class="icon-row">
+    <div>
+      <div class="icon-tile tile-app" style="background:linear-gradient(135deg,#0F1F35,#0A1428)">
+        <svg viewBox="0 0 200 200" width="120" height="120">
+          <!-- Card peeking -->
+          <rect x="92" y="36" width="46" height="32" rx="4" fill="none" stroke="#34D399" stroke-width="3"/>
+          <!-- Wallet body outline -->
+          <rect x="34" y="58" width="132" height="104" rx="14" fill="none" stroke="#34D399" stroke-width="3"/>
+          <!-- Inner fold -->
+          <line x1="34" y1="108" x2="166" y2="108" stroke="#34D399" stroke-width="2" opacity="0.55"/>
+          <!-- Clasp -->
+          <rect x="158" y="100" width="14" height="22" rx="3" fill="none" stroke="#34D399" stroke-width="2"/>
+          <circle cx="165" cy="111" r="2" fill="#34D399"/>
+          <!-- Outline P -->
+          <path d="M64 80 L64 142 L78 142 L78 124 L98 124 C112 124 122 116 122 104 C122 92 112 84 98 84 L64 84 Z M78 92 L98 92 C104 92 110 96 110 104 C110 112 104 116 98 116 L78 116 Z" fill="none" stroke="#34D399" stroke-width="3" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <p class="size-cap">Home</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-mid" style="background:#0A1428">
+        <svg viewBox="0 0 200 200" width="60" height="60">
+          <rect x="92" y="36" width="46" height="32" rx="4" fill="none" stroke="#34D399" stroke-width="4"/>
+          <rect x="34" y="58" width="132" height="104" rx="14" fill="none" stroke="#34D399" stroke-width="4"/>
+          <line x1="34" y1="108" x2="166" y2="108" stroke="#34D399" stroke-width="3" opacity="0.55"/>
+          <path d="M64 80 L64 142 L78 142 L78 124 L98 124 C112 124 122 116 122 104 C122 92 112 84 98 84 L64 84 Z M78 92 L98 92 C104 92 110 96 110 104 C110 112 104 116 98 116 L78 116 Z" fill="none" stroke="#34D399" stroke-width="4" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <p class="size-cap">Spotlight</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-fav" style="background:#0A1428">
+        <svg viewBox="0 0 200 200" width="40" height="40">
+          <rect x="34" y="58" width="132" height="104" rx="14" fill="none" stroke="#34D399" stroke-width="6"/>
+          <path d="M64 80 L64 142 L78 142 L78 124 L98 124 C112 124 122 116 122 104 C122 92 112 84 98 84 L64 84 Z M78 92 L98 92 C104 92 110 96 110 104 C110 112 104 116 98 116 L78 116 Z" fill="#34D399"/>
+        </svg>
+      </div>
+      <p class="size-cap">Favicon</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 03. Cash Stack ============ -->
+<div class="card">
+  <div class="card-head">
+    <div>
+      <p class="card-num">CONCEPT 03</p>
+      <p class="card-name">Cash Stack</p>
+    </div>
+    <span class="card-tag">Bold · Confident</span>
+  </div>
+  <p class="card-desc">Wallet with three bills fanned out, the topmost bill stamped with a giant P. Conveys "stash of savings" most directly.</p>
+  <div class="icon-row">
+    <div>
+      <div class="icon-tile tile-app" style="background:linear-gradient(135deg,#0F1F35,#0A1428)">
+        <svg viewBox="0 0 200 200" width="120" height="120">
+          <defs>
+            <linearGradient id="c3-body" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1E293B"/><stop offset="1" stop-color="#0F172A"/></linearGradient>
+            <linearGradient id="c3-bill1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6EE7B7"/><stop offset="1" stop-color="#34D399"/></linearGradient>
+          </defs>
+          <!-- Back bills (fanned) -->
+          <g transform="rotate(-9 100 60)">
+            <rect x="62" y="22" width="80" height="58" rx="3" fill="#10B981"/>
+          </g>
+          <g transform="rotate(-3 100 60)">
+            <rect x="62" y="22" width="80" height="58" rx="3" fill="#34D399"/>
+          </g>
+          <!-- Front bill with P -->
+          <rect x="62" y="22" width="80" height="58" rx="3" fill="url(#c3-bill1)"/>
+          <rect x="62" y="22" width="80" height="6" rx="3" fill="rgba(255,255,255,0.35)"/>
+          <path d="M82 36 L82 70 L92 70 L92 60 L104 60 C112 60 118 56 118 49 C118 42 112 36 104 36 Z M92 44 L104 44 C107 44 110 46 110 49 C110 52 107 52 104 52 L92 52 Z" fill="#0A1428"/>
+          <!-- Wallet body -->
+          <rect x="28" y="68" width="144" height="100" rx="14" fill="url(#c3-body)"/>
+          <!-- Stitching -->
+          <rect x="36" y="76" width="128" height="84" rx="8" fill="none" stroke="#34D399" stroke-width="1" stroke-dasharray="3 2" opacity="0.5"/>
+          <!-- Clasp -->
+          <rect x="164" y="108" width="14" height="22" rx="3" fill="#0F172A"/>
+          <circle cx="171" cy="119" r="2.5" fill="#34D399"/>
+        </svg>
+      </div>
+      <p class="size-cap">Home</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-mid" style="background:#0A1428">
+        <svg viewBox="0 0 200 200" width="60" height="60">
+          <g transform="rotate(-9 100 60)"><rect x="62" y="22" width="80" height="58" rx="3" fill="#10B981"/></g>
+          <g transform="rotate(-3 100 60)"><rect x="62" y="22" width="80" height="58" rx="3" fill="#34D399"/></g>
+          <rect x="62" y="22" width="80" height="58" rx="3" fill="#6EE7B7"/>
+          <path d="M82 36 L82 70 L92 70 L92 60 L104 60 C112 60 118 56 118 49 C118 42 112 36 104 36 Z M92 44 L104 44 C107 44 110 46 110 49 C110 52 107 52 104 52 L92 52 Z" fill="#0A1428"/>
+          <rect x="28" y="68" width="144" height="100" rx="14" fill="#0F172A"/>
+          <rect x="164" y="108" width="14" height="22" rx="3" fill="#1E293B"/>
+        </svg>
+      </div>
+      <p class="size-cap">Spotlight</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-fav" style="background:#0A1428">
+        <svg viewBox="0 0 200 200" width="40" height="40">
+          <rect x="62" y="22" width="80" height="58" rx="3" fill="#34D399"/>
+          <path d="M82 36 L82 70 L92 70 L92 60 L104 60 C112 60 118 56 118 49 C118 42 112 36 104 36 Z M92 44 L104 44 C107 44 110 46 110 49 C110 52 107 52 104 52 L92 52 Z" fill="#0A1428"/>
+          <rect x="28" y="68" width="144" height="100" rx="14" fill="#0F172A"/>
+        </svg>
+      </div>
+      <p class="size-cap">Favicon</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 04. P-Wallet (silhouette) ============ -->
+<div class="card">
+  <div class="card-head">
+    <div>
+      <p class="card-num">CONCEPT 04</p>
+      <p class="card-name">P-Wallet Hybrid</p>
+    </div>
+    <span class="card-tag">Distinct · Iconic</span>
+  </div>
+  <p class="card-desc">The P silhouette IS the wallet. The bowl of the P is the coin pocket. Most distinctive at small sizes — the form itself is unmistakable.</p>
+  <div class="icon-row">
+    <div>
+      <div class="icon-tile tile-app" style="background:linear-gradient(135deg,#0F1F35,#0A1428)">
+        <svg viewBox="0 0 200 200" width="120" height="120">
+          <defs>
+            <linearGradient id="c4-p" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#34D399"/><stop offset="1" stop-color="#059669"/></linearGradient>
+          </defs>
+          <!-- Big P with depth -->
+          <path d="M50 30 L50 170 L78 170 L78 122 L122 122 C152 122 174 102 174 76 C174 50 152 30 122 30 Z M78 56 L122 56 C136 56 148 64 148 76 C148 88 136 96 122 96 L78 96 Z" fill="url(#c4-p)"/>
+          <!-- Inner shadow on bowl -->
+          <path d="M78 56 L122 56 C136 56 148 64 148 76 C148 88 136 96 122 96 L78 96 Z" fill="#047857" opacity="0.45"/>
+          <!-- Highlight on stem -->
+          <rect x="50" y="32" width="6" height="138" rx="3" fill="rgba(255,255,255,0.18)"/>
+          <!-- Card sticking out of bowl -->
+          <rect x="100" y="44" width="48" height="30" rx="3" fill="#FFFFFF" opacity="0.95"/>
+          <rect x="100" y="44" width="48" height="6" rx="3" fill="#34D399"/>
+          <text x="124" y="65" font-family="-apple-system,sans-serif" font-size="13" font-weight="900" fill="#0A1428" text-anchor="middle">$</text>
+        </svg>
+      </div>
+      <p class="size-cap">Home</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-mid" style="background:#0A1428">
+        <svg viewBox="0 0 200 200" width="60" height="60">
+          <path d="M50 30 L50 170 L78 170 L78 122 L122 122 C152 122 174 102 174 76 C174 50 152 30 122 30 Z M78 56 L122 56 C136 56 148 64 148 76 C148 88 136 96 122 96 L78 96 Z" fill="#10B981"/>
+          <rect x="100" y="44" width="48" height="30" rx="3" fill="#FFFFFF"/>
+          <text x="124" y="65" font-family="-apple-system,sans-serif" font-size="13" font-weight="900" fill="#0A1428" text-anchor="middle">$</text>
+        </svg>
+      </div>
+      <p class="size-cap">Spotlight</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-fav" style="background:#0A1428">
+        <svg viewBox="0 0 200 200" width="40" height="40">
+          <path d="M50 30 L50 170 L78 170 L78 122 L122 122 C152 122 174 102 174 76 C174 50 152 30 122 30 Z M78 56 L122 56 C136 56 148 64 148 76 C148 88 136 96 122 96 L78 96 Z" fill="#10B981"/>
+        </svg>
+      </div>
+      <p class="size-cap">Favicon</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 05. Solid Mint Wallet ============ -->
+<div class="card">
+  <div class="card-head">
+    <div>
+      <p class="card-num">CONCEPT 05</p>
+      <p class="card-name">Solid Mint</p>
+    </div>
+    <span class="card-tag">Punchy · High contrast</span>
+  </div>
+  <p class="card-desc">Solid mint wallet with the P cut out as negative space — navy shows through. Bold, graphic, stands out on any home screen.</p>
+  <div class="icon-row">
+    <div>
+      <div class="icon-tile tile-app" style="background:linear-gradient(135deg,#0F1F35,#0A1428)">
+        <svg viewBox="0 0 200 200" width="120" height="120">
+          <defs>
+            <linearGradient id="c5-w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6EE7B7"/><stop offset="1" stop-color="#10B981"/></linearGradient>
+            <mask id="c5-mask">
+              <rect x="0" y="0" width="200" height="200" fill="#FFFFFF"/>
+              <path d="M64 60 L64 138 L82 138 L82 116 L102 116 C118 116 130 106 130 92 C130 78 118 68 102 68 L64 68 Z M82 80 L102 80 C108 80 112 84 112 92 C112 100 108 104 102 104 L82 104 Z" fill="#000000"/>
+            </mask>
+          </defs>
+          <!-- Card peeking -->
+          <rect x="86" y="34" width="52" height="36" rx="4" fill="#34D399" opacity="0.6"/>
+          <!-- Wallet body with P cut out -->
+          <rect x="28" y="58" width="144" height="106" rx="16" fill="url(#c5-w)" mask="url(#c5-mask)"/>
+          <!-- Clasp -->
+          <rect x="164" y="100" width="12" height="22" rx="3" fill="#047857"/>
+        </svg>
+      </div>
+      <p class="size-cap">Home</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-mid" style="background:#0A1428">
+        <svg viewBox="0 0 200 200" width="60" height="60">
+          <defs>
+            <mask id="c5b-mask">
+              <rect x="0" y="0" width="200" height="200" fill="#FFFFFF"/>
+              <path d="M64 60 L64 138 L82 138 L82 116 L102 116 C118 116 130 106 130 92 C130 78 118 68 102 68 L64 68 Z M82 80 L102 80 C108 80 112 84 112 92 C112 100 108 104 102 104 L82 104 Z" fill="#000000"/>
+            </mask>
+          </defs>
+          <rect x="28" y="58" width="144" height="106" rx="16" fill="#10B981" mask="url(#c5b-mask)"/>
+        </svg>
+      </div>
+      <p class="size-cap">Spotlight</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-fav" style="background:#0A1428">
+        <svg viewBox="0 0 200 200" width="40" height="40">
+          <defs>
+            <mask id="c5c-mask">
+              <rect x="0" y="0" width="200" height="200" fill="#FFFFFF"/>
+              <path d="M64 60 L64 138 L82 138 L82 116 L102 116 C118 116 130 106 130 92 C130 78 118 68 102 68 L64 68 Z M82 80 L102 80 C108 80 112 84 112 92 C112 100 108 104 102 104 L82 104 Z" fill="#000000"/>
+            </mask>
+          </defs>
+          <rect x="28" y="58" width="144" height="106" rx="16" fill="#10B981" mask="url(#c5c-mask)"/>
+        </svg>
+      </div>
+      <p class="size-cap">Favicon</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 06. Geometric Wallet ============ -->
+<div class="card">
+  <div class="card-head">
+    <div>
+      <p class="card-num">CONCEPT 06</p>
+      <p class="card-name">Geometric</p>
+    </div>
+    <span class="card-tag">Architectural · Sharp</span>
+  </div>
+  <p class="card-desc">Hexagonal facets — a wallet shape with prismatic cuts. Reads more "premium fintech" than "casual coupon app." Strong tech vibe.</p>
+  <div class="icon-row">
+    <div>
+      <div class="icon-tile tile-app" style="background:linear-gradient(135deg,#0F1F35,#0A1428)">
+        <svg viewBox="0 0 200 200" width="120" height="120">
+          <defs>
+            <linearGradient id="c6-1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6EE7B7"/><stop offset="1" stop-color="#10B981"/></linearGradient>
+            <linearGradient id="c6-2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#34D399"/><stop offset="1" stop-color="#047857"/></linearGradient>
+            <linearGradient id="c6-3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#10B981"/><stop offset="1" stop-color="#065F46"/></linearGradient>
+          </defs>
+          <!-- Three triangle/diamond facets forming a wallet hex -->
+          <polygon points="100,28 168,68 168,148 100,188 32,148 32,68" fill="url(#c6-1)"/>
+          <polygon points="100,28 168,68 100,108 32,68" fill="url(#c6-2)" opacity="0.85"/>
+          <polygon points="100,108 168,68 168,148 100,188" fill="url(#c6-3)" opacity="0.7"/>
+          <!-- P centered -->
+          <path d="M76 76 L76 132 L90 132 L90 116 L106 116 C118 116 128 108 128 96 C128 84 118 76 106 76 Z M90 88 L106 88 C110 88 114 91 114 96 C114 101 110 104 106 104 L90 104 Z" fill="#FFFFFF"/>
+        </svg>
+      </div>
+      <p class="size-cap">Home</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-mid" style="background:#0A1428">
+        <svg viewBox="0 0 200 200" width="60" height="60">
+          <polygon points="100,28 168,68 168,148 100,188 32,148 32,68" fill="#10B981"/>
+          <polygon points="100,28 168,68 100,108 32,68" fill="#34D399"/>
+          <path d="M76 76 L76 132 L90 132 L90 116 L106 116 C118 116 128 108 128 96 C128 84 118 76 106 76 Z M90 88 L106 88 C110 88 114 91 114 96 C114 101 110 104 106 104 L90 104 Z" fill="#FFFFFF"/>
+        </svg>
+      </div>
+      <p class="size-cap">Spotlight</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-fav" style="background:#0A1428">
+        <svg viewBox="0 0 200 200" width="40" height="40">
+          <polygon points="100,28 168,68 168,148 100,188 32,148 32,68" fill="#10B981"/>
+          <path d="M76 76 L76 132 L90 132 L90 116 L106 116 C118 116 128 108 128 96 C128 84 118 76 106 76 Z M90 88 L106 88 C110 88 114 91 114 96 C114 101 110 104 106 104 L90 104 Z" fill="#FFFFFF"/>
+        </svg>
+      </div>
+      <p class="size-cap">Favicon</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 07. Card-First ============ -->
+<div class="card">
+  <div class="card-head">
+    <div>
+      <p class="card-num">CONCEPT 07</p>
+      <p class="card-name">Card First</p>
+    </div>
+    <span class="card-tag">Apple Wallet vibe · Modern</span>
+  </div>
+  <p class="card-desc">A single elegant card — primary visual — sitting in front of a faint wallet outline. The P is on the card itself. Closer to Apple Wallet aesthetic than a literal wallet.</p>
+  <div class="icon-row">
+    <div>
+      <div class="icon-tile tile-app" style="background:linear-gradient(135deg,#0F1F35,#0A1428)">
+        <svg viewBox="0 0 200 200" width="120" height="120">
+          <defs>
+            <linearGradient id="c7-card" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#34D399"/><stop offset="1" stop-color="#059669"/></linearGradient>
+          </defs>
+          <!-- Wallet outline behind -->
+          <rect x="32" y="68" width="136" height="92" rx="12" fill="none" stroke="rgba(52,211,153,0.3)" stroke-width="2"/>
+          <!-- Hero card -->
+          <rect x="20" y="48" width="160" height="100" rx="14" fill="url(#c7-card)"/>
+          <!-- Card highlight -->
+          <rect x="20" y="48" width="160" height="40" rx="14" fill="rgba(255,255,255,0.12)"/>
+          <!-- Chip -->
+          <rect x="38" y="68" width="28" height="20" rx="3" fill="#FCD34D" opacity="0.9"/>
+          <line x1="38" y1="78" x2="66" y2="78" stroke="#92400E" stroke-width="0.5" opacity="0.6"/>
+          <!-- Big P bottom-right of card -->
+          <path d="M104 100 L104 138 L116 138 L116 124 L130 124 C140 124 148 118 148 110 C148 102 140 96 130 96 Z M116 108 L130 108 C133 108 136 110 136 110 C136 113 133 116 130 116 L116 116 Z" fill="#FFFFFF"/>
+          <!-- Contactless icon -->
+          <path d="M158 110 Q166 110 166 118" stroke="#FFFFFF" stroke-width="2" fill="none" opacity="0.7"/>
+          <path d="M152 104 Q170 104 170 122" stroke="#FFFFFF" stroke-width="2" fill="none" opacity="0.5"/>
+        </svg>
+      </div>
+      <p class="size-cap">Home</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-mid" style="background:#0A1428">
+        <svg viewBox="0 0 200 200" width="60" height="60">
+          <rect x="32" y="68" width="136" height="92" rx="12" fill="none" stroke="rgba(52,211,153,0.3)" stroke-width="3"/>
+          <rect x="20" y="48" width="160" height="100" rx="14" fill="#10B981"/>
+          <rect x="38" y="68" width="28" height="20" rx="3" fill="#FCD34D"/>
+          <path d="M104 100 L104 138 L116 138 L116 124 L130 124 C140 124 148 118 148 110 C148 102 140 96 130 96 Z M116 108 L130 108 C133 108 136 110 136 110 C136 113 133 116 130 116 L116 116 Z" fill="#FFFFFF"/>
+        </svg>
+      </div>
+      <p class="size-cap">Spotlight</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-fav" style="background:#0A1428">
+        <svg viewBox="0 0 200 200" width="40" height="40">
+          <rect x="20" y="48" width="160" height="100" rx="14" fill="#10B981"/>
+          <path d="M104 100 L104 138 L116 138 L116 124 L130 124 C140 124 148 118 148 110 C148 102 140 96 130 96 Z M116 108 L130 108 C133 108 136 110 136 110 C136 113 133 116 130 116 L116 116 Z" fill="#FFFFFF"/>
+        </svg>
+      </div>
+      <p class="size-cap">Favicon</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 08. Speed Wallet ============ -->
+<div class="card">
+  <div class="card-head">
+    <div>
+      <p class="card-num">CONCEPT 08</p>
+      <p class="card-name">Speed Wallet</p>
+    </div>
+    <span class="card-tag">Energetic · AI-feel</span>
+  </div>
+  <p class="card-desc">Wallet with motion lines suggesting "instant savings, automated agent." Leans into the AI-powered angle of Perq.</p>
+  <div class="icon-row">
+    <div>
+      <div class="icon-tile tile-app" style="background:linear-gradient(135deg,#0F1F35,#0A1428)">
+        <svg viewBox="0 0 200 200" width="120" height="120">
+          <!-- Speed lines behind -->
+          <line x1="14" y1="80" x2="44" y2="80" stroke="#34D399" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
+          <line x1="8" y1="100" x2="38" y2="100" stroke="#34D399" stroke-width="3" stroke-linecap="round" opacity="0.5"/>
+          <line x1="14" y1="120" x2="44" y2="120" stroke="#34D399" stroke-width="3" stroke-linecap="round" opacity="0.4"/>
+          <!-- Card peeking -->
+          <rect x="100" y="38" width="48" height="32" rx="4" fill="#6EE7B7"/>
+          <text x="124" y="61" font-family="-apple-system,sans-serif" font-size="14" font-weight="900" fill="#0A1428" text-anchor="middle">$</text>
+          <!-- Wallet body -->
+          <rect x="50" y="62" width="130" height="98" rx="14" fill="#10B981"/>
+          <!-- Highlight -->
+          <rect x="50" y="62" width="130" height="36" rx="14" fill="rgba(255,255,255,0.12)"/>
+          <!-- Clasp -->
+          <rect x="172" y="100" width="10" height="22" rx="3" fill="#047857"/>
+          <!-- P -->
+          <path d="M76 84 L76 144 L92 144 L92 124 L110 124 C124 124 134 116 134 104 C134 92 124 84 110 84 Z M92 96 L110 96 C115 96 120 99 120 104 C120 109 115 112 110 112 L92 112 Z" fill="#FFFFFF"/>
+        </svg>
+      </div>
+      <p class="size-cap">Home</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-mid" style="background:#0A1428">
+        <svg viewBox="0 0 200 200" width="60" height="60">
+          <line x1="14" y1="80" x2="44" y2="80" stroke="#34D399" stroke-width="4" stroke-linecap="round"/>
+          <line x1="8" y1="100" x2="38" y2="100" stroke="#34D399" stroke-width="4" stroke-linecap="round" opacity="0.6"/>
+          <line x1="14" y1="120" x2="44" y2="120" stroke="#34D399" stroke-width="4" stroke-linecap="round" opacity="0.45"/>
+          <rect x="100" y="38" width="48" height="32" rx="4" fill="#6EE7B7"/>
+          <rect x="50" y="62" width="130" height="98" rx="14" fill="#10B981"/>
+          <path d="M76 84 L76 144 L92 144 L92 124 L110 124 C124 124 134 116 134 104 C134 92 124 84 110 84 Z M92 96 L110 96 C115 96 120 99 120 104 C120 109 115 112 110 112 L92 112 Z" fill="#FFFFFF"/>
+        </svg>
+      </div>
+      <p class="size-cap">Spotlight</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-fav" style="background:#0A1428">
+        <svg viewBox="0 0 200 200" width="40" height="40">
+          <rect x="50" y="62" width="130" height="98" rx="14" fill="#10B981"/>
+          <path d="M76 84 L76 144 L92 144 L92 124 L110 124 C124 124 134 116 134 104 C134 92 124 84 110 84 Z M92 96 L110 96 C115 96 120 99 120 104 C120 109 115 112 110 112 L92 112 Z" fill="#FFFFFF"/>
+        </svg>
+      </div>
+      <p class="size-cap">Favicon</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 09. Stamp Wallet ============ -->
+<div class="card">
+  <div class="card-head">
+    <div>
+      <p class="card-num">CONCEPT 09</p>
+      <p class="card-name">Stamped</p>
+    </div>
+    <span class="card-tag">Premium · Brand-mark</span>
+  </div>
+  <p class="card-desc">Dark navy leather wallet with a glowing mint P stamp pressed into the front, like an official seal. Subtle silver clasp. Very "luxury wallet brand."</p>
+  <div class="icon-row">
+    <div>
+      <div class="icon-tile tile-app" style="background:linear-gradient(135deg,#0F1F35,#0A1428)">
+        <svg viewBox="0 0 200 200" width="120" height="120">
+          <defs>
+            <linearGradient id="c9-leather" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1E293B"/><stop offset="1" stop-color="#0F172A"/></linearGradient>
+            <radialGradient id="c9-glow" cx="50%" cy="50%" r="60%"><stop offset="0" stop-color="#34D399" stop-opacity="0.35"/><stop offset="1" stop-color="#34D399" stop-opacity="0"/></radialGradient>
+          </defs>
+          <!-- Card peeking -->
+          <rect x="86" y="32" width="48" height="36" rx="3" fill="#34D399"/>
+          <rect x="86" y="32" width="48" height="6" rx="3" fill="rgba(255,255,255,0.4)"/>
+          <!-- Wallet body -->
+          <rect x="28" y="60" width="144" height="104" rx="16" fill="url(#c9-leather)"/>
+          <!-- Inner panel/emboss area -->
+          <rect x="42" y="74" width="116" height="78" rx="10" fill="rgba(255,255,255,0.04)"/>
+          <!-- P glow -->
+          <circle cx="100" cy="113" r="46" fill="url(#c9-glow)"/>
+          <!-- Stamped P -->
+          <path d="M76 86 L76 142 L92 142 L92 122 L108 122 C122 122 132 114 132 104 C132 94 122 86 108 86 Z M92 98 L108 98 C113 98 118 100 118 104 C118 108 113 110 108 110 L92 110 Z" fill="#34D399"/>
+          <!-- Clasp -->
+          <rect x="160" y="100" width="14" height="26" rx="3" fill="#94A3B8"/>
+          <circle cx="167" cy="113" r="3" fill="#475569"/>
+        </svg>
+      </div>
+      <p class="size-cap">Home</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-mid" style="background:#0A1428">
+        <svg viewBox="0 0 200 200" width="60" height="60">
+          <rect x="86" y="32" width="48" height="36" rx="3" fill="#34D399"/>
+          <rect x="28" y="60" width="144" height="104" rx="16" fill="#0F172A"/>
+          <path d="M76 86 L76 142 L92 142 L92 122 L108 122 C122 122 132 114 132 104 C132 94 122 86 108 86 Z M92 98 L108 98 C113 98 118 100 118 104 C118 108 113 110 108 110 L92 110 Z" fill="#34D399"/>
+          <rect x="160" y="100" width="14" height="26" rx="3" fill="#94A3B8"/>
+        </svg>
+      </div>
+      <p class="size-cap">Spotlight</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-fav" style="background:#0A1428">
+        <svg viewBox="0 0 200 200" width="40" height="40">
+          <rect x="28" y="60" width="144" height="104" rx="16" fill="#0F172A"/>
+          <path d="M76 86 L76 142 L92 142 L92 122 L108 122 C122 122 132 114 132 104 C132 94 122 86 108 86 Z M92 98 L108 98 C113 98 118 100 118 104 C118 108 113 110 108 110 L92 110 Z" fill="#34D399"/>
+        </svg>
+      </div>
+      <p class="size-cap">Favicon</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 10. Layered Cards ============ -->
+<div class="card">
+  <div class="card-head">
+    <div>
+      <p class="card-num">CONCEPT 10</p>
+      <p class="card-name">Layered Cards</p>
+    </div>
+    <span class="card-tag">Modern · Tech-native</span>
+  </div>
+  <p class="card-desc">Three offset cards in a stack — front card prominently mint with a P. No literal wallet shape. Clean, modern, very Apple-Pay / Linear vibe.</p>
+  <div class="icon-row">
+    <div>
+      <div class="icon-tile tile-app" style="background:linear-gradient(135deg,#0F1F35,#0A1428)">
+        <svg viewBox="0 0 200 200" width="120" height="120">
+          <defs>
+            <linearGradient id="c10-1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#34D399"/><stop offset="1" stop-color="#059669"/></linearGradient>
+          </defs>
+          <!-- Back card -->
+          <g transform="rotate(-10 100 100)">
+            <rect x="30" y="64" width="140" height="86" rx="11" fill="rgba(52,211,153,0.25)"/>
+          </g>
+          <!-- Middle card -->
+          <g transform="rotate(-4 100 100)">
+            <rect x="26" y="56" width="148" height="92" rx="12" fill="rgba(52,211,153,0.5)"/>
+          </g>
+          <!-- Front card -->
+          <rect x="22" y="48" width="156" height="98" rx="14" fill="url(#c10-1)"/>
+          <!-- Top highlight -->
+          <rect x="22" y="48" width="156" height="38" rx="14" fill="rgba(255,255,255,0.15)"/>
+          <!-- Chip -->
+          <rect x="38" y="66" width="26" height="18" rx="3" fill="#FFFBEB"/>
+          <!-- P -->
+          <path d="M86 88 L86 138 L102 138 L102 122 L120 122 C134 122 144 114 144 105 C144 96 134 88 120 88 Z M102 100 L120 100 C124 100 130 102 130 105 C130 108 124 110 120 110 L102 110 Z" fill="#FFFFFF"/>
+          <!-- Wave / contactless -->
+          <path d="M152 104 Q160 110 152 118" stroke="#FFFFFF" stroke-width="2" fill="none" opacity="0.7"/>
+        </svg>
+      </div>
+      <p class="size-cap">Home</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-mid" style="background:#0A1428">
+        <svg viewBox="0 0 200 200" width="60" height="60">
+          <g transform="rotate(-10 100 100)"><rect x="30" y="64" width="140" height="86" rx="11" fill="rgba(52,211,153,0.3)"/></g>
+          <g transform="rotate(-4 100 100)"><rect x="26" y="56" width="148" height="92" rx="12" fill="rgba(52,211,153,0.55)"/></g>
+          <rect x="22" y="48" width="156" height="98" rx="14" fill="#10B981"/>
+          <path d="M86 88 L86 138 L102 138 L102 122 L120 122 C134 122 144 114 144 105 C144 96 134 88 120 88 Z M102 100 L120 100 C124 100 130 102 130 105 C130 108 124 110 120 110 L102 110 Z" fill="#FFFFFF"/>
+        </svg>
+      </div>
+      <p class="size-cap">Spotlight</p>
+    </div>
+    <div>
+      <div class="icon-tile tile-fav" style="background:#0A1428">
+        <svg viewBox="0 0 200 200" width="40" height="40">
+          <rect x="22" y="48" width="156" height="98" rx="14" fill="#10B981"/>
+          <path d="M86 88 L86 138 L102 138 L102 122 L120 122 C134 122 144 114 144 105 C144 96 134 88 120 88 Z M102 100 L120 100 C124 100 130 102 130 105 C130 108 124 110 120 110 L102 110 Z" fill="#FFFFFF"/>
+        </svg>
+      </div>
+      <p class="size-cap">Favicon</p>
+    </div>
+  </div>
+</div>
+
+<div class="foot">
+  <p style="margin-bottom:14px">Tell me <strong>"go with concept N"</strong> and I'll wire it through the app — icon-512.png, icon-192.png, Apple Touch icon, all Android mipmaps, iOS asset catalog (1024×1024 marketing icon), splash screen, and the in-app onboarding mark.</p>
+  <p>Want a hybrid? <em>"#1 wallet + #4 P silhouette"</em> — say it.</p>
+  <a href="preview.html?v=20" class="preview-link">← Back to app</a>
+</div>
+
+</div>
+</body>
+</html>
