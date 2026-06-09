@@ -14,14 +14,18 @@
 <title>Perq</title>
 <style>
 :root{
-  --bg:#FAF8F3;--surface:#FFF;--text:#1A1A1A;--text-dim:#6B6A64;--text-faint:#9C9AA8;
-  --accent:#FFE16B;--accent-dark:#B45309;
-  --warm-1:#FF6B6B;--warm-2:#FFA06B;--green-1:#00C9A7;--green-2:#4FACFE;
+  --bg:#0D1B2A;--bg-2:#1B3A5B;--surface:#FFFFFF;--surface-soft:#F4F8F6;
+  --text:#1A1A1A;--text-dim:#6B6A64;--text-faint:#9C9AA8;
+  --text-on-dark:#FFFFFF;--text-on-dark-dim:rgba(255,255,255,0.7);
+  --accent:#10B981;--accent-light:#34D399;--accent-dark:#047857;--accent-glow:rgba(16,185,129,0.35);
+  --warm-1:#FF6B6B;--warm-2:#FFA06B;--green-1:#10B981;--green-2:#34D399;
   --purple-1:#6366F1;--purple-2:#C084FC;--pink-1:#F472B6;--pink-2:#FB923C;
-  --border:rgba(0,0,0,0.08);
+  --border:rgba(0,0,0,0.08);--border-on-dark:rgba(255,255,255,0.1);
   --safe-top:env(safe-area-inset-top,20px);
   --safe-bottom:env(safe-area-inset-bottom,0px);
+  --page-bg:linear-gradient(180deg,#0D1B2A 0%,#1B3A5B 100%);
 }
+body{background:#0D1B2A}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
 html,body{font-family:-apple-system,"SF Pro Display",BlinkMacSystemFont,system-ui,sans-serif;background:var(--bg);color:var(--text);overscroll-behavior:none;-webkit-font-smoothing:antialiased;height:100vh;height:100dvh;overflow:hidden;width:100%}
 button,input,select,textarea{font-family:inherit;color:var(--text);font-size:15px}
@@ -95,7 +99,7 @@ input[type=range]:focus{outline:none}
 .h-cta{display:block;width:100%;margin-top:10px;background:var(--accent);color:#1A1A1A;border-radius:12px;padding:10px;font-size:12px;font-weight:700;text-align:center}
 
 /* ---- Onboarding ---- */
-.onboarding{position:fixed;inset:0;background:linear-gradient(180deg,#0D1B2A 0%,#1B3A5B 60%,#FAF8F3 100%);z-index:1000;display:flex;flex-direction:column;padding:calc(40px + var(--safe-top)) 24px calc(20px + var(--safe-bottom))}
+.onboarding{position:fixed;inset:0;background:linear-gradient(180deg,#0D1B2A 0%,#1B3A5B 100%);z-index:1000;display:flex;flex-direction:column;padding:calc(40px + var(--safe-top)) 24px calc(20px + var(--safe-bottom))}
 .onboarding.hidden{display:none}
 .ob-step{display:none;flex:1;flex-direction:column;justify-content:center;text-align:center;animation:fadeIn .3s}
 .ob-step.active{display:flex}
@@ -104,27 +108,18 @@ input[type=range]:focus{outline:none}
 .ob-logo-mark.small{width:96px;height:96px;margin-bottom:20px;filter:drop-shadow(0 10px 24px rgba(13,27,42,0.35))}
 .ob-logo-mark svg{width:100%;height:100%;display:block;border-radius:32px}
 .ob-logo-mark.small svg{border-radius:22px}
-.ob-title{font-size:30px;font-weight:900;letter-spacing:-0.6px;margin:0 0 12px;line-height:1.1;color:#FFFFFF;text-shadow:0 2px 8px rgba(0,0,0,0.2)}
-.ob-step[data-step="2"] .ob-title,
-.ob-step[data-step="3"] .ob-title,
-.ob-step[data-step="4"] .ob-title{color:var(--text);text-shadow:none}
+.ob-title{font-size:30px;font-weight:900;letter-spacing:-0.6px;margin:0 0 12px;line-height:1.1;color:#FFFFFF;text-shadow:0 2px 8px rgba(0,0,0,0.25)}
 .ob-sub{font-size:15px;line-height:1.5;margin:0 0 32px;max-width:300px;align-self:center;color:rgba(255,255,255,0.85)}
-.ob-step[data-step="2"] .ob-sub,
-.ob-step[data-step="3"] .ob-sub,
-.ob-step[data-step="4"] .ob-sub{color:var(--text-dim)}
 .ob-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.25)}
 .ob-dot.active{background:#10B981;width:20px;border-radius:6px;transition:all .3s}
-.ob-input{width:100%;background:white;border:2px solid transparent;border-radius:14px;padding:14px 16px;font-size:15px;outline:none;margin-bottom:12px;text-align:center}
-.ob-input:focus{border-color:#1A1A1A}
+.ob-input{width:100%;background:rgba(255,255,255,0.95);border:2px solid transparent;border-radius:14px;padding:14px 16px;font-size:15px;outline:none;margin-bottom:12px;text-align:center;color:#1A1A1A}
+.ob-input:focus{border-color:#10B981;background:#FFFFFF}
 .ob-prefs{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:0 0 24px}
-.ob-pref{background:white;border:2px solid transparent;border-radius:999px;padding:10px 16px;font-size:13px;font-weight:700;color:var(--text-dim)}
-.ob-pref.active{background:#1A1A1A;color:white;border-color:#1A1A1A}
+.ob-pref{background:rgba(255,255,255,0.92);border:2px solid transparent;border-radius:999px;padding:10px 16px;font-size:13px;font-weight:700;color:#1A1A1A}
+.ob-pref.active{background:#10B981;color:white;border-color:#10B981}
 .ob-actions{display:flex;flex-direction:column;gap:8px;margin-top:auto}
-.ob-btn{width:100%;background:linear-gradient(135deg,#10B981,#059669);color:white;border-radius:14px;padding:16px;font-size:15px;font-weight:800;box-shadow:0 6px 20px rgba(16,185,129,0.35)}
-.ob-btn.secondary{background:transparent;color:rgba(255,255,255,0.8);font-weight:600;box-shadow:none}
-.ob-step[data-step="2"] .ob-btn.secondary,
-.ob-step[data-step="3"] .ob-btn.secondary,
-.ob-step[data-step="4"] .ob-btn.secondary{color:var(--text-dim)}
+.ob-btn{width:100%;background:linear-gradient(135deg,#10B981,#059669);color:white;border-radius:14px;padding:16px;font-size:15px;font-weight:800;box-shadow:0 6px 20px rgba(16,185,129,0.4)}
+.ob-btn.secondary{background:transparent;color:rgba(255,255,255,0.7);font-weight:600;box-shadow:none}
 .ob-progress{display:flex;gap:6px;justify-content:center;margin-bottom:24px}
 
 /* ---- Modal ---- */
@@ -180,7 +175,7 @@ input[type=range]:focus{outline:none}
 @keyframes confettiFall{0%{transform:translateY(0) rotate(0)}100%{transform:translateY(110vh) rotate(720deg);opacity:0.6}}
 
 /* Wallet */
-.wallet-screen{background:#0A0A14;min-height:100%;padding-bottom:24px}
+.wallet-screen{background:linear-gradient(180deg,#0D1B2A 0%,#1B3A5B 100%);min-height:100%;padding-bottom:24px}
 .wallet-header{padding:0 20px 16px;display:flex;align-items:center;gap:12px;color:white}
 .wallet-back{background:rgba(255,255,255,0.15)!important}
 .wallet-back svg{stroke:white!important}
@@ -201,7 +196,7 @@ input[type=range]:focus{outline:none}
     <div class="ob-dot active"></div>
     <div class="ob-dot"></div>
     <div class="ob-dot"></div>
-    <div class="ob-dot"></div>
+    <div class="ob-dot ob-dot-install"></div>
   </div>
   <div class="ob-step active" data-step="1">
     <div class="ob-logo-mark">
@@ -321,22 +316,22 @@ input[type=range]:focus{outline:none}
 
 <!-- BROWSE -->
 <div class="page" data-page="browse">
-<div style="background:var(--bg);min-height:100%;padding-bottom:24px;padding-top:14px">
+<div style="background:var(--page-bg);min-height:100%;padding-bottom:24px;padding-top:14px">
   <div style="padding:0 20px 12px">
-    <h2 style="font-size:24px;font-weight:800;margin:0">Browse Deals</h2>
-    <p style="font-size:13px;color:var(--text-dim);margin:2px 0 0">Local + online + shared by friends</p>
+    <h2 style="font-size:24px;font-weight:800;margin:0;color:#FFFFFF">Browse Deals</h2>
+    <p style="font-size:13px;color:rgba(255,255,255,0.7);margin:2px 0 0">Local + online + shared by friends</p>
   </div>
   <div style="display:flex;gap:6px;padding:0 20px 12px">
-    <button class="btab" data-btab="local" onclick="setBrowseTab('local')" style="flex:1;background:#1A1A1A;color:white;border:1px solid #1A1A1A;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:700">📍 Local</button>
-    <button class="btab" data-btab="online" onclick="setBrowseTab('online')" style="flex:1;background:white;color:var(--text-dim);border:1px solid var(--border);border-radius:999px;padding:8px 12px;font-size:12px;font-weight:700">🌐 Online</button>
+    <button class="btab" data-btab="local" onclick="setBrowseTab('local')" style="flex:1;background:#10B981;color:white;border:1px solid #10B981;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:700">📍 Local</button>
+    <button class="btab" data-btab="online" onclick="setBrowseTab('online')" style="flex:1;background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.9);border:1px solid rgba(255,255,255,0.15);border-radius:999px;padding:8px 12px;font-size:12px;font-weight:700">🌐 Online</button>
   </div>
   <div class="bsection" data-bsection="local">
-    <div style="margin:0 20px 16px;background:white;border-radius:16px;padding:14px 16px;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
+    <div style="margin:0 20px 16px;background:white;border-radius:16px;padding:14px 16px;box-shadow:0 4px 14px rgba(0,0,0,0.08)">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <p style="font-size:12px;font-weight:700;margin:0">Distance radius</p>
-        <span id="radius-val" style="font-size:13px;font-weight:800;color:var(--accent-dark)">5 mi</span>
+        <span id="radius-val" style="font-size:13px;font-weight:800;color:#047857">5 mi</span>
       </div>
-      <input type="range" id="browse-radius" min="1" max="25" value="5" style="width:100%;height:6px;appearance:none;-webkit-appearance:none;background:linear-gradient(to right,#FFE16B 0%,#FFE16B 16%,#e5e5e5 16%,#e5e5e5 100%);border-radius:999px;outline:none">
+      <input type="range" id="browse-radius" min="1" max="25" value="5" style="width:100%;height:6px;appearance:none;-webkit-appearance:none;background:linear-gradient(to right,#10B981 0%,#10B981 16%,#e5e5e5 16%,#e5e5e5 100%);border-radius:999px;outline:none">
     </div>
     <div id="local-deals-list" style="padding:0 20px 16px"></div>
   </div>
@@ -346,20 +341,20 @@ input[type=range]:focus{outline:none}
 
 <!-- REWARDS (Gamified: missions, streak fire, surprise unlocks, animated tier celebrations) -->
 <div class="page" data-page="rewards">
-<div style="background:linear-gradient(180deg,#FF6B6B 0%,#FAF8F3 30%);min-height:100%;padding-top:14px;padding-bottom:24px">
+<div style="background:var(--page-bg);min-height:100%;padding-top:14px;padding-bottom:24px">
   <div id="rewards-root"></div>
 </div>
 </div>
 
 <!-- SETTINGS -->
 <div class="page" data-page="settings">
-<div style="min-height:100%;padding-top:14px;padding-bottom:24px">
+<div style="background:var(--page-bg);min-height:100%;padding-top:14px;padding-bottom:24px">
   <div style="padding:0 20px 16px;display:flex;align-items:center;gap:12px">
-    <button class="icon-btn" onclick="goPage('home')"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
-    <h2 style="font-size:24px;font-weight:800;margin:0">Settings</h2>
+    <button class="icon-btn" onclick="goPage('wallet')" style="background:rgba(255,255,255,0.15)"><svg viewBox="0 0 24 24" style="stroke:white !important"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <h2 style="font-size:24px;font-weight:800;margin:0;color:#FFFFFF">Settings</h2>
   </div>
   <div class="settings-list">
-    <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:8px 0">Profile</p>
+    <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.6);margin:14px 0 8px">Profile</p>
     <div class="settings-group">
       <div class="settings-row" onclick="editProfile()">
         <div id="profile-avatar" style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#FF6B6B,#FFA06B);display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:20px">?</div>
@@ -367,17 +362,17 @@ input[type=range]:focus{outline:none}
         <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--text-dim);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
     </div>
-    <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:8px 0">Notifications</p>
+    <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.6);margin:14px 0 8px">Notifications</p>
     <div class="settings-group">
-      <div class="settings-row">
-        <div class="settings-icon-sm" style="background:#FEF3C7;color:#D97706"><svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg></div>
-        <div class="settings-info"><p class="settings-row-title">Expiry reminders</p><p class="settings-row-sub">3 days before · evening · day-of</p></div>
-        <button class="toggle on" data-setting="reminders" onclick="toggleSetting(this,'reminders')"></button>
+      <div class="settings-row" onclick="openReminderSettings(event)">
+        <div class="settings-icon-sm" style="background:#D1FAE5;color:#065F46"><svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg></div>
+        <div class="settings-info"><p class="settings-row-title">Expiry reminders</p><p class="settings-row-sub" id="reminders-sub">2 days before · evening · day-of</p></div>
+        <button class="toggle on" data-setting="reminders" onclick="event.stopPropagation();toggleSetting(this,'reminders')"></button>
       </div>
-      <div class="settings-row">
-        <div class="settings-icon-sm" style="background:#DBEAFE;color:#2563EB"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
-        <div class="settings-info"><p class="settings-row-title">Proximity alerts</p><p class="settings-row-sub">Notify when near a store</p></div>
-        <button class="toggle on" data-setting="proximity" onclick="toggleSetting(this,'proximity')"></button>
+      <div class="settings-row" onclick="openProximitySettings(event)">
+        <div class="settings-icon-sm" style="background:#D1FAE5;color:#065F46"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+        <div class="settings-info"><p class="settings-row-title">Proximity alerts</p><p class="settings-row-sub" id="proximity-sub">Notify within 2 mi of a store</p></div>
+        <button class="toggle on" data-setting="proximity" onclick="event.stopPropagation();toggleSetting(this,'proximity')"></button>
       </div>
       <div class="settings-row">
         <div class="settings-icon-sm" style="background:#FCE7F3;color:#BE185D"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></div>
@@ -385,7 +380,7 @@ input[type=range]:focus{outline:none}
         <button class="toggle" data-setting="social" onclick="toggleSetting(this,'social')"></button>
       </div>
     </div>
-    <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:8px 0">Data</p>
+    <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.6);margin:14px 0 8px">Data</p>
     <div class="settings-group">
       <div class="settings-row" onclick="seedCommunityPool()">
         <div class="settings-icon-sm" style="background:#EAFBF4;color:#059669"><svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><circle cx="17" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg></div>
@@ -398,7 +393,7 @@ input[type=range]:focus{outline:none}
         <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--text-dim);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
     </div>
-    <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:8px 0">About</p>
+    <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.6);margin:14px 0 8px">About</p>
     <div class="settings-group">
       <div class="settings-row">
         <div class="settings-icon-sm" style="background:#F1F5F9;color:#475569"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></div>
@@ -480,6 +475,6 @@ input[type=range]:focus{outline:none}
 <div id="confetti-root" style="position:fixed;inset:0;pointer-events:none;z-index:9998;overflow:hidden"></div>
 <input type="file" id="capture-input" accept="image/*" capture="environment" style="display:none">
 
-<script src="preview-app.js?v=19"></script>
+<script src="preview-app.js?v=20"></script>
 </body>
 </html>
