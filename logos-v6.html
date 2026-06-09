@@ -1,0 +1,165 @@
+<!doctype html>
+<html><head><meta charset="utf-8" />
+<title>Perq · Tesla-style P variations</title>
+<style>
+body{margin:0;background:#020817;color:#fff;font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:32px}
+h1{text-align:center;letter-spacing:8px;font-weight:700;margin:0 0 8px}
+.sub{text-align:center;color:#94a3b8;margin:0 auto 32px;max-width:520px;font-size:13px;line-height:1.55}
+.sub b{color:#39ffd0}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;max-width:1200px;margin:auto}
+@media (max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}
+.card{text-align:center}
+svg{width:180px;height:180px;border-radius:34px;display:block;margin:0 auto}
+.num{color:#39ffd0;font-size:18px;margin-top:10px;font-weight:700}
+.label{color:#64748b;font-size:11px;margin-top:2px;letter-spacing:1px;text-transform:uppercase}
+.foot{text-align:center;margin-top:48px;color:#94a3b8;font-size:14px;line-height:1.6}
+.foot a{display:inline-block;background:linear-gradient(135deg,#10B981,#059669);color:#fff;padding:12px 22px;border-radius:999px;text-decoration:none;font-weight:800;margin-top:12px}
+</style>
+</head>
+<body>
+<h1>TESLA-DNA P</h1>
+<p class="sub">Same wallet as #3. Eight Tesla-inspired letterforms — <b>sharp, angular, geometric, vertical-heavy, no rounded curves</b>. Pick the one that feels right.</p>
+<div class="grid">
+
+<script>
+// Shared wallet structure from logos-v5 #3
+function tile(n, pSvg, label){
+  const wallet = `
+    <defs>
+      <linearGradient id="bg${n}" x1="0" y1="0" x2="1" y2="1">
+        <stop stop-color="#082b6f"/><stop offset="1" stop-color="#020817"/>
+      </linearGradient>
+      <linearGradient id="mint${n}" x1="0" y1="0" x2="1" y2="1">
+        <stop stop-color="#9cffdf"/><stop offset="1" stop-color="#00c9a7"/>
+      </linearGradient>
+      <filter id="shadow${n}"><feDropShadow dx="0" dy="14" stdDeviation="14" flood-opacity=".35"/></filter>
+    </defs>
+    <rect width="512" height="512" rx="96" fill="url(#bg${n})"/>
+    <!-- Card peeking with $ (n=3 variant) -->
+    <rect x="150" y="105" width="210" height="130" rx="24" fill="url(#mint${n})" transform="rotate(-9 256 170)" opacity=".95"/>
+    <text x="255" y="195" font-size="72" text-anchor="middle" font-weight="800" fill="white">$</text>
+    <!-- Wallet body -->
+    <path d="M112 178 Q112 145 145 145 H367 Q400 145 400 178 V350 Q400 395 355 395 H157 Q112 395 112 350Z" fill="#071b4d" filter="url(#shadow${n})"/>
+    <path d="M112 178 Q112 145 145 145 H367 Q400 145 400 178" fill="none" stroke="#174073" stroke-width="8"/>
+    <!-- Clasp -->
+    <rect x="350" y="245" width="58" height="78" rx="20" fill="#08265f"/>
+    <circle cx="378" cy="284" r="13" fill="url(#mint${n})"/>
+  `;
+  return `<div class="card">
+    <svg viewBox="0 0 512 512">${wallet}${pSvg}</svg>
+    <div class="num">${n}</div>
+    <div class="label">${label}</div>
+  </div>`;
+}
+
+// Eight Tesla-inspired P variations.
+// Each P is constructed from straight lines and angular cuts only — no <text>, no curved arcs.
+// Bounding box target: roughly x:200-320, y:215-345 inside the wallet body.
+const variations = [
+  // 1. Sharp wedge bowl — most Tesla-like profile (thin stem, angular bowl)
+  {
+    label: 'Sharp Wedge',
+    p: `
+      <!-- vertical stem -->
+      <polygon points="220,215 250,215 250,345 220,345" fill="#fff"/>
+      <!-- bowl: trapezoid + angular cuts -->
+      <polygon points="250,215 305,215 320,232 320,278 305,295 250,295" fill="#fff"/>
+      <!-- inner negative space (cut out the loop) -->
+      <polygon points="250,235 290,235 300,247 300,263 290,275 250,275" fill="#071b4d"/>
+    `
+  },
+  // 2. Tesla-T fusion — horizontal crossbar + downward "tooth" on right (echoes Tesla T)
+  {
+    label: 'Tesla Crossbar',
+    p: `
+      <!-- top crossbar (horizontal, full width) -->
+      <polygon points="200,215 320,215 320,247 200,247" fill="#fff"/>
+      <!-- vertical stem -->
+      <polygon points="220,215 250,215 250,345 220,345" fill="#fff"/>
+      <!-- right downward tooth (the Tesla-T signature) -->
+      <polygon points="290,247 320,247 305,295" fill="#fff"/>
+    `
+  },
+  // 3. Chamfered rectangle bowl — all 90° + 45° cuts, no curves
+  {
+    label: 'Chamfered',
+    p: `
+      <!-- stem with chamfered top-left corner -->
+      <polygon points="225,225 235,215 250,215 250,345 220,345 220,232 225,225" fill="#fff"/>
+      <!-- bowl: rectangle with 45° chamfered corners -->
+      <polygon points="250,215 305,215 320,230 320,280 305,295 250,295" fill="#fff"/>
+      <polygon points="250,235 285,235 295,245 295,265 285,275 250,275" fill="#071b4d"/>
+    `
+  },
+  // 4. Slim & tall — narrow proportions, vertical emphasis (Tesla's height-to-width ratio)
+  {
+    label: 'Slim & Tall',
+    p: `
+      <!-- narrow stem -->
+      <polygon points="225,210 245,210 245,350 225,350" fill="#fff"/>
+      <!-- compact bowl, top-aligned -->
+      <polygon points="245,210 295,210 310,225 310,265 295,280 245,280" fill="#fff"/>
+      <polygon points="245,228 282,228 292,238 292,252 282,262 245,262" fill="#071b4d"/>
+    `
+  },
+  // 5. Angular bowl with diagonal slash (futuristic, sharp)
+  {
+    label: 'Diagonal Slash',
+    p: `
+      <polygon points="220,215 250,215 250,345 220,345" fill="#fff"/>
+      <!-- bowl: parallelogram with sharp top -->
+      <polygon points="250,215 312,215 320,235 320,275 290,295 250,295" fill="#fff"/>
+      <polygon points="250,234 295,234 303,244 303,266 280,276 250,276" fill="#071b4d"/>
+      <!-- accent diagonal on stem -->
+      <polygon points="220,300 250,300 250,310 220,320" fill="#071b4d"/>
+    `
+  },
+  // 6. Stencil — broken stem, industrial/signage feel
+  {
+    label: 'Stencil',
+    p: `
+      <!-- stem with stencil break -->
+      <polygon points="220,215 250,215 250,265 220,265" fill="#fff"/>
+      <polygon points="220,275 250,275 250,345 220,345" fill="#fff"/>
+      <!-- bowl with stencil break -->
+      <polygon points="250,215 305,215 320,232 320,250 250,250" fill="#fff"/>
+      <polygon points="250,260 320,260 320,278 305,295 250,295" fill="#fff"/>
+      <polygon points="250,233 295,233 303,242 303,250 250,250" fill="#071b4d"/>
+      <polygon points="250,260 303,260 303,268 295,278 250,278" fill="#071b4d"/>
+    `
+  },
+  // 7. Pointed top stem — Tesla T's signature peak
+  {
+    label: 'Pointed Peak',
+    p: `
+      <!-- stem with sharp triangular peak -->
+      <polygon points="220,225 235,205 250,225 250,345 220,345" fill="#fff"/>
+      <!-- bowl: rectangular -->
+      <polygon points="250,225 312,225 320,240 320,275 312,290 250,290" fill="#fff"/>
+      <polygon points="250,240 295,240 303,250 303,265 295,275 250,275" fill="#071b4d"/>
+    `
+  },
+  // 8. Hard-edged bowl — pure rectangles, brutalist Tesla
+  {
+    label: 'Brutalist',
+    p: `
+      <!-- stem: pure rectangle -->
+      <polygon points="218,215 252,215 252,345 218,345" fill="#fff"/>
+      <!-- bowl: pure rectangle, no cuts -->
+      <polygon points="252,215 318,215 318,290 252,290" fill="#fff"/>
+      <!-- inner negative: pure rectangle -->
+      <polygon points="252,235 300,235 300,270 252,270" fill="#071b4d"/>
+    `
+  }
+];
+
+document.write(variations.map((v, i) => tile(i+1, v.p, v.label)).join(""));
+</script>
+</div>
+
+<div class="foot">
+  <p>Pick a number — say <b style="color:#39ffd0">"go with #N"</b> — and I'll wire it through as the real app icon.</p>
+  <a href="preview.html?v=20">← Back to app</a>
+</div>
+
+</body></html>
