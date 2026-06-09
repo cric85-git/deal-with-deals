@@ -1,4 +1,4 @@
-package com.perq.app;
+package com.perqwallet.app;
 
 import com.getcapacitor.BridgeActivity;
 

@@ -21,7 +21,7 @@ The platform folders are already present in this repo. Use:
 
 ## What Capacitor owns
 
-- `capacitor.config.json` sets the native app name to `Perq`, app id to `com.perq.app`, and web output to `dist`.
+- `capacitor.config.json` sets the native app name to `Perq`, app id to `com.perqwallet.app`, and web output to `dist`.
 - `scripts/build-native.js` copies the static root app into `dist` for native packaging.
 - Native icons and splash screens are already generated in the iOS and Android projects from the approved root `icon-512.png`.
 - GitHub Pages still serves from repo root. The `dist` folder is generated and is not the website deployment source.

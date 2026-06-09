@@ -134,7 +134,7 @@ test('Capacitor config packages Perq for native iOS and Android', ()=>{
   const config=JSON.parse(readRootFile('capacitor.config.json'));
   const pkg=JSON.parse(readRootFile('package.json'));
   assert.strictEqual(config.appName, 'Perq');
-  assert.strictEqual(config.appId, 'com.perq.app');
+  assert.strictEqual(config.appId, 'com.perqwallet.app');
   assert.strictEqual(config.webDir, 'dist');
   ['@capacitor/core','@capacitor/ios','@capacitor/android','@capacitor/camera','@capacitor/geolocation','@capacitor/local-notifications','@capacitor/push-notifications','@capacitor/share','@capacitor/splash-screen'].forEach(dep=>{
     assert(pkg.dependencies[dep], `${dep} dependency missing`);
