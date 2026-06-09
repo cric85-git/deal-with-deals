@@ -1,5 +1,5 @@
 {
-  "appId": "com.perq.app",
+  "appId": "com.perqwallet.app",
   "appName": "Perq",
   "webDir": "dist",
   "bundledWebRuntime": false,
