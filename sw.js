@@ -1,4 +1,4 @@
-const CACHE_NAME = 'perq-v27-deal-form-polish';
+const CACHE_NAME = 'perq-v28-deal-image-toggle';
 const ASSETS = [
   './',
   './index.html',

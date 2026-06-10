@@ -948,6 +948,8 @@ window.viewWalletDeal=function(id){
   html+='<p style="font-size:22px;font-weight:800;margin:0;line-height:1.1">'+merchantText+'</p>';
   if(discountText)html+='<p style="font-size:32px;font-weight:900;margin:6px 0 0;letter-spacing:-1px;line-height:1">'+discountText+'</p>';
   html+='</div>';
+  // Image preview (only when the deal has an image — legacy/Type-a-deal entries skip cleanly)
+  html+=dealImageFrame(d.image,'wallet-detail-img-'+d.id);
   // Info rows
   html+='<div style="background:var(--surface-soft);border-radius:14px;padding:4px 14px;margin-bottom:16px">';
   html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);font-size:14px"><span style="color:var(--text-dim)">🏷️ Merchant</span><span style="color:var(--text);font-weight:600">'+merchantText+'</span></div>';
@@ -1916,7 +1918,7 @@ Read carefully — get the name and number EXACTLY as shown. Return only JSON.`;
 function openLoyaltyManualPrefilled(data,image){
   const colors=['#DC2626','#059669','#7C3AED','#2563EB','#D97706','#1F2937'];
   let html='<div class="modal-handle"></div><h3 class="modal-title">Review & save</h3>';
-  if(image)html+='<div style="width:100%;background:#f5f5f5;border-radius:12px;margin-bottom:12px;overflow:hidden;display:flex;justify-content:center"><img src="'+image+'" style="max-width:100%;max-height:320px;object-fit:contain;display:block"></div>';
+  html+=dealImageFrame(image,'loyalty-form-img');
   if(data.name||data.number){
     html+='<div style="background:#EAFBF4;border:1px solid #00C9A7;border-radius:12px;padding:10px 12px;margin-bottom:12px;display:flex;align-items:center;gap:8px;font-size:12px;color:#065F46;font-weight:600"><span style="font-size:16px">✨</span>AI extracted these details</div>';
   }
@@ -2119,6 +2121,38 @@ function parseJsonResponse(text){
   }
 }
 
+// Reusable image preview frame. Collapsed by default (90px thumbnail), tap the
+// Expand pill (or the strip itself) to inflate to full size. Same component on
+// the deal-form preview, loyalty-form preview, and wallet detail modal so the
+// user gesture is consistent across surfaces. Spec: feature-deal-form-discount-expiry.md
+function dealImageFrame(src,frameId){
+  if(!src)return '';
+  const id=frameId||'deal-img-'+Math.random().toString(36).slice(2,8);
+  return '<div id="'+id+'" data-expanded="false" style="position:relative;width:100%;background:#0a1628;border-radius:14px;margin-bottom:12px;overflow:hidden;display:flex;justify-content:center;align-items:center">'
+    +'<img src="'+src+'" alt="Deal image" style="width:100%;max-height:90px;object-fit:cover;display:block;cursor:pointer" onclick="toggleDealImage(\''+id+'\')">'
+    +'<button type="button" onclick="toggleDealImage(\''+id+'\')" aria-label="Expand image" style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.65);color:white;border:none;border-radius:999px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px">'
+    +'<svg viewBox="0 0 24 24" style="width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>'
+    +'<span data-toggle-label>Expand</span></button>'
+    +'</div>';
+}
+
+window.toggleDealImage=function(frameId){
+  const frame=document.getElementById(frameId);
+  if(!frame)return;
+  const img=frame.querySelector('img');
+  const label=frame.querySelector('[data-toggle-label]');
+  const expanded=frame.getAttribute('data-expanded')==='true';
+  if(expanded){
+    frame.setAttribute('data-expanded','false');
+    if(img){img.style.maxHeight='90px';img.style.objectFit='cover';}
+    if(label)label.textContent='Expand';
+  }else{
+    frame.setAttribute('data-expanded','true');
+    if(img){img.style.maxHeight='60vh';img.style.objectFit='contain';}
+    if(label)label.textContent='Collapse';
+  }
+};
+
 window.openDealPreview=function(data,image){
   const cats=CATEGORIES.map(c=>'<option value="'+c+'"'+(c===data.category?' selected':'')+'>'+c+'</option>').join('');
   // Pre-fill detection from OCR-extracted string. Default to $ if shape unclear.
@@ -2137,7 +2171,7 @@ window.openDealPreview=function(data,image){
     return '<button id="'+id+'" type="button" data-active="'+(active?'true':'false')+'" onclick="'+onclick+'" style="flex:1;padding:10px 0;border:none;background:'+bg+';color:'+color+';font-weight:700;font-size:14px;cursor:pointer">'+label+'</button>';
   }
   let html='<div class="modal-handle"></div><h3 class="modal-title">Review & save</h3>';
-  if(image)html+='<div style="width:100%;background:#f5f5f5;border-radius:12px;margin-bottom:12px;overflow:hidden;display:flex;justify-content:center"><img src="'+image+'" style="max-width:100%;max-height:320px;object-fit:contain;display:block"></div>';
+  html+=dealImageFrame(image,'deal-form-img');
   html+='<div style="background:#EAFBF4;border:1px solid #00C9A7;border-radius:12px;padding:10px 12px;margin-bottom:12px;display:flex;align-items:center;gap:8px;font-size:12px;color:#065F46;font-weight:600"><span style="font-size:16px">✨</span>AI extracted these details — review below</div>';
   html+='<div class="form-row"><label>Merchant *</label><input id="f-merchant" placeholder="Store name" value="'+escapeHtml(data.merchant||'')+'"></div>';
   // NEW: discount = symbol toggle + number. % branch reveals total-value input.

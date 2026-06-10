@@ -4,6 +4,38 @@ All notable feature changes to the Perq app are documented here.
 
 ---
 
+## [Unreleased] — 2026-06-10 (deal-image-toggle)
+
+### 🆕 Feature: collapsed thumbnail + Expand toggle, full image on saved-deal modal
+
+Spec amendment: `.kiro/specs/feature-deal-form-discount-expiry.md` (ACs 22-25 + 3 edge cases). One new global: `window.toggleDealImage(frameId)`.
+
+**What a user couldn't do well yesterday:**
+- The deal-form image preview filled up to 320px tall — pushing merchant/discount/expiry fields below the fold on iPhone. Users had to scroll just to see the form they were filling out.
+- Tapping a saved deal in the wallet (the new Deal Detail Modal) showed merchant + discount + expiry, but **not the image**. Deals where the cashier needs to see the original coupon screenshot or barcode were unusable from the wallet — the image was saved but never surfaced.
+
+**What a user can do today:**
+- The deal-form image preview is now a **90px collapsed thumbnail** with a small "Expand" pill in the top-right corner. The form fields fit on one screen with no scroll.
+- Tapping the pill (or the thumbnail itself) **expands inline** to `max-height: 60vh` with `object-fit: contain`. Pill text becomes "Collapse". Tap again to return to the thumbnail.
+- The same `dealImageFrame` component is now rendered on the **wallet Deal Detail Modal** (`viewWalletDeal`) below the brand header. Tap a saved deal → see the merchant/discount/expiry rows immediately, with the original image one tap away. Cashier flow works.
+- Deals saved without an image (legacy entries or "Type a deal" manual flow) render the modal cleanly without an empty frame.
+
+**Public global added (covered by spec):**
+- `window.toggleDealImage(frameId)` — flips `data-expanded` on the frame and adjusts inline `max-height` + `object-fit` on the contained `<img>` and pill label text. Defensive `if(!frame)return` for missing-id calls.
+
+**Surfaces sharing the same component:**
+- `openDealPreview` (deal Review & save form) — frame id `deal-form-img`
+- `openLoyaltyManualPrefilled` (loyalty card Review & save form) — frame id `loyalty-form-img`
+- `viewWalletDeal` (saved deal detail modal) — frame id `wallet-detail-img-<dealId>` (per-deal so multiple modals don't collide)
+
+**Tests added (4 cases, all assertion-bearing for Gate 4B.7):**
+- `scripts/perq-load-test.js` — `toggleDealImage` added to required globals; LOAD OK still passes.
+- `scripts/perq-render-test.js` — AC21+22 (form preview renders collapsed thumbnail with Expand pill, no legacy `height:100px`), AC23 (viewWalletDeal renders image frame with deal-id-scoped frame id when `d.image` is set), AC24 (viewWalletDeal omits frame entirely when `d.image` is absent), AC25 (`toggleDealImage` is `typeof === 'function'`). RENDER 38 → 41 PASS.
+
+**Cache version:** `?v=34` → `?v=35`. SW `perq-v27-deal-form-polish` → `perq-v28-deal-image-toggle`. Native build + cap sync ios/android complete.
+
+---
+
 ## [Unreleased] — 2026-06-10 (deal-form-polish)
 
 ### 🛠 Polish: today-default expiry date + full-size image preview

@@ -1,15 +1,15 @@
 # Perq Automated Test Results
 
-Last run: 2026-06-10 (post deal-form-polish — today-default expiry + full image preview)
+Last run: 2026-06-10 (post deal-image-toggle — collapsed thumbnail + Expand toggle, image on saved-deal modal)
 
 ## Suite 1 — `npm test` (Node script suite, runs in CI on every push)
 
 | Test | PASS | FAIL |
 |---|---:|---:|
 | `scripts/perq-gamif-test.js` | 20 | 0 |
-| `scripts/perq-load-test.js` | LOAD OK | 0 |
+| `scripts/perq-load-test.js` | LOAD OK (toggleDealImage now in required globals) | 0 |
 | `scripts/perq-migration-test.js` | 6 | 0 |
-| `scripts/perq-render-test.js` | 38 (was 35: +1 setHasExpiry today-default empty, +1 setHasExpiry preserves prefilled, +1 openDealPreview full image) | 0 |
+| `scripts/perq-render-test.js` | 41 (was 38: +1 form preview collapsed thumbnail + Expand pill, +1 viewWalletDeal renders image when present, +1 viewWalletDeal omits frame when no image, +1 toggleDealImage exposed; AC21 marker updated for new structure) | 0 |
 | `scripts/perq-brand-test.js` | 53 (+ 9 outline-warn) | 0 |
 | `scripts/perq-splash-test.js` | 18 | 0 |
 
