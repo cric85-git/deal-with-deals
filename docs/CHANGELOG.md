@@ -4,6 +4,28 @@ All notable feature changes to the Perq app are documented here.
 
 ---
 
+## [Unreleased] — 2026-06-10 (splash-boot-logo-transparent)
+
+### 🛠 Fix: white square frame around splash logo on device
+
+User reported (with screenshot): the rendered splash showed a glaring white square box behind the dark wallet icon.
+
+**Root cause:** the previous `splash-raster-logo` iteration referenced `icon-192.png` for the boot overlay logo. That file is the PWA launcher icon — it has a white square background designed to be masked by iOS rounded corners or Android adaptive icon shapes. Dropped onto the dark splash background with no shape masking, the white padding became a visible frame.
+
+**Fix:** added `scripts/build-boot-logo.js` which renders the same wallet SVG used by `scripts/build-splash.js` to a 208×208 PNG with `omitBackground: true` (preserving alpha). Saved as `boot-logo.png` at repo root and added to the SW precache list. `preview.html` boot overlay now references `boot-logo.png` instead of `icon-192.png`.
+
+**Bonus alignment fix:** with the white frame gone, the visible logo content sits ~22px below the IMG box top (the SVG's wallet shape occupies the central 56% of its 512×512 viewBox). Reverted `#boot-splash` `padding-top` from `28vh` back to `26vh` so the visible content top aligns with the native master's y=240 (delta 1px, well within 10px tolerance).
+
+**Files:**
+- `scripts/build-boot-logo.js` — new, produces transparent PNG via Playwright + Chromium screenshot with omitBackground
+- `boot-logo.png` — new asset at repo root, 208×208 RGBA, 10.3 KB
+- `preview.html` — `<img src="icon-192.png">` → `<img src="boot-logo.png">`; `padding-top:28vh` → `26vh`
+- `sw.js` — `boot-logo.png` added to ASSETS precache; `CACHE_NAME` bumped to `perq-v35-boot-logo-transparent`
+
+**Tests:** 148/148 PASS + smoke 6/6.
+
+---
+
 ## [Unreleased] — 2026-06-10 (splash-raster-logo + repo cleanup)
 
 ### 🛠 Fix: splash content glitch — raster logo + body gradient + aligned position
