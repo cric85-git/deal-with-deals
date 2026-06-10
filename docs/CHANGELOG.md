@@ -4,6 +4,39 @@ All notable feature changes to the Perq app are documented here.
 
 ---
 
+## [Unreleased] — 2026-06-10 (splash-no-glitch)
+
+### 🛠 Fix: splash screen rendering glitch on load
+
+The user reported the splash had "some animation on it and when it loads up, it appears like a glitch." Three root causes, all fixed:
+
+**1. CSS transition firing on initial paint.**
+- `#boot-splash{transition:opacity .35s ease}` was declared at the CSS level, which on some Safari versions fires a transition during the very first opacity computation — visible as a fade-in flash.
+- Fix: removed `transition` from CSS entirely. The transition is now applied INLINE via `splash.style.transition='opacity 350ms ease'` only when `dismiss()` runs. Initial render has no transition declared, so there's nothing for the browser to animate on first paint.
+- Also removed the `#boot-splash.hide{opacity:0}` rule. Dismiss now sets opacity inline directly.
+
+**2. SVG drop-shadow filter painting progressively.**
+- The wallet path used `<filter><feDropShadow dx=0 dy=14 stdDeviation=14 flood-opacity=0.4></filter>`. iOS Safari renders SVG filters in multiple compositor passes — the wallet visibly "fills in" over 2-3 frames, which reads as a glitch animation.
+- Fix: removed the `<filter>` definition and the `filter="url(#bs-shadow)"` reference on the wallet path. The wallet is now a flat gradient-filled shape that paints in a single composite pass. The drop-shadow was decorative, not structural — the brand identity is preserved by the wallet color, the card peeking out, and the amber clasp dot.
+
+**3. Linear gradient background painting incrementally.**
+- `background:linear-gradient(160deg,#082b6f 0%,#020817 100%)` had two color stops. iOS sometimes paints gradient stops in two passes when the layer isn't GPU-promoted.
+- Fix: switched to solid `background:#020817`. This also gives **perfect color continuity** with the native splash (which uses solid `#020817` per `capacitor.config.json`). Native → webview handoff now has zero color shift.
+- Added `transform:translateZ(0); -webkit-transform:translateZ(0)` to GPU-promote the layer so the entire splash composes in one pass.
+
+**Splash test still passes 18/18:**
+- Logo size 104px ✓
+- Wordmark 34px ✓
+- Tagline 13px ✓
+- Visible within 1s, dismissed within 3s ✓
+- Native + webview alignment within 1px (now y=240 native, y=241 webview — same as before) ✓
+
+**No new globals. No new tests** — the fix is purely a CSS/markup tightening; no new behavior to assert. The existing 18 splash assertions cover the load, visibility, alignment, and dismiss timing comprehensively.
+
+**Cache version:** `?v=38` → `?v=39`. SW `perq-v31-image-align-splash` → `perq-v32-splash-no-glitch`. Native build + cap sync ios/android complete.
+
+---
+
 ## [Unreleased] — 2026-06-10 (image-align-splash)
 
 ### 🛠 Fix: image right-shift on snap + splash visible for 2 seconds

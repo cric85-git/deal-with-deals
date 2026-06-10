@@ -1,6 +1,6 @@
 # Perq Automated Test Results
 
-Last run: 2026-06-10 (post image-align-splash — drop flex from image frame, MIN_MS 900→2000)
+Last run: 2026-06-10 (post splash-no-glitch — strip drop-shadow filter, no entry transition, solid bg matches native)
 
 ## Suite 1 — `npm test` (Node script suite, runs in CI on every push)
 
@@ -9,9 +9,9 @@ Last run: 2026-06-10 (post image-align-splash — drop flex from image frame, MI
 | `scripts/perq-gamif-test.js` | 20 | 0 |
 | `scripts/perq-load-test.js` | LOAD OK | 0 |
 | `scripts/perq-migration-test.js` | 6 | 0 |
-| `scripts/perq-render-test.js` | 51 (was 50: +1 image frame wrapper no longer uses display:flex — drops the iOS Safari subpixel right-shift on snap) | 0 |
+| `scripts/perq-render-test.js` | 51 | 0 |
 | `scripts/perq-brand-test.js` | 53 (+ 9 outline-warn) | 0 |
-| `scripts/perq-splash-test.js` | 18 | 0 |
+| `scripts/perq-splash-test.js` | 18 — alignment within 1px between native and webview overlay maintained | 0 |
 
 **Suite 1 total: 112 PASS, 0 FAIL.** (Was 107 PASS at supervisor v1 deploy → +5 from the two new features.)
 
