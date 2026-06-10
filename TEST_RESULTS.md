@@ -1,6 +1,6 @@
 # Perq Automated Test Results
 
-Last run: 2026-06-10 (post splash-no-glitch — strip drop-shadow filter, no entry transition, solid bg matches native)
+Last run: 2026-06-10 (post splash-unified-gradient — native PNG + boot overlay + body all use #0D1B2A → #1B3A5B)
 
 ## Suite 1 — `npm test` (Node script suite, runs in CI on every push)
 
@@ -11,7 +11,7 @@ Last run: 2026-06-10 (post splash-no-glitch — strip drop-shadow filter, no ent
 | `scripts/perq-migration-test.js` | 6 | 0 |
 | `scripts/perq-render-test.js` | 51 | 0 |
 | `scripts/perq-brand-test.js` | 53 (+ 9 outline-warn) | 0 |
-| `scripts/perq-splash-test.js` | 18 — alignment within 1px between native and webview overlay maintained | 0 |
+| `scripts/perq-splash-test.js` | 18 — backgroundColor now `#0D1B2A`, alignment within 1px maintained | 0 |
 
 **Suite 1 total: 112 PASS, 0 FAIL.** (Was 107 PASS at supervisor v1 deploy → +5 from the two new features.)
 
