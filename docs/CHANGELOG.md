@@ -4,7 +4,38 @@ All notable feature changes to the Perq app are documented here.
 
 ---
 
-## [Unreleased] — 2026-06-10 (splash-unified-gradient)
+## [Unreleased] — 2026-06-10 (splash-raster-logo + repo cleanup)
+
+### 🛠 Fix: splash content glitch — raster logo + body gradient + aligned position
+
+User reported: "background is fine but the glitch is not addressed for splash screen". After the unified-gradient fix removed the color shift, a second-order glitch remained inside the splash content itself — the logo appeared to jitter/redraw during the handoff.
+
+**Three causes diagnosed and fixed:**
+
+1. **Body bg painted solid before overlay covered it.** The `<body>` was `background: var(--bg)` (solid `#0D1B2A`) while the overlay was a gradient. Even though the overlay covers the body when active, the first-paint frame showed the solid before the overlay composited. Switched body to the same gradient so first paint is identical.
+2. **Inline SVG logo painted progressively.** The boot overlay logo was an inline `<svg>` with gradient-filled paths. iOS Safari and Chromium can paint SVG paths in stages on first frame. Replaced with `<img src="icon-192.png" width="104" height="104" decoding="sync" loading="eager" fetchpriority="high">`. A raster paints in a single texture upload — no progressive fill possible. Native splash master PNG already uses a raster pipeline, so both phases of the boot now use rasters of the same artwork.
+3. **Non-standard `font-weight: 850` rendered inconsistently.** iOS Safari and Chromium round 850 differently against the available font weights for SF Pro Display. Changed boot overlay AND `scripts/build-splash.js` to `font-weight: 800` (a standard weight that maps directly without rounding).
+
+**Bonus alignment fix:** raster `<img>` doesn't have the implicit baseline padding that the inline `<svg>` had, so the logo sat 18px higher than the native master PNG (failing the alignment test's 10px tolerance). Bumped `#boot-splash` `padding-top` from `26vh` to `28vh` — boot overlay logo now at y=239px vs native's y=240px (delta 1px).
+
+**Files:**
+- `preview.html` — body background → wallet gradient; boot-splash overlay markup → raster `<img>`; padding-top 26vh → 28vh; font-weight 850 → 800
+- `scripts/build-splash.js` — wordmark font-weight 850 → 800. PNG regeneration produced bit-identical output at the rendered resolutions.
+- `sw.js` — `CACHE_NAME` bumped to `perq-v34-splash-raster-logo`
+
+**Tests:** 148/148 PASS (gamif 20 / migration 6 / render 51 / brand 53 / splash 18) + smoke 6/6.
+
+### 🧹 Chore: repo cleanup — relocate to `Perq_Dev/`, scrub personal docs from history
+
+Project files relocated from workspace root into a dedicated `Perq_Dev/` subfolder so the Kiro workspace can host non-Perq work alongside without clutter. Git internals moved with the project — the GitHub Pages deploy URL is unchanged.
+
+Personal/internal documents that had been incidentally tracked by the repo (resumes, interview prep, an internal PRFAQ, three resume-generation Python scripts, a stray `.DS_Store`) were scrubbed from ALL commit history via `git-filter-repo` and force-pushed. Local copies remain at `/Users/itsshail/Kiro-workspace/Documents/` outside the repo.
+
+`.gitignore` extended to defensively block `Documents/`, `generate_*.py`, `*.docx` from ever being re-added.
+
+---
+
+## [Released] — 2026-06-10 (splash-unified-gradient)
 
 ### 🛠 Fix: unified splash + body gradient — zero color shift on handoff
 
