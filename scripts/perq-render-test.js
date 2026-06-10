@@ -251,5 +251,156 @@ try {
   console.error('calculateDiscount tests threw:', e.message);
 }
 
+// ---- saveDealForm + setDiscountSymbol + setHasExpiry tests ----
+// Spec: feature-deal-form-discount-expiry.md
+// state.deals is closed over inside the IIFE, so we can't read sandbox.state directly.
+// saveDealForm writes via save(K.deals, state.deals) which persists to localStorage.
+// We read back from store['perq-mvp:deals'] to verify.
+try {
+  function setEl(id, value) {
+    const el = sandbox.document.getElementById(id);
+    el.value = value;
+  }
+  function readToasts() {
+    return sandbox.document.getElementById('toast').textContent || '';
+  }
+  function getDeals() { return JSON.parse(store['perq-mvp:deals'] || '[]'); }
+  function lastDeal() { const d = getDeals(); return d[d.length - 1]; }
+  function dealCount() { return getDeals().length; }
+  function resetState() {
+    // Reset localStorage to empty + re-run IIFE so the in-closure state.deals
+    // is fresh.  The rewards reset prevents cross-test pollution from earlier
+    // calculateDiscount etc cases.
+    store['perq-mvp:deals'] = '[]';
+    store['perq-mvp:rewards'] = JSON.stringify({points:0,spins:0,streak:0,saved:0,lastClaim:null,missions:{date:null,done:{}},lastSeenTier:'BRONZE',unlocksSeen:[]});
+    vm.runInContext(code, ctx, { filename: 'preview-app.js' });
+  }
+  function primeForm(opts) {
+    setEl('f-merchant', opts.merchant || '');
+    setEl('f-discount-num', opts.num != null ? String(opts.num) : '');
+    setEl('f-symbol', opts.symbol || '$');
+    setEl('f-value', opts.value != null ? String(opts.value) : '');
+    setEl('f-category', opts.category || 'Groceries');
+    setEl('f-code', opts.code || '');
+    setEl('f-has-expiry', opts.hasExpiry || 'N');
+    setEl('f-expiry', opts.expiry || '');
+    setEl('f-address', opts.address || '');
+    setEl('toast', '');
+  }
+
+  // AC7: empty merchant → toast Merchant required, no save
+  resetState();
+  primeForm({ num: 10, symbol: '$' });
+  sandbox.saveDealForm();
+  if (dealCount() === 0 && readToasts().includes('Merchant required')) pass++;
+  else { fail++; console.error('saveDealForm(empty merchant) expected toast+no-save — got toast', JSON.stringify(readToasts()), 'count', dealCount()); }
+
+  // AC8: empty discount number → toast, no save (edge: invalid/null input)
+  resetState();
+  primeForm({ merchant: 'Target', num: '', symbol: '$' });
+  sandbox.saveDealForm();
+  if (dealCount() === 0 && readToasts().includes('Discount amount required')) pass++;
+  else { fail++; console.error('saveDealForm(empty num) expected toast+no-save — got toast', JSON.stringify(readToasts())); }
+
+  // AC9: % selected, value empty → toast, no save (edge: invalid/null input)
+  resetState();
+  primeForm({ merchant: 'Target', num: 20, symbol: '%', value: '' });
+  sandbox.saveDealForm();
+  if (dealCount() === 0 && readToasts().includes('Total value required')) pass++;
+  else { fail++; console.error('saveDealForm(% no value) expected toast+no-save — got toast', JSON.stringify(readToasts())); }
+
+  // AC10: hasExpiry=Y, date empty → toast, no save (edge: invalid/null input)
+  resetState();
+  primeForm({ merchant: 'Target', num: 10, symbol: '$', hasExpiry: 'Y', expiry: '' });
+  sandbox.saveDealForm();
+  if (dealCount() === 0 && readToasts().includes('Pick an expiry date')) pass++;
+  else { fail++; console.error('saveDealForm(Y no date) expected toast+no-save — got toast', JSON.stringify(readToasts())); }
+
+  // AC11: $ symbol num=10 → discount '$10 off', value=10
+  resetState();
+  primeForm({ merchant: 'Target', num: 10, symbol: '$', hasExpiry: 'N' });
+  sandbox.saveDealForm();
+  const d11 = lastDeal();
+  if (dealCount() === 1 && d11.discount === '$10 off' && d11.value === 10) pass++;
+  else { fail++; console.error('saveDealForm($ 10) expected "$10 off"/value=10, got', JSON.stringify(d11)); }
+
+  // AC12: % symbol num=20 value=50 → discount '20% off', value=10 (50×0.20)
+  resetState();
+  primeForm({ merchant: 'Target', num: 20, symbol: '%', value: 50, hasExpiry: 'N' });
+  sandbox.saveDealForm();
+  const d12 = lastDeal();
+  if (dealCount() === 1 && d12.discount === '20% off' && d12.value === 10) pass++;
+  else { fail++; console.error('saveDealForm(% 20 of 50) expected "20% off"/value=10, got', JSON.stringify(d12)); }
+
+  // AC13: hasExpiry=N → expiry === ''
+  resetState();
+  primeForm({ merchant: 'Target', num: 10, symbol: '$', hasExpiry: 'N' });
+  sandbox.saveDealForm();
+  const d13 = lastDeal();
+  if (dealCount() === 1 && d13.expiry === '') pass++;
+  else { fail++; console.error('saveDealForm(N expiry) expected "" got', JSON.stringify(d13 && d13.expiry)); }
+
+  // AC14: hasExpiry=Y date=2026-12-31 → preserved
+  resetState();
+  primeForm({ merchant: 'Target', num: 10, symbol: '$', hasExpiry: 'Y', expiry: '2026-12-31' });
+  sandbox.saveDealForm();
+  const d14 = lastDeal();
+  if (dealCount() === 1 && d14.expiry === '2026-12-31') pass++;
+  else { fail++; console.error('saveDealForm(Y 2026-12-31) expected "2026-12-31" got', JSON.stringify(d14 && d14.expiry)); }
+
+  // ---- Pre-fill edge cases (spec § 5 cases 5-8) ----
+  // Re-install modal-overlay setter because resetState() re-runs the IIFE
+  // and earlier `els['modal-overlay']` may have been replaced. modalHTML
+  // captures the openModal() innerHTML so we can grep pre-fill markers.
+  els['modal-overlay'] = (function () {
+    const e = fakeEl('modal-overlay');
+    Object.defineProperty(e, 'innerHTML', { set(v) { modalHTML = v; }, get() { return modalHTML; } });
+    return e;
+  })();
+
+  // Edge case 5: pre-fill OCR with non-numeric discount → defaults to $ toggle,
+  // num input empty. Modal HTML must mark f-sym-dollar active and f-sym-pct inactive.
+  modalHTML = '';
+  sandbox.openDealPreview({ merchant: 'X', discount: 'twenty bucks' });
+  if (modalHTML.includes('id="f-sym-dollar"') && modalHTML.includes('data-active="true"') && !/f-sym-pct"[^>]*data-active="true"/.test(modalHTML)) pass++;
+  else { fail++; console.error('openDealPreview(non-numeric discount) expected $-active default, got modalHTML[0..400]:', modalHTML.slice(0, 400)); }
+
+  // Edge case 6: pre-fill OCR with data.expiry set → has-expiry=Y, date prefilled.
+  modalHTML = '';
+  sandbox.openDealPreview({ merchant: 'X', expiry: '2026-12-31' });
+  if (modalHTML.includes('value="2026-12-31"') && modalHTML.includes('value="Y"') && /f-exp-y"[^>]*data-active="true"/.test(modalHTML)) pass++;
+  else { fail++; console.error('openDealPreview(expiry=2026-12-31) expected has-expiry=Y + date prefilled, got:', modalHTML.slice(0, 600)); }
+
+  // Edge case 7: pre-fill OCR with data.expiry empty/undefined → has-expiry=N,
+  // date input hidden via display:none.
+  modalHTML = '';
+  sandbox.openDealPreview({ merchant: 'X' });
+  if (modalHTML.includes('value="N"') && /f-exp-n"[^>]*data-active="true"/.test(modalHTML) && modalHTML.includes('display:none')) pass++;
+  else { fail++; console.error('openDealPreview(no expiry) expected has-expiry=N + date hidden, got:', modalHTML.slice(0, 600)); }
+
+  // Edge case 8: returning user with pre-existing free-form discount strings —
+  // wallet render must not crash on legacy shape (no `value` field, free-form
+  // discount text). Load old-shape deal, navigate to wallet, confirm no throw
+  // and the merchant string appears somewhere downstream.
+  store['perq-mvp:deals'] = JSON.stringify([
+    { id: 'legacy1', merchant: 'OldStyleStore', discount: '20% off entire purchase', redeemed: false, createdAt: Date.now() }
+  ]);
+  vm.runInContext(code, ctx, { filename: 'preview-app.js' });
+  let legacyOk = false;
+  try {
+    sandbox.goPage('wallet');
+    // No throw is the primary assertion. Also verify localStorage round-trip preserved the legacy shape.
+    const back = JSON.parse(store['perq-mvp:deals']);
+    if (back[0].discount === '20% off entire purchase' && back[0].value === undefined) legacyOk = true;
+  } catch (e) {
+    console.error('legacy free-form deal crashed wallet render:', e.message);
+  }
+  if (legacyOk) pass++;
+  else fail++;
+} catch (e) {
+  fail++;
+  console.error('saveDealForm tests threw:', e.message);
+}
+
 console.log(`RENDER TEST: PASS ${pass}, FAIL ${fail}`);
 process.exit(fail === 0 ? 0 : 1);

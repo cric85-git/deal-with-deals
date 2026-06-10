@@ -1,4 +1,4 @@
-const CACHE_NAME = 'perq-v25-profile-beacon';
+const CACHE_NAME = 'perq-v26-deal-form-discount-expiry';
 const ASSETS = [
   './',
   './index.html',
