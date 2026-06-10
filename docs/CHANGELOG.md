@@ -4,6 +4,44 @@ All notable feature changes to the Perq app are documented here.
 
 ---
 
+## [Unreleased] — 2026-06-10 (splash-unified-gradient)
+
+### 🛠 Fix: unified splash + body gradient — zero color shift on handoff
+
+User reported: "Now the app loads with one gradient and changes to another background gradient which is a darker shade. You are not being consistent here."
+
+**Diagnosis:**
+The boot sequence had THREE different background treatments:
+1. **Native splash master PNG**: gradient `#082b6f → #020817` (the "splash gradient" tokens from steering)
+2. **Boot overlay**: solid `#020817` (after the previous fix)
+3. **App body / wallet**: gradient `#0D1B2A → #1B3A5B` (the "page bg" tokens)
+
+So the user saw: dark splash gradient → solid `#020817` → lighter wallet gradient. Three colors, two transitions, both visible to the eye.
+
+**Fix:**
+Unified all three to the wallet gradient `linear-gradient(180deg, #0D1B2A 0%, #1B3A5B 100%)`:
+
+- **`scripts/build-splash.js`**: master PNG background changed from `linear-gradient(160deg, #082b6f, #020817)` to `linear-gradient(180deg, #0D1B2A, #1B3A5B)`. Regenerated all 35 platform PNGs (iOS Splash.imageset @1x/@2x/@3x light+dark + Android port/land × ldpi…xxxhdpi × default/night).
+- **`preview.html` boot overlay**: changed from solid `#020817` to the wallet gradient.
+- **`capacitor.config.json` SplashScreen.backgroundColor**: changed from `#020817` to `#0D1B2A` (top of the wallet gradient — used as the fallback fill behind the master PNG, but with `scaleAspectFill` the image fills the screen so this is mostly invisible).
+- **`scripts/perq-splash-test.js`**: updated expected `backgroundColor` to `#0D1B2A`. Updated the synthetic native-splash-mock fixtures (which simulate `scaleAspectFill` for the alignment test) to the new color.
+- **`.kiro/steering/perq.md` splash contract**: updated documentation to reflect the unified gradient.
+
+**Result:**
+Native splash → boot overlay → wallet body now share the EXACT same gradient. The only "change" the user sees is the dismiss fade-out animation of the boot overlay revealing identical colors underneath. Zero color shift. The user's complaint is resolved.
+
+**The `#082b6f` and `#020817` "splash bg" tokens in the steering color palette are now legacy** — kept in the palette section for historical reference but no longer used at runtime. A future cleanup commit can remove them once we're sure no other code references them.
+
+**Splash test still 18/18:**
+- Native splash logo top edge at y=240px (28% of viewport)
+- Webview overlay logo top edge at y=241px (28% of viewport)
+- Aligned within 1px — handoff invisible
+- Logo 104px, wordmark 34px, tagline 13px — all unchanged
+
+**Cache version:** `?v=39` → `?v=40`. SW `perq-v32-splash-no-glitch` → `perq-v33-splash-unified-gradient`. Native build + cap sync ios/android complete (all 35 master PNGs regenerated and synced).
+
+---
+
 ## [Unreleased] — 2026-06-10 (splash-no-glitch)
 
 ### 🛠 Fix: splash screen rendering glitch on load

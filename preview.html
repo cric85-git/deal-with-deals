@@ -200,13 +200,15 @@ input[type=range]:focus{outline:none}
    (build-splash.js puts content at 26% down the 2732 canvas, which after
    Capacitor's scaleAspectFill on iPhone lands at ~26vh) so there's no
    visible "shift up" when the native splash hands off to this overlay. */
-/* Boot splash — designed for ZERO entry animation. Solid background matches
-   the native splash (#020817) so the handoff is invisible. GPU-promoted via
-   translateZ(0) so the first paint is a single compositor pass instead of
-   incremental tile-painting. NO transition declared at the CSS level — the
-   dismiss fade is applied inline via JS only when ready, so initial render
-   has nothing to animate. */
-#boot-splash{position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:26vh;gap:16px;background:#020817;transform:translateZ(0);-webkit-transform:translateZ(0)}
+/* Boot splash — designed for ZERO entry animation. Background uses the
+   SAME wallet gradient (#0D1B2A → #1B3A5B) the body shows underneath, so
+   when this overlay fades out the user sees identical colors above and
+   below the fade — perfect color continuity across native splash → boot
+   overlay → wallet body. GPU-promoted via translateZ(0) so the first
+   paint is a single compositor pass. NO transition declared at the CSS
+   level — the dismiss fade is applied inline via JS only when ready, so
+   initial render has nothing to animate. */
+#boot-splash{position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:26vh;gap:16px;background:linear-gradient(180deg,#0D1B2A 0%,#1B3A5B 100%);transform:translateZ(0);-webkit-transform:translateZ(0)}
 #boot-splash .bs-logo{width:104px;height:104px;display:block}
 #boot-splash .bs-word{font-size:34px;font-weight:850;color:#34D399;letter-spacing:-0.02em;line-height:1;margin-top:6px}
 #boot-splash .bs-tag{font-size:13px;font-weight:500;color:rgba(255,255,255,0.72);letter-spacing:0.02em;margin-top:0}
@@ -599,6 +601,6 @@ input[type=range]:focus{outline:none}
 <div id="confetti-root" style="position:fixed;inset:0;pointer-events:none;z-index:9998;overflow:hidden"></div>
 <input type="file" id="capture-input" accept="image/*" capture="environment" style="display:none">
 
-<script src="preview-app.js?v=39"></script>
+<script src="preview-app.js?v=40"></script>
 </body>
 </html>

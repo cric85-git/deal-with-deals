@@ -1,4 +1,4 @@
-const CACHE_NAME = 'perq-v32-splash-no-glitch';
+const CACHE_NAME = 'perq-v33-splash-unified-gradient';
 const ASSETS = [
   './',
   './index.html',
