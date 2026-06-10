@@ -1,4 +1,4 @@
-const CACHE_NAME = 'perq-v26-deal-form-discount-expiry';
+const CACHE_NAME = 'perq-v27-deal-form-polish';
 const ASSETS = [
   './',
   './index.html',
