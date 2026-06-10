@@ -57,9 +57,13 @@ const TARGETS = [
   'android/app/src/main/res/drawable-land-night-xxxhdpi/splash.png'
 ];
 
-// Splash artwork — square, content centered, navy gradient bg.
-// Wallet artwork is the same shape used in brand/perq-icon.svg, scaled
-// up and lifted slightly so "Perq" + tagline fit underneath.
+// Splash artwork — square 2732×2732. Capacitor / iOS LaunchScreen apply
+// scaleAspectFill so on iPhone (1170×2532 device px) the content gets
+// scaled by ~0.927 and cropped horizontally. To make the displayed sizes
+// match human-readable target sizes we render content small in the
+// source: logo ~12% canvas, "Perq" word ~4% font, tagline ~1.6% font.
+// Vertically the content sits in the upper portion (top-aligned) so it
+// reads like a launch frame, not centered like a hero unit.
 function splashHtml(size) {
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
     *{margin:0;padding:0;box-sizing:border-box}
@@ -67,12 +71,12 @@ function splashHtml(size) {
       font-family:-apple-system,'SF Pro Display','Helvetica Neue',sans-serif;
       background:linear-gradient(160deg,#082b6f 0%,#020817 100%)}
     .stage{width:100%;height:100%;display:flex;flex-direction:column;
-      align-items:center;justify-content:center;gap:64px}
-    .logo{width:${Math.round(size*0.36)}px;height:${Math.round(size*0.36)}px}
-    .word{font-size:${Math.round(size*0.13)}px;font-weight:850;color:#34D399;
-      letter-spacing:-0.02em;line-height:1;margin-top:-32px}
-    .tag{font-size:${Math.round(size*0.038)}px;font-weight:500;
-      color:rgba(255,255,255,0.78);letter-spacing:0.02em;margin-top:-8px}
+      align-items:center;justify-content:flex-start;padding-top:${Math.round(size*0.27)}px;gap:${Math.round(size*0.012)}px}
+    .logo{width:${Math.round(size*0.12)}px;height:${Math.round(size*0.12)}px}
+    .word{font-size:${Math.round(size*0.042)}px;font-weight:850;color:#34D399;
+      letter-spacing:-0.02em;line-height:1;margin-top:${Math.round(size*0.008)}px}
+    .tag{font-size:${Math.round(size*0.0155)}px;font-weight:500;
+      color:rgba(255,255,255,0.72);letter-spacing:0.02em}
   </style></head><body>
     <div class="stage">
       <svg class="logo" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">

@@ -196,11 +196,11 @@ input[type=range]:focus{outline:none}
 .wallet-tab.active{background:var(--accent);color:#1A1A1A}
 
 /* Boot splash overlay — covers the gap between native splash dismiss and app boot */
-#boot-splash{position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;background:linear-gradient(160deg,#082b6f 0%,#020817 100%);transition:opacity .35s ease}
+#boot-splash{position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:24vh;gap:16px;background:linear-gradient(160deg,#082b6f 0%,#020817 100%);transition:opacity .35s ease}
 #boot-splash.hide{opacity:0;pointer-events:none}
-#boot-splash .bs-logo{width:160px;height:160px}
-#boot-splash .bs-word{font-size:56px;font-weight:850;color:#34D399;letter-spacing:-0.02em;line-height:1;margin-top:-4px}
-#boot-splash .bs-tag{font-size:15px;font-weight:500;color:rgba(255,255,255,0.78);letter-spacing:0.02em;margin-top:-12px}
+#boot-splash .bs-logo{width:104px;height:104px}
+#boot-splash .bs-word{font-size:34px;font-weight:850;color:#34D399;letter-spacing:-0.02em;line-height:1;margin-top:6px}
+#boot-splash .bs-tag{font-size:13px;font-weight:500;color:rgba(255,255,255,0.72);letter-spacing:0.02em;margin-top:0}
 </style>
 </head>
 <body>
@@ -226,20 +226,31 @@ input[type=range]:focus{outline:none}
 </div>
 <script>
   // Hide boot splash once the app code has had a chance to render the
-  // first real screen. preview-app.js sets window.__perqAppReady=true on
-  // boot; we also have a hard timeout so we never strand the user on it.
+  // first real screen AND a minimum display duration has passed (so the
+  // user actually sees the brand frame, not a sub-100ms flash).
+  // preview-app.js sets window.__perqAppReady=true on first render. We
+  // also have a hard timeout so we never strand the user on it.
   (function(){
     var splash=document.getElementById('boot-splash');
+    if(!splash)return;
     var done=false;
+    var startedAt=Date.now();
+    var MIN_MS=900;   // minimum brand frame visibility
+    var MAX_MS=2500;  // hard cap if the app never signals ready
     function dismiss(){
       if(done)return;done=true;
       splash.classList.add('hide');
       setTimeout(function(){splash.parentNode&&splash.parentNode.removeChild(splash);},400);
     }
-    var poll=setInterval(function(){
-      if(window.__perqAppReady){clearInterval(poll);dismiss();}
-    },50);
-    setTimeout(function(){clearInterval(poll);dismiss();},1400); // hard cap
+    function maybeDismiss(){
+      if(!window.__perqAppReady)return;
+      var elapsed=Date.now()-startedAt;
+      if(elapsed>=MIN_MS){dismiss();return;}
+      setTimeout(dismiss,MIN_MS-elapsed);
+      clearInterval(poll);
+    }
+    var poll=setInterval(maybeDismiss,50);
+    setTimeout(function(){clearInterval(poll);dismiss();},MAX_MS);
   })();
 </script>
 
@@ -568,6 +579,6 @@ input[type=range]:focus{outline:none}
 <div id="confetti-root" style="position:fixed;inset:0;pointer-events:none;z-index:9998;overflow:hidden"></div>
 <input type="file" id="capture-input" accept="image/*" capture="environment" style="display:none">
 
-<script src="preview-app.js?v=28"></script>
+<script src="preview-app.js?v=29"></script>
 </body>
 </html>
