@@ -76,7 +76,7 @@ function splashHtml(size) {
     .stage{width:100%;height:100%;display:flex;flex-direction:column;
       align-items:center;justify-content:flex-start;padding-top:${Math.round(size*0.26)}px;gap:${Math.round(size*0.012)}px}
     .logo{width:${Math.round(size*0.12)}px;height:${Math.round(size*0.12)}px}
-    .word{font-size:${Math.round(size*0.042)}px;font-weight:850;color:#34D399;
+    .word{font-size:${Math.round(size*0.042)}px;font-weight:800;color:#34D399;
       letter-spacing:-0.02em;line-height:1;margin-top:${Math.round(size*0.008)}px}
     .tag{font-size:${Math.round(size*0.0155)}px;font-weight:500;
       color:rgba(255,255,255,0.72);letter-spacing:0.02em}

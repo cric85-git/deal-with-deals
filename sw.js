@@ -1,4 +1,4 @@
-const CACHE_NAME = 'perq-v33-splash-unified-gradient';
+const CACHE_NAME = 'perq-v34-splash-raster-logo';
 const ASSETS = [
   './',
   './index.html',
