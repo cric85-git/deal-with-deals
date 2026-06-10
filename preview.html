@@ -196,7 +196,11 @@ input[type=range]:focus{outline:none}
 .wallet-tab.active{background:var(--accent);color:#1A1A1A}
 
 /* Boot splash overlay — covers the gap between native splash dismiss and app boot */
-#boot-splash{position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:24vh;gap:16px;background:linear-gradient(160deg,#082b6f 0%,#020817 100%);transition:opacity .35s ease}
+/* padding-top tuned to match the native splash artwork's vertical position
+   (build-splash.js puts content at 26% down the 2732 canvas, which after
+   Capacitor's scaleAspectFill on iPhone lands at ~26vh) so there's no
+   visible "shift up" when the native splash hands off to this overlay. */
+#boot-splash{position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:26vh;gap:16px;background:linear-gradient(160deg,#082b6f 0%,#020817 100%);transition:opacity .35s ease}
 #boot-splash.hide{opacity:0;pointer-events:none}
 #boot-splash .bs-logo{width:104px;height:104px}
 #boot-splash .bs-word{font-size:34px;font-weight:850;color:#34D399;letter-spacing:-0.02em;line-height:1;margin-top:6px}
