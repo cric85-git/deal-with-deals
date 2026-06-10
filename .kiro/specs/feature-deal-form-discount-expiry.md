@@ -47,6 +47,8 @@ Pure form refactor. None of the deferred areas are touched.
 | 17 | OCR pre-fills `data.expiry = "2026-12-31"` | Form opens with "Has expiry?" set to `Yes`, date input pre-filled |
 | 18 | `window.setDiscountSymbol` | Function exposed on `window` after boot |
 | 19 | `window.setHasExpiry` | Function exposed on `window` after boot |
+| 20 | User taps `Yes` for "Has expiry?" with date input empty | Date input is auto-filled with today's date in `YYYY-MM-DD` format; user can adjust |
+| 21 | User opens "Review & save" form with an image (snapped or library-uploaded) | Full image is visible — aspect ratio preserved (`object-fit: contain`), no crop, max-height 320px so the form controls remain reachable below |
 
 ## 4. UI contract
 
@@ -79,6 +81,8 @@ The existing `Value ($)` input below `Category` is REMOVED (its function is now 
 - **Pre-fill from OCR with `data.expiry` set.** Default has-expiry toggle to `Yes`, prefill date.
 - **Pre-fill from OCR with `data.expiry === ''` or undefined.** Default has-expiry toggle to `No`, hide date input.
 - **Returning user with pre-existing wallet deals (state.deals already has free-form discount strings).** No migration needed — existing deals keep their stored shape. Only NEW deals saved via this form go through the structured flow.
+- **Has-expiry toggle from N → Y with empty date.** `setHasExpiry('Y')` auto-populates the date input with today's date (`YYYY-MM-DD`) when the input is currently empty. If the input already has a value (e.g., from OCR pre-fill or a prior toggle), it is preserved untouched. Users can always override by tapping the date picker.
+- **Image preview crops the user's coupon/barcode.** The previous design used `height: 100px` + `object-fit: cover`, which cropped tall coupons and made barcodes unreadable. The new design uses an auto-height container with `object-fit: contain` and `max-height: 320px`, so the full image is always visible while the form controls remain reachable below.
 
 Network failure, offline state, permission denied do not apply — this is a synchronous in-page form with no I/O.
 
@@ -107,6 +111,8 @@ Network failure, offline state, permission denied do not apply — this is a syn
 | `openDealPreview` pre-fill expiry set → has-expiry=Y, date filled | scripts/perq-render-test.js (new case) | 17, edge 6 |
 | `openDealPreview` no expiry → has-expiry=N, date hidden | scripts/perq-render-test.js (new case) | edge 7 |
 | Legacy free-form deal does not crash wallet render | scripts/perq-render-test.js (new case) | edge 8 (returning user) |
+| `setHasExpiry('Y')` auto-fills date with today when empty | scripts/perq-render-test.js (new case) | 20, edge: today-default |
+| `openDealPreview(.., image)` renders full image (object-fit:contain, no 100px height cap) | scripts/perq-render-test.js (new case) | 21, edge: image-no-crop |
 
 ## 7. Native impact
 

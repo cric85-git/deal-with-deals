@@ -1916,7 +1916,7 @@ Read carefully — get the name and number EXACTLY as shown. Return only JSON.`;
 function openLoyaltyManualPrefilled(data,image){
   const colors=['#DC2626','#059669','#7C3AED','#2563EB','#D97706','#1F2937'];
   let html='<div class="modal-handle"></div><h3 class="modal-title">Review & save</h3>';
-  if(image)html+='<div style="width:100%;height:90px;background:#f5f5f5;border-radius:12px;margin-bottom:12px;overflow:hidden"><img src="'+image+'" style="width:100%;height:100%;object-fit:cover"></div>';
+  if(image)html+='<div style="width:100%;background:#f5f5f5;border-radius:12px;margin-bottom:12px;overflow:hidden;display:flex;justify-content:center"><img src="'+image+'" style="max-width:100%;max-height:320px;object-fit:contain;display:block"></div>';
   if(data.name||data.number){
     html+='<div style="background:#EAFBF4;border:1px solid #00C9A7;border-radius:12px;padding:10px 12px;margin-bottom:12px;display:flex;align-items:center;gap:8px;font-size:12px;color:#065F46;font-weight:600"><span style="font-size:16px">✨</span>AI extracted these details</div>';
   }
@@ -2137,7 +2137,7 @@ window.openDealPreview=function(data,image){
     return '<button id="'+id+'" type="button" data-active="'+(active?'true':'false')+'" onclick="'+onclick+'" style="flex:1;padding:10px 0;border:none;background:'+bg+';color:'+color+';font-weight:700;font-size:14px;cursor:pointer">'+label+'</button>';
   }
   let html='<div class="modal-handle"></div><h3 class="modal-title">Review & save</h3>';
-  if(image)html+='<div style="width:100%;height:100px;background:#f5f5f5;border-radius:12px;margin-bottom:12px;overflow:hidden"><img src="'+image+'" style="width:100%;height:100%;object-fit:cover"></div>';
+  if(image)html+='<div style="width:100%;background:#f5f5f5;border-radius:12px;margin-bottom:12px;overflow:hidden;display:flex;justify-content:center"><img src="'+image+'" style="max-width:100%;max-height:320px;object-fit:contain;display:block"></div>';
   html+='<div style="background:#EAFBF4;border:1px solid #00C9A7;border-radius:12px;padding:10px 12px;margin-bottom:12px;display:flex;align-items:center;gap:8px;font-size:12px;color:#065F46;font-weight:600"><span style="font-size:16px">✨</span>AI extracted these details — review below</div>';
   html+='<div class="form-row"><label>Merchant *</label><input id="f-merchant" placeholder="Store name" value="'+escapeHtml(data.merchant||'')+'"></div>';
   // NEW: discount = symbol toggle + number. % branch reveals total-value input.
@@ -2208,7 +2208,14 @@ window.setHasExpiry=function(yn){
   nBtn.style.color=isY?'#777':'#1A1A1A';
   dateInput.style.display=isY?'block':'none';
   hidden.value=yn;
-  if(!isY)dateInput.value='';
+  if(!isY){dateInput.value='';}
+  else if(!dateInput.value){
+    // Default to today's date when toggling Y on an empty input. User can adjust via picker.
+    const t=new Date();
+    const m=String(t.getMonth()+1).padStart(2,'0');
+    const d=String(t.getDate()).padStart(2,'0');
+    dateInput.value=t.getFullYear()+'-'+m+'-'+d;
+  }
 };
 
 // Replaces the old openAddManual — for "Type a deal" mode (no scan)

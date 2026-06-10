@@ -397,6 +397,41 @@ try {
   }
   if (legacyOk) pass++;
   else fail++;
+
+  // AC20: setHasExpiry('Y') auto-fills today's date when input is empty.
+  // openDealPreview with no expiry primes f-expiry to ''. Toggling Y must populate it.
+  // Also verifies that toggling Y when the input is ALREADY populated preserves the value.
+  resetState();
+  // Re-install modal-overlay setter (resetState recreates the IIFE).
+  els['modal-overlay'] = (function () {
+    const e = fakeEl('modal-overlay');
+    Object.defineProperty(e, 'innerHTML', { set(v) { modalHTML = v; }, get() { return modalHTML; } });
+    return e;
+  })();
+  // Force the form input fakeEls to exist with empty values.
+  sandbox.document.getElementById('f-expiry').value = '';
+  sandbox.document.getElementById('f-has-expiry').value = 'N';
+  sandbox.document.getElementById('f-exp-y').setAttribute && sandbox.document.getElementById('f-exp-y');
+  sandbox.document.getElementById('f-exp-n');
+  sandbox.setHasExpiry('Y');
+  const expiredDateAfterY = sandbox.document.getElementById('f-expiry').value;
+  const t = new Date();
+  const expectedToday = t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
+  if (expiredDateAfterY === expectedToday) pass++;
+  else { fail++; console.error('setHasExpiry(Y empty) expected today=' + expectedToday + ', got=' + JSON.stringify(expiredDateAfterY)); }
+  // Toggling Y again with existing value must NOT overwrite it.
+  sandbox.document.getElementById('f-expiry').value = '2027-03-15';
+  sandbox.setHasExpiry('Y');
+  if (sandbox.document.getElementById('f-expiry').value === '2027-03-15') pass++;
+  else { fail++; console.error('setHasExpiry(Y, prefilled) overwrote existing date'); }
+
+  // AC21: openDealPreview with image renders full image (object-fit:contain, no
+  // 100px height crop). modalHTML must contain `object-fit:contain` and must NOT
+  // contain the legacy `height:100px` constraint or `object-fit:cover`.
+  modalHTML = '';
+  sandbox.openDealPreview({ merchant: 'X' }, 'data:image/png;base64,iVBORw0KGgo=');
+  if (modalHTML.includes('object-fit:contain') && !modalHTML.includes('height:100px') && !modalHTML.includes('object-fit:cover')) pass++;
+  else { fail++; console.error('openDealPreview(image) expected contain/no-crop, got modalHTML[0..400]:', modalHTML.slice(0, 400)); }
 } catch (e) {
   fail++;
   console.error('saveDealForm tests threw:', e.message);

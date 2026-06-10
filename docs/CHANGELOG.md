@@ -4,6 +4,32 @@ All notable feature changes to the Perq app are documented here.
 
 ---
 
+## [Unreleased] — 2026-06-10 (deal-form-polish)
+
+### 🛠 Polish: today-default expiry date + full-size image preview
+
+Spec amendment: `.kiro/specs/feature-deal-form-discount-expiry.md` (ACs 20-21 + edge cases 9-10 added). No new globals — both changes are tweaks to existing `setHasExpiry` and `openDealPreview` / `openLoyaltyManualPrefilled`.
+
+**What a user couldn't do well yesterday:**
+- Tapping `Yes` on "Has expiry?" surfaced an empty date picker. Most users had to tap the picker before they could even see what date range was available.
+- The preview thumbnail above the form was hard-cropped at 100px tall with `object-fit: cover`, so coupons with barcodes or terms below the discount were either chopped off at the top, the bottom, or both. For deals where you need to show the cashier the original image, this made the screenshot useless.
+
+**What a user can do today:**
+- Tap `Yes` on an empty has-expiry input → date auto-fills with today's `YYYY-MM-DD`. User can adjust by tapping the picker. Toggling `Yes` when the date is already filled (from OCR or a prior toggle) preserves the existing value.
+- Snap or upload an image → the full image is shown in the preview, aspect ratio preserved (`object-fit: contain`), capped at 320px tall so the form controls remain reachable. No more crops.
+
+**Surfaces touched:**
+- `openDealPreview` (deal Review & save form) — image block.
+- `openLoyaltyManualPrefilled` (loyalty card Review & save form) — image block. Same fix applied for consistency.
+- `setHasExpiry` — today-default-on-empty logic added; existing-value preservation logic added.
+
+**Tests added (3 cases, all assertion-bearing):**
+- `scripts/perq-render-test.js` — AC20 case A: `setHasExpiry('Y')` on empty input populates `dateInput.value` with today computed via the same `Date()` formatter the production code uses. Case B: `setHasExpiry('Y')` on a prefilled date (`'2027-03-15'`) preserves the existing value, does not overwrite. AC21: `openDealPreview(.., image)` produces modal HTML containing `object-fit:contain` and NOT containing `height:100px` or `object-fit:cover` (proves the legacy crop is gone). RENDER 35 → 38 PASS.
+
+**Cache version:** `?v=33` → `?v=34`. SW `perq-v26-deal-form-discount-expiry` → `perq-v27-deal-form-polish`. Native build + `cap sync ios && cap sync android` complete.
+
+---
+
 ## [Unreleased] — 2026-06-10 (deal-form-discount-expiry)
 
 ### 🛠 Refactor: deal form — discount as number+symbol toggle, expiry as Y/N gate

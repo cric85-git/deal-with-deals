@@ -6,3 +6,4 @@ dist/
 .env.*
 tmp/
 test-results/
+.commit-msg.tmp

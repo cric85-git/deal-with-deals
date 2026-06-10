@@ -1,6 +1,6 @@
 # Perq Automated Test Results
 
-Last run: 2026-06-10 (post deal-form-discount-expiry — supervisor v4)
+Last run: 2026-06-10 (post deal-form-polish — today-default expiry + full image preview)
 
 ## Suite 1 — `npm test` (Node script suite, runs in CI on every push)
 
@@ -9,7 +9,7 @@ Last run: 2026-06-10 (post deal-form-discount-expiry — supervisor v4)
 | `scripts/perq-gamif-test.js` | 20 | 0 |
 | `scripts/perq-load-test.js` | LOAD OK | 0 |
 | `scripts/perq-migration-test.js` | 6 | 0 |
-| `scripts/perq-render-test.js` | 35 (was 23: +8 saveDealForm AC7-14, +3 openDealPreview pre-fill, +1 legacy-deal backward-compat) | 0 |
+| `scripts/perq-render-test.js` | 38 (was 35: +1 setHasExpiry today-default empty, +1 setHasExpiry preserves prefilled, +1 openDealPreview full image) | 0 |
 | `scripts/perq-brand-test.js` | 53 (+ 9 outline-warn) | 0 |
 | `scripts/perq-splash-test.js` | 18 | 0 |
 
