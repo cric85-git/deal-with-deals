@@ -48,7 +48,11 @@ Pure form refactor. None of the deferred areas are touched.
 | 18 | `window.setDiscountSymbol` | Function exposed on `window` after boot |
 | 19 | `window.setHasExpiry` | Function exposed on `window` after boot |
 | 20 | User taps `Yes` for "Has expiry?" with date input empty | Date input is auto-filled with today's date in `YYYY-MM-DD` format; user can adjust |
-| 21 | User opens "Review & save" form with an image (snapped or library-uploaded) | Full image is visible — aspect ratio preserved (`object-fit: contain`), no crop, max-height 320px so the form controls remain reachable below |
+| 21 | User opens "Review & save" form with an image | Image preview is rendered as a collapsed thumbnail strip (90px tall, `object-fit: cover`) with an "Expand" pill button in the top-right corner. Reduces vertical scroll so merchant/discount/expiry fields fit on one screen. |
+| 22 | User taps the "Expand" pill (or the thumbnail strip itself) on the form preview | Image expands inline to full size (`max-height: 60vh`, `object-fit: contain`) — full coupon/barcode visible. Pill text becomes "Collapse". Tapping again returns to thumbnail. |
+| 23 | User taps a saved deal in the wallet (opens `viewWalletDeal` modal) and the deal has an `image` field | Modal renders the same image preview component (collapsed thumbnail + Expand toggle) below the brand header, above the info rows. |
+| 24 | User taps a saved deal that has no `image` field (legacy or "Type a deal" entry) | Modal does NOT render the image preview component; the layout collapses cleanly with no empty frame. |
+| 25 | `window.toggleDealImage(frameId)` | Function exposed on `window` after boot. Flips `data-expanded` on the frame and adjusts inline `max-height` + `object-fit` on the contained `<img>` and label text on the pill. |
 
 ## 4. UI contract
 
@@ -82,7 +86,9 @@ The existing `Value ($)` input below `Category` is REMOVED (its function is now 
 - **Pre-fill from OCR with `data.expiry === ''` or undefined.** Default has-expiry toggle to `No`, hide date input.
 - **Returning user with pre-existing wallet deals (state.deals already has free-form discount strings).** No migration needed — existing deals keep their stored shape. Only NEW deals saved via this form go through the structured flow.
 - **Has-expiry toggle from N → Y with empty date.** `setHasExpiry('Y')` auto-populates the date input with today's date (`YYYY-MM-DD`) when the input is currently empty. If the input already has a value (e.g., from OCR pre-fill or a prior toggle), it is preserved untouched. Users can always override by tapping the date picker.
-- **Image preview crops the user's coupon/barcode.** The previous design used `height: 100px` + `object-fit: cover`, which cropped tall coupons and made barcodes unreadable. The new design uses an auto-height container with `object-fit: contain` and `max-height: 320px`, so the full image is always visible while the form controls remain reachable below.
+- **Image preview ergonomics — too much scroll vs. unreadable barcode.** The original design hard-cropped at 100px (`object-fit: cover`), making barcodes unreadable. The first polish removed the crop (`object-fit: contain`, max-height 320px) but pushed the form controls below the fold on iPhone. The current design splits the difference: collapsed thumbnail by default (90px, `object-fit: cover`, fast at-a-glance recognition) + an Expand pill that toggles to `max-height: 60vh` with `object-fit: contain` when the user wants to read the original. Same component is reused on the saved-deal detail modal so users can show cashiers the original image.
+- **Saved deal has no image (legacy entry or "Type a deal" manual flow).** `viewWalletDeal` must not render an empty image frame in this case — the absence is detected via `if(d.image)` and the entire frame is omitted.
+- **`toggleDealImage` called with a missing frame id.** No-op (defensive `if(!frame)return`). Prevents crashes if the modal closes mid-tap or the function is called before openModal renders the frame.
 
 Network failure, offline state, permission denied do not apply — this is a synchronous in-page form with no I/O.
 

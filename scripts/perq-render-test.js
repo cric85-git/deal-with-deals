@@ -425,13 +425,52 @@ try {
   if (sandbox.document.getElementById('f-expiry').value === '2027-03-15') pass++;
   else { fail++; console.error('setHasExpiry(Y, prefilled) overwrote existing date'); }
 
-  // AC21: openDealPreview with image renders full image (object-fit:contain, no
-  // 100px height crop). modalHTML must contain `object-fit:contain` and must NOT
-  // contain the legacy `height:100px` constraint or `object-fit:cover`.
+  // AC21+22: openDealPreview with image renders the collapsed thumbnail frame
+  // (data-expanded="false") with the Expand toggle pill. The legacy hard-crop
+  // (height:100px) must be gone. object-fit:cover is now intentional FOR THE
+  // COLLAPSED THUMBNAIL — the frame uses cover when collapsed and contain when
+  // expanded (toggled at runtime).
   modalHTML = '';
   sandbox.openDealPreview({ merchant: 'X' }, 'data:image/png;base64,iVBORw0KGgo=');
-  if (modalHTML.includes('object-fit:contain') && !modalHTML.includes('height:100px') && !modalHTML.includes('object-fit:cover')) pass++;
-  else { fail++; console.error('openDealPreview(image) expected contain/no-crop, got modalHTML[0..400]:', modalHTML.slice(0, 400)); }
+  if (modalHTML.includes('data-expanded="false"') && modalHTML.includes('toggleDealImage') && modalHTML.includes('>Expand</span>') && !modalHTML.includes('height:100px')) pass++;
+  else { fail++; console.error('openDealPreview(image) expected collapsed frame + Expand toggle, got modalHTML[0..600]:', modalHTML.slice(0, 600)); }
+
+  // AC23: viewWalletDeal renders the image frame when the deal has d.image.
+  // Set up an active deal with an image, open the modal, verify the frame markers.
+  store['perq-mvp:deals'] = JSON.stringify([
+    { id: 'imgDeal', merchant: 'TestStore', discount: '20% off', value: 10, redeemed: false, image: 'data:image/png;base64,iVBORw0KGgo=', createdAt: Date.now() }
+  ]);
+  vm.runInContext(code, ctx, { filename: 'preview-app.js' });
+  els['modal-overlay'] = (function () {
+    const e = fakeEl('modal-overlay');
+    Object.defineProperty(e, 'innerHTML', { set(v) { modalHTML = v; }, get() { return modalHTML; } });
+    return e;
+  })();
+  modalHTML = '';
+  sandbox.viewWalletDeal('imgDeal');
+  if (modalHTML.includes('data-expanded="false"') && modalHTML.includes('wallet-detail-img-imgDeal') && modalHTML.includes('toggleDealImage')) pass++;
+  else { fail++; console.error('viewWalletDeal(deal with image) missing image frame, got modalHTML[0..800]:', modalHTML.slice(0, 800)); }
+
+  // AC24: viewWalletDeal does NOT render the frame when the deal has no image.
+  // Legacy / Type-a-deal entries skip the frame cleanly — no empty container.
+  store['perq-mvp:deals'] = JSON.stringify([
+    { id: 'noImgDeal', merchant: 'TypedStore', discount: '$5 off', value: 5, redeemed: false, createdAt: Date.now() }
+  ]);
+  vm.runInContext(code, ctx, { filename: 'preview-app.js' });
+  els['modal-overlay'] = (function () {
+    const e = fakeEl('modal-overlay');
+    Object.defineProperty(e, 'innerHTML', { set(v) { modalHTML = v; }, get() { return modalHTML; } });
+    return e;
+  })();
+  modalHTML = '';
+  sandbox.viewWalletDeal('noImgDeal');
+  if (!modalHTML.includes('toggleDealImage') && !modalHTML.includes('data-expanded')) pass++;
+  else { fail++; console.error('viewWalletDeal(no image) unexpectedly rendered image frame, got modalHTML[0..600]:', modalHTML.slice(0, 600)); }
+
+  // AC25: window.toggleDealImage exposed and is a function (also covered in load-test
+  // but kept here so render-test self-validates the new public global).
+  if (typeof sandbox.toggleDealImage === 'function') pass++;
+  else { fail++; console.error('toggleDealImage not exposed on window, got:', typeof sandbox.toggleDealImage); }
 } catch (e) {
   fail++;
   console.error('saveDealForm tests threw:', e.message);
