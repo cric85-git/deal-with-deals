@@ -4,6 +4,29 @@ All notable feature changes to the Perq app are documented here.
 
 ---
 
+## [Unreleased] — 2026-06-10 (deal-detail-modal)
+
+### 🆕 Feature: Deal Detail Modal
+
+Spec: `.kiro/specs/feature-deal-detail-modal.md`. First feature delivered through the autonomous quality system shipped earlier today.
+
+**What a user couldn't do yesterday:**
+- Viewing a saved deal required tapping the inline stacked-card expand. The expanded view crowded the discount, code, terms, address, and three action buttons into one frame — fine for at-a-glance, but cluttered for a screenshot, for reading at arm's length in a store, or for a future "open from notification deep link" path.
+
+**What a user can do today:**
+- Tap the new ⓘ icon inside an expanded wallet pass → a focused **Deal Detail Modal** opens. Brand-tile header (uses `getBrandFor(merchant)` colors with the white outline shadow), then three info rows for Merchant, Discount, and Expiry. The Expiry row colors itself based on state: faint for "No expiry", warm-red for "Expires today" or "Expired N days ago".
+- Single primary CTA: **Mark as Used**. Tapping it runs the existing `redeemDeal()` (points + streak + savings + notification cancel) and closes the modal.
+- For deals already redeemed, the CTA is replaced with a disabled "Already used" pill in `var(--text-faint)`.
+- Modal uses the existing `.modal-overlay` shell (slide-up sheet, backdrop tap to close, X button top-right). No new infrastructure.
+
+**Tests added:**
+- `scripts/perq-load-test.js` — `viewWalletDeal` and `markDealUsed` are asserted on `window` after boot.
+- `scripts/perq-render-test.js` — three new cases: bad-id no-op, active-deal renders "Mark as Used" CTA, redeemed-deal renders disabled "Already used" pill. RENDER TEST went from 10 PASS → 13 PASS.
+
+**Cache version:** `?v=29` → `?v=30`.
+
+---
+
 ## [Unreleased] — 2026-06-10
 
 ### 🛠 Autonomous Quality System

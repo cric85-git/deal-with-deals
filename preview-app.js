@@ -607,6 +607,7 @@ function renderDealsList(active){
     }
     html+='<div style="display:flex;gap:6px">';
     html+='<button onclick="event.stopPropagation();redeemDeal(\''+d.id+'\')" style="flex:1;padding:11px;border-radius:10px;font-size:13px;font-weight:700;background:#1A1A1A;color:white;border:none">✓ Mark redeemed</button>';
+    html+='<button onclick="event.stopPropagation();viewWalletDeal(\''+d.id+'\')" title="Details" style="flex:0 0 44px;padding:0;border-radius:10px;background:#F4F8F6;color:#1A1A1A;border:none;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button>';
     html+='<button onclick="event.stopPropagation();shareDeal(\''+d.id+'\')" title="Share" style="flex:0 0 44px;padding:0;border-radius:10px;background:#F0F9FF;color:#2563EB;border:none;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button>';
     html+='<button onclick="event.stopPropagation();deleteDeal(\''+d.id+'\')" title="Delete" style="flex:0 0 44px;padding:0;border-radius:10px;background:#FFE5E5;color:#DC2626;border:none;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg></button>';
     html+='</div>';
@@ -916,6 +917,56 @@ window.redeemDeal=function(id){
   checkTierUp();
   scheduleReminders();
   renderAll();
+};
+
+// -------- Deal Detail Modal --------
+// Focused, modal-style view of a single saved wallet deal. Shows merchant,
+// discount, expiry. Primary CTA is "Mark as Used" which calls redeemDeal().
+// Existing inline pass expand/collapse stays as the primary at-a-glance view —
+// this modal is the deeper, screenshot-friendly surface. Spec:
+// .kiro/specs/feature-deal-detail-modal.md
+window.viewWalletDeal=function(id){
+  const d=state.deals.find(x=>x.id===id);
+  if(!d){toast('Deal not found');return;}
+  const brand=getBrandFor(d.merchant);
+  const headerBg=brandGradientCss(brand);
+  const headerText=brand.text||'#FFFFFF';
+  const du=daysUntil(d.expiry);
+  let expRow,expColor='var(--text)';
+  if(!d.expiry){expRow='No expiry';expColor='var(--text-faint)';}
+  else if(du===0){expRow='Expires today';expColor='var(--warm-1)';}
+  else if(du<0){expRow='Expired '+Math.abs(du)+' day'+(Math.abs(du)===1?'':'s')+' ago';expColor='var(--warm-1)';}
+  else{expRow='Expires '+fmtDate(d.expiry);}
+  const isRedeemed=!!d.redeemed;
+  const merchantText=d.merchant?escapeHtml(d.merchant):'Untitled deal';
+  const discountText=escapeHtml(d.discount||'');
+
+  let html='<div class="modal-handle"></div>';
+  html+='<button onclick="closeModal()" aria-label="Close" style="position:absolute;top:14px;right:14px;width:32px;height:32px;border-radius:50%;background:rgba(0,0,0,0.06);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer"><svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:none;stroke:#1A1A1A;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>';
+  // Brand-tile header (merchant + discount as one visual headline)
+  html+='<div style="background:'+headerBg+';color:'+headerText+';border-radius:18px;padding:20px;margin:8px 0 16px;box-shadow:'+brandCardShadow()+'">';
+  html+='<p style="font-size:22px;font-weight:800;margin:0;line-height:1.1">'+merchantText+'</p>';
+  if(discountText)html+='<p style="font-size:32px;font-weight:900;margin:6px 0 0;letter-spacing:-1px;line-height:1">'+discountText+'</p>';
+  html+='</div>';
+  // Info rows
+  html+='<div style="background:var(--surface-soft);border-radius:14px;padding:4px 14px;margin-bottom:16px">';
+  html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);font-size:14px"><span style="color:var(--text-dim)">🏷️ Merchant</span><span style="color:var(--text);font-weight:600">'+merchantText+'</span></div>';
+  html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);font-size:14px"><span style="color:var(--text-dim)">💰 Discount</span><span style="color:var(--text);font-weight:600">'+(discountText||'<span style="color:var(--text-faint)">—</span>')+'</span></div>';
+  html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;font-size:14px"><span style="color:var(--text-dim)">📅 Expiry</span><span style="color:'+expColor+';font-weight:600">'+escapeHtml(expRow)+'</span></div>';
+  html+='</div>';
+  // Primary CTA
+  if(isRedeemed){
+    html+='<button disabled style="width:100%;padding:14px;border-radius:14px;background:var(--surface-soft);color:var(--text-faint);border:none;font-size:15px;font-weight:800;cursor:not-allowed">Already used</button>';
+  } else {
+    html+='<button onclick="markDealUsed(\''+d.id+'\')" style="width:100%;padding:14px;border-radius:14px;background:linear-gradient(135deg,var(--accent),var(--accent-dark));color:white;border:none;font-size:15px;font-weight:800;cursor:pointer">Mark as Used</button>';
+  }
+  openModal(html);
+};
+
+// Wraps redeemDeal with modal close, so the modal is the entry point.
+window.markDealUsed=function(id){
+  closeModal();
+  redeemDeal(id);
 };
 
 window.shareDeal=function(id){

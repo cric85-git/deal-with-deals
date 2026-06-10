@@ -147,5 +147,57 @@ try {
   console.error('unlock flow threw:', e.message);
 }
 
+// ---- Deal Detail Modal tests (feature-deal-detail-modal spec, ACs 1, 8, 9, edge case 1) ----
+try {
+  // Capture the modal overlay's innerHTML the same way we do for rewards-root.
+  let modalHTML = '';
+  // Fresh modal-overlay fake element (recreate to install the setter)
+  els['modal-overlay'] = (function () {
+    const e = fakeEl('modal-overlay');
+    Object.defineProperty(e, 'innerHTML', { set(v) { modalHTML = v; }, get() { return modalHTML; } });
+    return e;
+  })();
+
+  // Case A: viewWalletDeal with a bad id should NOT open a modal (toast fires but DOM unchanged).
+  modalHTML = '';
+  sandbox.viewWalletDeal('definitely-not-a-real-id');
+  if (modalHTML === '') pass++;
+  else { fail++; console.error('viewWalletDeal(badId) opened a modal when it should not have'); }
+
+  // Case B: viewWalletDeal on an ACTIVE deal renders the "Mark as Used" CTA.
+  const activeDealsX = JSON.parse(store['perq-mvp:deals'] || '[]');
+  activeDealsX.push({ id: 'detailActive', merchant: 'Starbucks', discount: '$5 off', value: 5, expiry: '2099-12-31', redeemed: false, createdAt: Date.now() });
+  store['perq-mvp:deals'] = JSON.stringify(activeDealsX);
+  vm.runInContext(code, ctx, { filename: 'preview-app.js' });
+  // Re-install setter on modal-overlay since fakeDoc.getElementById creates fresh elements after reload
+  els['modal-overlay'] = (function () {
+    const e = fakeEl('modal-overlay');
+    Object.defineProperty(e, 'innerHTML', { set(v) { modalHTML = v; }, get() { return modalHTML; } });
+    return e;
+  })();
+  modalHTML = '';
+  sandbox.viewWalletDeal('detailActive');
+  if (modalHTML.includes('Mark as Used')) pass++;
+  else { fail++; console.error('viewWalletDeal(active) missing "Mark as Used" CTA — got:\n' + modalHTML.slice(0, 400)); }
+
+  // Case C: viewWalletDeal on a REDEEMED deal renders the disabled "Already used" pill.
+  const redeemedDealsX = JSON.parse(store['perq-mvp:deals']);
+  redeemedDealsX.push({ id: 'detailRedeemed', merchant: 'Target', discount: '20% off', value: 20, expiry: '2099-12-31', redeemed: true, createdAt: Date.now() });
+  store['perq-mvp:deals'] = JSON.stringify(redeemedDealsX);
+  vm.runInContext(code, ctx, { filename: 'preview-app.js' });
+  els['modal-overlay'] = (function () {
+    const e = fakeEl('modal-overlay');
+    Object.defineProperty(e, 'innerHTML', { set(v) { modalHTML = v; }, get() { return modalHTML; } });
+    return e;
+  })();
+  modalHTML = '';
+  sandbox.viewWalletDeal('detailRedeemed');
+  if (modalHTML.includes('Already used') && modalHTML.includes('disabled')) pass++;
+  else { fail++; console.error('viewWalletDeal(redeemed) missing disabled "Already used" pill — got:\n' + modalHTML.slice(0, 400)); }
+} catch (e) {
+  fail++;
+  console.error('viewWalletDeal tests threw:', e.message);
+}
+
 console.log(`RENDER TEST: PASS ${pass}, FAIL ${fail}`);
 process.exit(fail === 0 ? 0 : 1);
