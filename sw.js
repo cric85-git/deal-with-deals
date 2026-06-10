@@ -1,4 +1,4 @@
-const CACHE_NAME = 'perq-v30-deal-detail-modal-v2';
+const CACHE_NAME = 'perq-v31-image-align-splash';
 const ASSETS = [
   './',
   './index.html',

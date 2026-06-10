@@ -4,6 +4,28 @@ All notable feature changes to the Perq app are documented here.
 
 ---
 
+## [Unreleased] — 2026-06-10 (image-align-splash)
+
+### 🛠 Fix: image right-shift on snap + splash visible for 2 seconds
+
+Two scoped fixes. No new globals.
+
+**Issue 1 — image right-shift after snap:**
+- The `dealImageFrame` wrapper used `display:flex; justify-content:center; align-items:center`. On iOS Safari, an `<img width:100%; display:block>` inside that flex container rendered with a 1-2px right offset on the first paint after a fresh camera capture. Subsequent re-renders (after re-opening the form) cleared the offset, but the user saw the shift on the canonical "snap → preview" flow.
+- Switched the wrapper to plain `display:block`. Image still fills 100% width edge-to-edge with `display:block`, and the absolute-positioned Expand pill in the corner is unaffected. The Expand pill button itself still uses `display:flex` internally for its icon + label — that's unchanged.
+
+**Issue 2 — splash glitch:**
+- The in-webview boot overlay (`#boot-splash` in preview.html) had `MIN_MS = 900ms` — meaning the brand frame stayed visible for only ~900ms after the native splash hid. Combined with the native splash's 2530ms duration, the total brand exposure was ~3.4s but with a perceptible handoff blip in the middle, and the boot overlay phase felt rushed.
+- Bumped `MIN_MS` to 2000ms. Boot overlay now stays visible for a deliberate 2 seconds after handoff. The 350ms CSS opacity fade-out on dismiss is unchanged — already smooth. Native + webview alignment was already within 1px (per splash-test) so the handoff itself is invisible; the user complaint was about the boot phase being too brief, not about misalignment.
+- `MAX_MS` stays at 2500 — hard cap unchanged. Splash test's "dismissed cleanly within 3s" assertion still passes (dismiss now happens at 2000ms + 400ms removal = 2400ms, comfortably within the 3000ms window).
+
+**Test added (1 case, assertion-bearing):**
+- `scripts/perq-render-test.js` — image frame wrapper slice (between `id="deal-form-img"` and `alt="Deal image"`) does NOT contain `display:flex`. Scoped assertion so the Expand pill's internal flex is not flagged. RENDER 50 → 51 PASS.
+
+**Cache version:** `?v=37` → `?v=38`. SW `perq-v30-deal-detail-modal-v2` → `perq-v31-image-align-splash`. Native build + cap sync ios/android complete.
+
+---
+
 ## [Unreleased] — 2026-06-10 (deal-detail-modal-v2)
 
 ### 🆕 Feature: tap-to-modal, expiry chip, offer line, address row, delete button

@@ -239,7 +239,10 @@ input[type=range]:focus{outline:none}
     if(!splash)return;
     var done=false;
     var startedAt=Date.now();
-    var MIN_MS=900;   // minimum brand frame visibility
+    // 2000ms minimum — gives a deliberate 2-second brand frame after the native
+    // splash hands off, rather than a brief 900ms flash. 350ms CSS fade-out on
+    // dismiss keeps the transition smooth. Spec: steering/perq.md splash contract.
+    var MIN_MS=2000;
     var MAX_MS=2500;  // hard cap if the app never signals ready
     function dismiss(){
       if(done)return;done=true;
@@ -583,6 +586,6 @@ input[type=range]:focus{outline:none}
 <div id="confetti-root" style="position:fixed;inset:0;pointer-events:none;z-index:9998;overflow:hidden"></div>
 <input type="file" id="capture-input" accept="image/*" capture="environment" style="display:none">
 
-<script src="preview-app.js?v=37"></script>
+<script src="preview-app.js?v=38"></script>
 </body>
 </html>
