@@ -1,15 +1,15 @@
 # Perq Automated Test Results
 
-Last run: 2026-06-10 (post discount-row-inline — $/% + value + code consolidated to one line)
+Last run: 2026-06-10 (post deal-detail-modal-v2 — wallet-tap-to-modal, expiry chip, offer line, address row, delete)
 
 ## Suite 1 — `npm test` (Node script suite, runs in CI on every push)
 
 | Test | PASS | FAIL |
 |---|---:|---:|
 | `scripts/perq-gamif-test.js` | 20 | 0 |
-| `scripts/perq-load-test.js` | LOAD OK | 0 |
+| `scripts/perq-load-test.js` | LOAD OK (deleteDealFromModal now in required globals) | 0 |
 | `scripts/perq-migration-test.js` | 6 | 0 |
-| `scripts/perq-render-test.js` | 42 (was 41: +1 AC26 inline order assertion — f-discount-num < f-value < f-code < f-category, no standalone Code label) | 0 |
+| `scripts/perq-render-test.js` | 50 (was 42: +1 wallet onclick=viewWalletDeal, +1 expiry chip when expiry set, +1 no chip when expiry empty, +1 offer line in .pcoll, +1 modal address row when address set, +1 modal omits address row when absent, +1 modal Delete deal button, +1 deleteDealFromModal exposed) | 0 |
 | `scripts/perq-brand-test.js` | 53 (+ 9 outline-warn) | 0 |
 | `scripts/perq-splash-test.js` | 18 | 0 |
 
