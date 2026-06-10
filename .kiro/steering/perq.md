@@ -35,6 +35,24 @@ from chat history. Never contradict them without explicit user instruction.
 - **Commit + push after each feature delivery.** Never leave work uncommitted
   across sessions.
 
+## Supervisor hook scope (v5+)
+
+The supervisor and reporter hooks at `.kiro/hooks/perq-supervisor.kiro.hook`
+and `.kiro/hooks/perq-supervisor-report.kiro.hook` apply to Perq work
+**only**. Both hooks short-circuit at Step 0 with `APPROVE: not in Perq
+context — supervisor scope is Perq_Dev only` when the shell command's `cwd`
+or the agent's recent work is not under `/Users/itsshail/Kiro-workspace/Perq_Dev`.
+
+In Perq context iff ANY of:
+1. Shell `cwd` contains `/Perq_Dev` (substring match)
+2. Command text contains the literal token `Perq_Dev`
+3. `git rev-parse --show-toplevel` resolves to a path ending in `/Perq_Dev`
+   AND `.kiro/steering/perq.md` exists at that root
+
+Outside Perq context the gates are not run, no commands are executed, and no
+table is printed. This keeps the hook from interfering with unrelated work
+when Kiro's IDE-cached hook config is shared across sessions.
+
 ## Security guardrails (never violate)
 
 - **API keys never embedded in client code.** All third-party API calls go

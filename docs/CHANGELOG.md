@@ -4,6 +4,27 @@ All notable feature changes to the Perq app are documented here.
 
 ---
 
+## [Unreleased] — 2026-06-10 (supervisor-scope-guard)
+
+### 🧰 Chore: scope supervisor hooks to Perq_Dev only
+
+User asked: ensure the supervisor + reporter hooks fire only when working on Perq, not on unrelated projects sharing the same IDE session.
+
+**Why this matters:** the hook config lives in `Perq_Dev/.kiro/hooks/`. Workspace-scoped hooks normally only register when Kiro's workspace is rooted at the directory containing `.kiro/`. But the IDE caches hook registrations across session boundaries — a user who switches workspaces mid-session can still see the Perq hook fire on unrelated shell commands until the IDE reloads. The Step 0 in-prompt guard provides defense in depth.
+
+**Hook updates:**
+- `perq-supervisor.kiro.hook` v4 → **v5**. Added "Step 0 — verify Perq context" before "Step 1 — detect intent". The hook short-circuits with `APPROVE: not in Perq context — supervisor scope is Perq_Dev only` if NONE of these hold:
+  - Shell `cwd` substring-matches `/Perq_Dev`
+  - Command text contains literal token `Perq_Dev`
+  - `git rev-parse --show-toplevel` resolves to `*/Perq_Dev` AND `.kiro/steering/perq.md` exists at that root
+- `perq-supervisor-report.kiro.hook` v2 → **v3**. Same Step 0 guard. Reports `REPORT: not in Perq context — supervisor scope is Perq_Dev only` and stops without running any gate command.
+
+**Steering:** new "Supervisor hook scope (v5+)" section in `.kiro/steering/perq.md` documents the rule.
+
+**No behavioral change in Perq context** — gates run identically. The guard only affects out-of-scope invocations.
+
+---
+
 ## [Unreleased] — 2026-06-10 (splash-boot-logo-transparent)
 
 ### 🛠 Fix: white square frame around splash logo on device
