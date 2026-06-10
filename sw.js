@@ -1,4 +1,4 @@
-const CACHE_NAME = 'perq-v29-discount-row-inline';
+const CACHE_NAME = 'perq-v30-deal-detail-modal-v2';
 const ASSETS = [
   './',
   './index.html',

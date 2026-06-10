@@ -4,6 +4,48 @@ All notable feature changes to the Perq app are documented here.
 
 ---
 
+## [Unreleased] — 2026-06-10 (deal-detail-modal-v2)
+
+### 🆕 Feature: tap-to-modal, expiry chip, offer line, address row, delete button
+
+Spec: `.kiro/specs/feature-deal-detail-modal-v2.md` (7 ACs, 8 edge cases). One new global: `window.deleteDealFromModal(id)`.
+
+**Why this matters:**
+- Tapping a wallet pass used to expand the card inline (replacing the brand background with white). Users preferred the focused modal that the ⓘ button opens — so we made that the default tap target.
+- Stacked wallet cards used to hide the discount text and expiry under the next card. Users had to remember which deal each merchant card represented.
+- A deal expiring tomorrow used to look identical to one expiring in 90 days when stacked. No urgency signal at the fleet level.
+- The detail modal had merchant + discount + expiry rows but no address — and `d.address` was sitting in the data, perfectly available, just not surfaced.
+- The modal had no delete button. Once the modal became the default tap target, delete was unreachable.
+
+**What a user can do today:**
+- **Tap a wallet pass** → focused detail modal opens. Brand-tile header, image preview (if any), info rows, address row (if any), and 3 action buttons (Mark as Used / Share / Delete).
+- **Stacked wallet cards** show three things at a glance: merchant name, the offer one-liner under it (one-line truncated for long strings like "30% off entire site, free shipping over $50"), and an expiry chip in the top-right corner color-coded by urgency:
+  - 🔴 red: "Expired" / "Today"
+  - 🟡 amber: "Tomorrow" / "2d left" / "3d left"
+  - ⚪️ translucent white: "12d left" / "60d left"
+  - Hidden entirely when `d.expiry` is empty
+- **Address row in the modal** — tappable, opens platform maps. Same Google-Maps URL the inline view uses (`https://www.google.com/maps/search/?api=1&query=...`); Apple Maps recognizes it on iOS, Google Maps app handles it on Android. `event.stopPropagation()` keeps the modal-overlay's backdrop-tap handler from closing the modal when the user taps the address.
+- **Delete button** — outlined faint-red secondary button below "Share Deal". Calls the new `window.deleteDealFromModal(id)` wrapper which `closeModal()` first then runs the existing `deleteDeal(id)` (which prompts native `confirm()` and toasts on success).
+
+**Public global added (covered by spec):**
+- `window.deleteDealFromModal(id)` — closes modal then calls `deleteDeal`. Mirrors the `markDealUsed` and `shareDealFromModal` wrapper pattern.
+
+**Surfaces touched:**
+- `renderActivePasses` (wallet pass collapsed view) — new expiry chip + offer line in `.pcoll` top section; tap target switched from `togglePass(this)` to `viewWalletDeal('${id}')`.
+- `viewWalletDeal` (saved-deal detail modal) — address row inserted between info rows and CTAs; Delete deal button appended below Share Deal.
+
+**Backward compat:**
+- Legacy `togglePass`, `expandPass`, `collapsePass` functions remain in the file but are no longer called from any `onclick`. Dead code preserved this round to minimize blast radius — a future cleanup commit can remove them once stable.
+- The inline `.pexp` expanded section also remains in the rendered DOM (just never display:block-flipped). Functional but invisible. Same future cleanup.
+
+**Tests added (8 cases, all assertion-bearing):**
+- `scripts/perq-load-test.js` — `deleteDealFromModal` added to required globals; LOAD OK still passes.
+- `scripts/perq-render-test.js` — AC1 wallet onclick = `viewWalletDeal('aXcBnQ')` not `togglePass(this)`, AC2 expiry chip ⏱ glyph in HTML, AC2 edge: no chip when `d.expiry` empty, AC3 offer text under merchant in `.pcoll` (before `.pexp`), AC4 modal contains maps URL + "Directions" + URL-encoded address substring, AC5 modal omits maps URL when no `d.address`, AC6 modal contains "Delete deal" + `deleteDealFromModal('id')`, AC7 `typeof deleteDealFromModal === 'function'`. RENDER 42 → 50 PASS.
+
+**Cache version:** `?v=36` → `?v=37`. SW `perq-v29-discount-row-inline` → `perq-v30-deal-detail-modal-v2`. Native build + cap sync ios/android complete.
+
+---
+
 ## [Unreleased] — 2026-06-10 (discount-row-inline)
 
 ### 🛠 Refactor: Discount + Value + Code on one line — saves two rows of vertical space
