@@ -3,7 +3,7 @@
   "version": "19.0.0",
   "private": true,
   "scripts": {
-    "build:icons": "node scripts/build-icons.js && node scripts/build-app-icons.js",
+    "build:icons": "node scripts/build-icons.js && node scripts/build-app-icons.js && node scripts/build-splash.js",
     "build:native": "node scripts/build-native.js",
     "cap:add:ios": "npm run build:native && npx cap add ios",
     "cap:add:android": "npm run build:native && npx cap add android",
