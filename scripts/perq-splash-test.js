@@ -132,7 +132,7 @@ async function testNativeSplashMaster(browser) {
   const dataUri = 'data:image/png;base64,' + masterBuf.toString('base64');
   const html = `<!doctype html><html><head><style>
     *{margin:0;padding:0}
-    html,body{width:393px;height:852px;overflow:hidden;background:#020817}
+    html,body{width:393px;height:852px;overflow:hidden;background:#0D1B2A}
     img{width:100%;height:100%;object-fit:cover;display:block}
   </style></head><body>
     <img src="${dataUri}">
@@ -203,7 +203,7 @@ async function testSplashAlignment(browser) {
   const dataUri = 'data:image/png;base64,' + masterBuf.toString('base64');
   const html = `<!doctype html><html><head><style>
     *{margin:0;padding:0}
-    html,body{width:393px;height:852px;overflow:hidden;background:#020817}
+    html,body{width:393px;height:852px;overflow:hidden;background:#0D1B2A}
     img{width:100%;height:100%;object-fit:cover;display:block}
   </style></head><body><img src="${dataUri}"></body></html>`;
   const ctx = await browser.newContext({ viewport: VIEWPORT });
@@ -292,8 +292,8 @@ async function testSplashAlignment(browser) {
   if (typeof lsd !== 'number' || lsd < 2000) bad(`launchShowDuration is ${lsd} (need >= 2000ms for a readable launch frame)`);
   else ok(`launchShowDuration=${lsd}ms (visible native splash before auto-hide)`);
   const bg = cfg.plugins && cfg.plugins.SplashScreen && cfg.plugins.SplashScreen.backgroundColor;
-  if (bg !== '#020817') bad(`SplashScreen.backgroundColor=${bg} (expected #020817 navy)`);
-  else ok('SplashScreen.backgroundColor=#020817');
+  if (bg !== '#0D1B2A') bad(`SplashScreen.backgroundColor=${bg} (expected #0D1B2A — top of wallet gradient, matches body)`);
+  else ok('SplashScreen.backgroundColor=#0D1B2A (matches wallet body top — no color shift on handoff)');
 
   const browser = await chromium.launch();
   const ctx = await browser.newContext({ viewport: VIEWPORT });

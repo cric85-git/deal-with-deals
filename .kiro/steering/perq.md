@@ -109,7 +109,8 @@ Logo / icon rules:
 
 Native (Capacitor SplashScreen):
 - `launchShowDuration ≥ 2000ms`
-- `backgroundColor === "#020817"`
+- `backgroundColor === "#0D1B2A"` (top of wallet body gradient — matches what user lands on after splash)
+- Master PNG background: `linear-gradient(180deg, #0D1B2A 0%, #1B3A5B 100%)` — same as `--page-bg` so the native splash → boot overlay → wallet body sequence has zero color shift at handoff
 - Master PNG content sized for `scaleAspectFill` zoom (~3× on iPhone), not 1:1
 - Logo at 12% canvas, "Perq" wordmark 4.2% font, tagline 1.55% font
 - Vertical position 26% canvas (top-aligned)

@@ -72,7 +72,7 @@ function splashHtml(size) {
     *{margin:0;padding:0;box-sizing:border-box}
     html,body{width:${size}px;height:${size}px;overflow:hidden;
       font-family:-apple-system,'SF Pro Display','Helvetica Neue',sans-serif;
-      background:linear-gradient(160deg,#082b6f 0%,#020817 100%)}
+      background:linear-gradient(180deg,#0D1B2A 0%,#1B3A5B 100%)}
     .stage{width:100%;height:100%;display:flex;flex-direction:column;
       align-items:center;justify-content:flex-start;padding-top:${Math.round(size*0.26)}px;gap:${Math.round(size*0.012)}px}
     .logo{width:${Math.round(size*0.12)}px;height:${Math.round(size*0.12)}px}
