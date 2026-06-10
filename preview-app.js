@@ -2174,23 +2174,23 @@ window.openDealPreview=function(data,image){
   html+=dealImageFrame(image,'deal-form-img');
   html+='<div style="background:#EAFBF4;border:1px solid #00C9A7;border-radius:12px;padding:10px 12px;margin-bottom:12px;display:flex;align-items:center;gap:8px;font-size:12px;color:#065F46;font-weight:600"><span style="font-size:16px">✨</span>AI extracted these details — review below</div>';
   html+='<div class="form-row"><label>Merchant *</label><input id="f-merchant" placeholder="Store name" value="'+escapeHtml(data.merchant||'')+'"></div>';
-  // NEW: discount = symbol toggle + number. % branch reveals total-value input.
+  // Discount row hosts $/% toggle + discount number + (when %) total-value + code, all on one line.
+  // Saves two vertical rows (former f-value-row and former Code row). aria-labels carry the
+  // semantics that individual <label> tags would have crowded out at 320-393px widths.
   html+='<div class="form-row"><label>Discount *</label>';
-  html+='<div style="display:flex;gap:8px;align-items:center">';
-  html+='<div style="display:flex;border-radius:12px;overflow:hidden;width:80px;flex-shrink:0">';
+  html+='<div style="display:flex;gap:6px;align-items:stretch">';
+  html+='<div style="display:flex;border-radius:10px;overflow:hidden;width:64px;flex-shrink:0">';
   html+=segBtn('f-sym-dollar','setDiscountSymbol(\'$\')','$',initSymbol==='$');
   html+=segBtn('f-sym-pct','setDiscountSymbol(\'%\')','%',initSymbol==='%');
   html+='</div>';
-  html+='<input id="f-discount-num" type="number" inputmode="decimal" min="0" step="0.01" placeholder="'+(initSymbol==='%'?'20':'10')+'" value="'+escapeHtml(initNum)+'" style="flex:1">';
+  html+='<input id="f-discount-num" type="number" inputmode="decimal" min="0" step="0.01" aria-label="Discount amount" placeholder="'+(initSymbol==='%'?'20':'10')+'" value="'+escapeHtml(initNum)+'" style="flex:1;min-width:0">';
+  html+='<input id="f-value" type="number" inputmode="decimal" min="0" step="0.01" aria-label="Total value (required when % selected)" placeholder="$50" value="'+escapeHtml(initValue)+'" style="flex:1;min-width:0;display:'+(initSymbol==='%'?'block':'none')+'">';
+  html+='<input id="f-code" type="text" aria-label="Promo code (optional)" placeholder="CODE" value="'+escapeHtml(data.code||'')+'" style="flex:1.2;min-width:0">';
   html+='</div>';
   html+='<input type="hidden" id="f-symbol" value="'+initSymbol+'">';
   html+='</div>';
-  // Total value (only visible when % selected)
-  html+='<div class="form-row" id="f-value-row" style="display:'+(initSymbol==='%'?'block':'none')+'"><label>Total value ($) *</label><input id="f-value" type="number" inputmode="decimal" min="0" step="0.01" placeholder="50" value="'+escapeHtml(initValue)+'"></div>';
-  // Category alone (the old separate Value field is removed — it's now in the discount row above)
+  // Category (Code is now inline in the Discount row above; old separate Code row removed)
   html+='<div class="form-row"><label>Category</label><select id="f-category">'+cats+'</select></div>';
-  // Code
-  html+='<div class="form-row"><label>Code</label><input id="f-code" placeholder="SAVE20" value="'+escapeHtml(data.code||'')+'"></div>';
   // NEW: expiry = Y/N toggle, conditional date input
   html+='<div class="form-row"><label>Expires *</label>';
   html+='<div style="display:flex;border-radius:12px;overflow:hidden;width:120px;margin-bottom:8px">';
@@ -2211,10 +2211,10 @@ window.openDealPreview=function(data,image){
 window.setDiscountSymbol=function(sym){
   const dollar=document.getElementById('f-sym-dollar');
   const pct=document.getElementById('f-sym-pct');
-  const valueRow=document.getElementById('f-value-row');
+  const valueInput=document.getElementById('f-value');
   const hidden=document.getElementById('f-symbol');
   const numInput=document.getElementById('f-discount-num');
-  if(!dollar||!pct||!valueRow||!hidden)return;
+  if(!dollar||!pct||!hidden)return;
   const isPct=sym==='%';
   dollar.setAttribute('data-active',isPct?'false':'true');
   dollar.style.background=isPct?'#F0F0F0':'var(--accent)';
@@ -2222,7 +2222,8 @@ window.setDiscountSymbol=function(sym){
   pct.setAttribute('data-active',isPct?'true':'false');
   pct.style.background=isPct?'var(--accent)':'#F0F0F0';
   pct.style.color=isPct?'#1A1A1A':'#777';
-  valueRow.style.display=isPct?'block':'none';
+  // Toggle the value input itself (the wrapper f-value-row no longer exists after the inline merge).
+  if(valueInput)valueInput.style.display=isPct?'block':'none';
   hidden.value=sym;
   if(numInput)numInput.placeholder=isPct?'20':'10';
 };
