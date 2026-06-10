@@ -2121,16 +2121,94 @@ function parseJsonResponse(text){
 
 window.openDealPreview=function(data,image){
   const cats=CATEGORIES.map(c=>'<option value="'+c+'"'+(c===data.category?' selected':'')+'>'+c+'</option>').join('');
+  // Pre-fill detection from OCR-extracted string. Default to $ if shape unclear.
+  const incoming=String(data.discount||'');
+  const pctMatch=incoming.match(/(\d+(?:\.\d+)?)\s*%/);
+  const dollarMatch=incoming.match(/\$\s*(\d+(?:\.\d+)?)/);
+  const initSymbol=pctMatch?'%':'$';
+  const initNum=pctMatch?pctMatch[1]:(dollarMatch?dollarMatch[1]:'');
+  const initValue=data.value!=null?String(data.value):'';
+  const initExpiry=String(data.expiry||'');
+  const initHasExpiry=initExpiry?'Y':'N';
+  // Segmented toggle button styles. data-active drives the visual state.
+  function segBtn(id,onclick,label,active){
+    const bg=active?'var(--accent)':'#F0F0F0';
+    const color=active?'#1A1A1A':'#777';
+    return '<button id="'+id+'" type="button" data-active="'+(active?'true':'false')+'" onclick="'+onclick+'" style="flex:1;padding:10px 0;border:none;background:'+bg+';color:'+color+';font-weight:700;font-size:14px;cursor:pointer">'+label+'</button>';
+  }
   let html='<div class="modal-handle"></div><h3 class="modal-title">Review & save</h3>';
   if(image)html+='<div style="width:100%;height:100px;background:#f5f5f5;border-radius:12px;margin-bottom:12px;overflow:hidden"><img src="'+image+'" style="width:100%;height:100%;object-fit:cover"></div>';
   html+='<div style="background:#EAFBF4;border:1px solid #00C9A7;border-radius:12px;padding:10px 12px;margin-bottom:12px;display:flex;align-items:center;gap:8px;font-size:12px;color:#065F46;font-weight:600"><span style="font-size:16px">✨</span>AI extracted these details — review below</div>';
   html+='<div class="form-row"><label>Merchant *</label><input id="f-merchant" placeholder="Store name" value="'+escapeHtml(data.merchant||'')+'"></div>';
-  html+='<div class="form-row"><label>Discount *</label><input id="f-discount" placeholder="20% off" value="'+escapeHtml(data.discount||'')+'"></div>';
-  html+='<div class="form-grid"><div class="form-row"><label>Category</label><select id="f-category">'+cats+'</select></div><div class="form-row"><label>Value ($)</label><input id="f-value" type="number" inputmode="numeric" placeholder="10" value="'+escapeHtml(String(data.value||''))+'"></div></div>';
-  html+='<div class="form-grid"><div class="form-row"><label>Code</label><input id="f-code" placeholder="SAVE20" value="'+escapeHtml(data.code||'')+'"></div><div class="form-row"><label>Expires</label><input id="f-expiry" type="date" value="'+escapeHtml(data.expiry||'')+'"></div></div>';
+  // NEW: discount = symbol toggle + number. % branch reveals total-value input.
+  html+='<div class="form-row"><label>Discount *</label>';
+  html+='<div style="display:flex;gap:8px;align-items:center">';
+  html+='<div style="display:flex;border-radius:12px;overflow:hidden;width:80px;flex-shrink:0">';
+  html+=segBtn('f-sym-dollar','setDiscountSymbol(\'$\')','$',initSymbol==='$');
+  html+=segBtn('f-sym-pct','setDiscountSymbol(\'%\')','%',initSymbol==='%');
+  html+='</div>';
+  html+='<input id="f-discount-num" type="number" inputmode="decimal" min="0" step="0.01" placeholder="'+(initSymbol==='%'?'20':'10')+'" value="'+escapeHtml(initNum)+'" style="flex:1">';
+  html+='</div>';
+  html+='<input type="hidden" id="f-symbol" value="'+initSymbol+'">';
+  html+='</div>';
+  // Total value (only visible when % selected)
+  html+='<div class="form-row" id="f-value-row" style="display:'+(initSymbol==='%'?'block':'none')+'"><label>Total value ($) *</label><input id="f-value" type="number" inputmode="decimal" min="0" step="0.01" placeholder="50" value="'+escapeHtml(initValue)+'"></div>';
+  // Category alone (the old separate Value field is removed — it's now in the discount row above)
+  html+='<div class="form-row"><label>Category</label><select id="f-category">'+cats+'</select></div>';
+  // Code
+  html+='<div class="form-row"><label>Code</label><input id="f-code" placeholder="SAVE20" value="'+escapeHtml(data.code||'')+'"></div>';
+  // NEW: expiry = Y/N toggle, conditional date input
+  html+='<div class="form-row"><label>Expires *</label>';
+  html+='<div style="display:flex;border-radius:12px;overflow:hidden;width:120px;margin-bottom:8px">';
+  html+=segBtn('f-exp-y','setHasExpiry(\'Y\')','Yes',initHasExpiry==='Y');
+  html+=segBtn('f-exp-n','setHasExpiry(\'N\')','No',initHasExpiry==='N');
+  html+='</div>';
+  html+='<input type="hidden" id="f-has-expiry" value="'+initHasExpiry+'">';
+  html+='<input id="f-expiry" type="date" value="'+escapeHtml(initExpiry)+'" style="display:'+(initHasExpiry==='Y'?'block':'none')+'">';
+  html+='</div>';
   html+='<div class="form-row"><label>Address (optional)</label><input id="f-address" placeholder="For directions" value="'+escapeHtml(data.address||'')+'"></div>';
   html+='<div class="form-actions"><button class="btn-secondary" onclick="closeModal();pendingDealImage=null">Cancel</button><button class="btn-primary" onclick="saveDealForm()">Save deal</button></div>';
   openModal(html);
+};
+
+// Segmented-toggle helpers for the discount $/% switch and the has-expiry Y/N switch.
+// They mutate the inline data-active + style attributes on the two buttons and
+// hide/show the conditional input row. Spec: feature-deal-form-discount-expiry.md
+window.setDiscountSymbol=function(sym){
+  const dollar=document.getElementById('f-sym-dollar');
+  const pct=document.getElementById('f-sym-pct');
+  const valueRow=document.getElementById('f-value-row');
+  const hidden=document.getElementById('f-symbol');
+  const numInput=document.getElementById('f-discount-num');
+  if(!dollar||!pct||!valueRow||!hidden)return;
+  const isPct=sym==='%';
+  dollar.setAttribute('data-active',isPct?'false':'true');
+  dollar.style.background=isPct?'#F0F0F0':'var(--accent)';
+  dollar.style.color=isPct?'#777':'#1A1A1A';
+  pct.setAttribute('data-active',isPct?'true':'false');
+  pct.style.background=isPct?'var(--accent)':'#F0F0F0';
+  pct.style.color=isPct?'#1A1A1A':'#777';
+  valueRow.style.display=isPct?'block':'none';
+  hidden.value=sym;
+  if(numInput)numInput.placeholder=isPct?'20':'10';
+};
+
+window.setHasExpiry=function(yn){
+  const yBtn=document.getElementById('f-exp-y');
+  const nBtn=document.getElementById('f-exp-n');
+  const dateInput=document.getElementById('f-expiry');
+  const hidden=document.getElementById('f-has-expiry');
+  if(!yBtn||!nBtn||!dateInput||!hidden)return;
+  const isY=yn==='Y';
+  yBtn.setAttribute('data-active',isY?'true':'false');
+  yBtn.style.background=isY?'var(--accent)':'#F0F0F0';
+  yBtn.style.color=isY?'#1A1A1A':'#777';
+  nBtn.setAttribute('data-active',isY?'false':'true');
+  nBtn.style.background=isY?'#F0F0F0':'var(--accent)';
+  nBtn.style.color=isY?'#777':'#1A1A1A';
+  dateInput.style.display=isY?'block':'none';
+  hidden.value=yn;
+  if(!isY)dateInput.value='';
 };
 
 // Replaces the old openAddManual — for "Type a deal" mode (no scan)
@@ -2140,14 +2218,34 @@ window.openAddManual=function(image){
 
 window.saveDealForm=function(){
   const m=document.getElementById('f-merchant').value.trim();
-  const d=document.getElementById('f-discount').value.trim();
-  if(!m||!d){toast('Merchant and discount required');return;}
+  if(!m){toast('Merchant required');return;}
+  const symbol=document.getElementById('f-symbol').value;
+  const numRaw=document.getElementById('f-discount-num').value.trim();
+  const num=parseFloat(numRaw);
+  if(!numRaw||!Number.isFinite(num)||num<=0){toast('Discount amount required');return;}
+  let discountStr,value;
+  if(symbol==='%'){
+    const valRaw=document.getElementById('f-value').value.trim();
+    const totalValue=parseFloat(valRaw);
+    if(!valRaw||!Number.isFinite(totalValue)||totalValue<=0){toast('Total value required for % discounts');return;}
+    discountStr=num+'% off';
+    value=totalValue*num/100;
+  } else {
+    discountStr='$'+num+' off';
+    value=num;
+  }
+  const hasExpiry=document.getElementById('f-has-expiry').value;
+  let expiry='';
+  if(hasExpiry==='Y'){
+    expiry=document.getElementById('f-expiry').value;
+    if(!expiry){toast('Pick an expiry date');return;}
+  }
   state.deals.push({
-    id:uid(),merchant:m,discount:d,
+    id:uid(),merchant:m,discount:discountStr,
     category:document.getElementById('f-category').value,
-    value:parseFloat(document.getElementById('f-value').value)||parseValue(d),
+    value:value,
     code:document.getElementById('f-code').value.trim(),
-    expiry:document.getElementById('f-expiry').value||'',
+    expiry:expiry,
     address:document.getElementById('f-address').value.trim(),
     notes:'',
     image:pendingDealImage||null,
