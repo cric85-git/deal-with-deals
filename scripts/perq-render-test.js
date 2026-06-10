@@ -211,5 +211,45 @@ try {
   console.error('viewWalletDeal tests threw:', e.message);
 }
 
+// ---- calculateDiscount tests (feature-calculate-discount spec, ACs 1–7 + edge cases) ----
+try {
+  // AC1: basic 10% discount on $100 → $90
+  if (sandbox.calculateDiscount(100, 10) === 90) pass++;
+  else { fail++; console.error('calculateDiscount(100,10) expected 90, got', sandbox.calculateDiscount(100, 10)); }
+
+  // AC2: zero price short-circuits to 0
+  if (sandbox.calculateDiscount(0, 50) === 0) pass++;
+  else { fail++; console.error('calculateDiscount(0,50) expected 0, got', sandbox.calculateDiscount(0, 50)); }
+
+  // AC3: zero percent leaves price unchanged
+  if (sandbox.calculateDiscount(100, 0) === 100) pass++;
+  else { fail++; console.error('calculateDiscount(100,0) expected 100, got', sandbox.calculateDiscount(100, 0)); }
+
+  // AC4: 100% discount returns 0
+  if (sandbox.calculateDiscount(100, 100) === 0) pass++;
+  else { fail++; console.error('calculateDiscount(100,100) expected 0, got', sandbox.calculateDiscount(100, 100)); }
+
+  // AC5: fractional result preserved (50 - 50*0.25 = 37.5)
+  if (sandbox.calculateDiscount(50, 25) === 37.5) pass++;
+  else { fail++; console.error('calculateDiscount(50,25) expected 37.5, got', sandbox.calculateDiscount(50, 25)); }
+
+  // AC6: invalid/null input — null price coerces to 0 in JS arithmetic, so
+  // calculateDiscount(null, 10) === 0 (NOT NaN — null is numerically 0).
+  // Callers wanting to reject null must check `price == null` before calling.
+  if (sandbox.calculateDiscount(null, 10) === 0) pass++;
+  else { fail++; console.error('calculateDiscount(null,10) expected 0 (null coerces to 0), got', sandbox.calculateDiscount(null, 10)); }
+
+  // AC7: invalid/null input — undefined percent propagates NaN.
+  if (Number.isNaN(sandbox.calculateDiscount(100, undefined))) pass++;
+  else { fail++; console.error('calculateDiscount(100,undefined) expected NaN, got', sandbox.calculateDiscount(100, undefined)); }
+
+  // AC8: invalid/null input — undefined price also propagates NaN.
+  if (Number.isNaN(sandbox.calculateDiscount(undefined, 10))) pass++;
+  else { fail++; console.error('calculateDiscount(undefined,10) expected NaN, got', sandbox.calculateDiscount(undefined, 10)); }
+} catch (e) {
+  fail++;
+  console.error('calculateDiscount tests threw:', e.message);
+}
+
 console.log(`RENDER TEST: PASS ${pass}, FAIL ${fail}`);
 process.exit(fail === 0 ? 0 : 1);
