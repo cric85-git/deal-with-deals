@@ -4,6 +4,27 @@ All notable feature changes to the Perq app are documented here.
 
 ---
 
+## [Unreleased] — 2026-06-10
+
+### 🛠 Autonomous Quality System
+
+**What a maintainer couldn't do yesterday:**
+- Conventions for the project lived only in chat history. Each new session re-derived them from scratch.
+- A `git push` could ship broken code: `npm test` and `npm run test:smoke` were not enforced before push, only after — and the smoke spec targeted the legacy `index.html` DOM, so it had been silently failing.
+- New features could be coded without a written spec, and there was no checklist to prevent quietly touching deferred items (cloud persistence, analytics, push, paid geocoding, freemium, background geofencing).
+
+**What a maintainer can do today:**
+- `.kiro/steering/perq.md` is auto-included in every Perq session. Encodes brand system, splash contract, native build cycle, security guardrails, and the explicit "open gaps — do not auto-implement without instruction" list.
+- `.kiro/hooks/perq-supervisor.kiro.hook` (preToolUse on shell) intercepts every `git push` and runs five gates: `node --check preview-app.js`, `npm test`, `npm run test:smoke`, cache-bump assertion (`?v=N` advanced if `preview-app.js` changed), and CHANGELOG assertion (entry present unless commit subject is `chore:`/`docs:`/`test:`/`ci:`). Push is blocked on any failure.
+- `.kiro/specs/feature-template.md` is the mandatory pre-coding template. Includes an OPEN GAPS CHECKLIST that must be confirmed unchecked before any feature work.
+- `tests/perq-smoke.spec.js` rewritten against the current `preview.html` DOM. 6 cold-launch tests now pass (boot splash content + sizes + dismiss + wallet/onboarding visible + tabbar + Perq wordmark mint color).
+- `playwright.config.js` simplified — drops the legacy Python http.server `webServer` block; tests load `preview.html` via `file://`.
+- `package.json` exposes individual aliases: `test:brand`, `test:splash`, `test:smoke`.
+- `.github/workflows/android-build.yml` now runs the brand, splash, and smoke suites in CI before building the APK. Playwright Chromium installs as a separate step.
+- `TEST_RESULTS.md` updated 2026-06-10. Suite 1 (`npm test`) = 107 PASS / 0 FAIL across 6 sub-suites. Suite 2 (`npm run test:smoke`) = 6 PASS / 0 FAIL. Honest report on Suite 3 (`tests/perq-agent.test.js`) which is orphaned and has 3 staleness failures unrelated to product correctness.
+
+---
+
 ## [Unreleased] — 2026-06-04
 
 ### 🆕 Phase 4: Deal Discovery + Enhanced Gamification + Integrations Upgrade

@@ -17,6 +17,8 @@ on:
       - 'scripts/build-native.js'
       - '.github/workflows/android-build.yml'
   workflow_dispatch:  # Allow manual trigger from GitHub UI
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -26,10 +28,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node 20
+      - name: Setup Node 22
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Setup Java 21
@@ -50,6 +52,18 @@ jobs:
           node scripts/perq-load-test.js
           node scripts/perq-migration-test.js
           node scripts/perq-render-test.js
+
+      - name: Run brand contrast tests
+        run: npm run test:brand
+
+      - name: Run splash layout tests
+        run: npm run test:splash
+
+      - name: Install Playwright browsers (Chromium only)
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright smoke tests
+        run: npm run test:smoke
 
       - name: Build native web bundle
         run: npm run build:native
