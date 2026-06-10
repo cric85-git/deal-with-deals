@@ -194,12 +194,101 @@ async function testNativeSplashMaster(browser) {
   await ctx.close();
 }
 
+async function testSplashAlignment(browser) {
+  console.log('\n[3/3] Vertical alignment between native splash and webview boot overlay');
+
+  // Native master rendered through scaleAspectFill at iPhone viewport.
+  const masterPath = path.join(ROOT, 'ios/App/App/Assets.xcassets/Splash.imageset/splash-2732x2732.png');
+  const masterBuf = fs.readFileSync(masterPath);
+  const dataUri = 'data:image/png;base64,' + masterBuf.toString('base64');
+  const html = `<!doctype html><html><head><style>
+    *{margin:0;padding:0}
+    html,body{width:393px;height:852px;overflow:hidden;background:#020817}
+    img{width:100%;height:100%;object-fit:cover;display:block}
+  </style></head><body><img src="${dataUri}"></body></html>`;
+  const ctx = await browser.newContext({ viewport: VIEWPORT });
+  const page = await ctx.newPage();
+  await page.setContent(html, { waitUntil: 'networkidle' });
+
+  // Find the topmost row that has visibly-mint pixels (the wallet logo
+  // top edge). We scan column-by-column at the horizontal center.
+  const nativeLogoTop = await page.evaluate(async (vp) => {
+    return new Promise(resolve => {
+      const img = document.querySelector('img');
+      const c = document.createElement('canvas');
+      c.width = vp.width; c.height = vp.height;
+      const ctx = c.getContext('2d');
+      const sample = () => {
+        ctx.drawImage(img, 0, 0, vp.width, vp.height);
+        const data = ctx.getImageData(0, 0, vp.width, vp.height).data;
+        // bg navy is roughly r<30, g<50, b<70. Look for the first row
+        // (top-down) where the central 60% has a "bright" pixel
+        // (sum r+g+b > 150) — that's the logo or text edge.
+        for (let y = 0; y < vp.height; y++) {
+          for (let x = Math.round(vp.width*0.20); x < Math.round(vp.width*0.80); x++) {
+            const i = (y * vp.width + x) * 4;
+            const sum = data[i] + data[i+1] + data[i+2];
+            if (sum > 200) { resolve(y); return; }
+          }
+        }
+        resolve(-1);
+      };
+      if (img.complete) sample(); else img.onload = sample;
+    });
+  }, VIEWPORT);
+  await ctx.close();
+  if (nativeLogoTop < 0) { bad('could not locate logo in native splash render'); return; }
+  ok(`native splash: logo top edge at y=${nativeLogoTop}px (${Math.round(100*nativeLogoTop/VIEWPORT.height)}% of viewport)`);
+
+  // Webview overlay logo top edge — pixel-scan with the SAME algorithm
+  // as the native render so the comparison is apples-to-apples.
+  const ctx2 = await browser.newContext({ viewport: VIEWPORT });
+  const page2 = await ctx2.newPage();
+  await page2.goto('file://' + path.join(ROOT, 'preview.html'), { waitUntil: 'domcontentloaded' });
+  await page2.evaluate(() => { window.__perqAppReady = false; });
+  await page2.waitForSelector('#boot-splash .bs-logo', { state: 'visible', timeout: 1000 });
+  const overlayShot = path.join(TMP, 'splash-overlay-for-align.png');
+  await page2.screenshot({ path: overlayShot, clip: { x:0, y:0, ...VIEWPORT } });
+
+  // Reuse the pixel-scan algorithm: load the screenshot back into a
+  // canvas in the same page, find first row with central bright pixels.
+  const overlayLogoTop = await page2.evaluate(async (cfg) => {
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement('canvas');
+        c.width = cfg.w; c.height = cfg.h;
+        const ctx = c.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        const data = ctx.getImageData(0, 0, cfg.w, cfg.h).data;
+        for (let y = 0; y < cfg.h; y++) {
+          for (let x = Math.round(cfg.w*0.20); x < Math.round(cfg.w*0.80); x++) {
+            const i = (y * cfg.w + x) * 4;
+            const sum = data[i] + data[i+1] + data[i+2];
+            if (sum > 200) { resolve(y); return; }
+          }
+        }
+        resolve(-1);
+      };
+      img.src = cfg.uri;
+    });
+  }, { w: VIEWPORT.width, h: VIEWPORT.height, uri: 'data:image/png;base64,' + fs.readFileSync(overlayShot).toString('base64') });
+  await ctx2.close();
+  if (overlayLogoTop < 0) { bad('could not locate logo in webview overlay render'); return; }
+  ok(`webview overlay: logo top edge at y=${overlayLogoTop}px (${Math.round(100*overlayLogoTop/VIEWPORT.height)}% of viewport)`);
+
+  const delta = Math.abs(nativeLogoTop - overlayLogoTop);
+  const TOLERANCE_PX = 10;
+  if (delta > TOLERANCE_PX) bad(`logo vertical position drifts ${Math.round(delta)}px between native splash and webview overlay (max ${TOLERANCE_PX}px) — would look like a shift-up animation on transition`);
+  else ok(`logo position aligned within ${Math.round(delta)}px (max ${TOLERANCE_PX}px) — no visible shift on handoff`);
+}
+
 (async () => {
   // Sanity-check the native splash config so a future bump that silently
   // drops launchShowDuration below the intended value will fail this test.
   const cfg = JSON.parse(fs.readFileSync(path.join(ROOT, 'capacitor.config.json'), 'utf8'));
   const lsd = cfg.plugins && cfg.plugins.SplashScreen && cfg.plugins.SplashScreen.launchShowDuration;
-  console.log('\n[0/2] Native SplashScreen config');
+  console.log('\n[0/3] Native SplashScreen config');
   if (typeof lsd !== 'number' || lsd < 2000) bad(`launchShowDuration is ${lsd} (need >= 2000ms for a readable launch frame)`);
   else ok(`launchShowDuration=${lsd}ms (visible native splash before auto-hide)`);
   const bg = cfg.plugins && cfg.plugins.SplashScreen && cfg.plugins.SplashScreen.backgroundColor;
@@ -213,6 +302,7 @@ async function testNativeSplashMaster(browser) {
     await testWebviewSplash(page);
     await ctx.close();
     await testNativeSplashMaster(browser);
+    await testSplashAlignment(browser);
   } finally {
     await browser.close();
   }
