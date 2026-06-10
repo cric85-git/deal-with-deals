@@ -474,9 +474,6 @@ try {
 
   // AC26: Discount row consolidates $/% toggle, discount number, value, and code
   // onto one line. Standalone Code row and standalone Total-value row are gone.
-  // Mechanical check: f-discount-num appears BEFORE f-value, f-value BEFORE f-code,
-  // and f-code BEFORE f-category in the rendered modal HTML — proving inline order.
-  // Also: there is no longer a `<label>Code</label>` standalone row marker.
   modalHTML = '';
   sandbox.openDealPreview({ merchant: 'X' });
   const idxNum = modalHTML.indexOf('id="f-discount-num"');
@@ -487,6 +484,107 @@ try {
   const noStandaloneCodeLabel = !modalHTML.includes('<label>Code</label>');
   if (inlineOrderOk && noStandaloneCodeLabel) pass++;
   else { fail++; console.error('Discount row inline merge failed — order:', { num: idxNum, value: idxValue, code: idxCode, category: idxCategory }, 'standaloneCodeLabel:', !noStandaloneCodeLabel); }
+
+  // ---- feature-deal-detail-modal-v2 tests (AC1-7) ----
+  // AC1: Wallet pass card onclick calls viewWalletDeal (NOT togglePass).
+  // Mechanical: render wallet, capture wallet-content innerHTML, search for the
+  // deal id inside an onclick="viewWalletDeal(...)" attribute on a .wpass div.
+  let walletHTML = '';
+  els['wallet-content'] = (function () {
+    const e = fakeEl('wallet-content');
+    Object.defineProperty(e, 'innerHTML', { set(v) { walletHTML = v; }, get() { return walletHTML; } });
+    return e;
+  })();
+  store['perq-mvp:deals'] = JSON.stringify([
+    { id: 'aXcBnQ', merchant: 'Trader Joes', discount: '20% off entire purchase', value: 10, redeemed: false, category: 'Groceries', expiry: '2026-06-25', address: '123 Main St, Anywhere', image: 'data:image/png;base64,iVBORw0KGgo=', createdAt: Date.now() }
+  ]);
+  vm.runInContext(code, ctx, { filename: 'preview-app.js' });
+  // Re-install interceptors AFTER IIFE reload (it recreates els lazily).
+  els['wallet-content'] = (function () {
+    const e = fakeEl('wallet-content');
+    Object.defineProperty(e, 'innerHTML', { set(v) { walletHTML = v; }, get() { return walletHTML; } });
+    return e;
+  })();
+  els['modal-overlay'] = (function () {
+    const e = fakeEl('modal-overlay');
+    Object.defineProperty(e, 'innerHTML', { set(v) { modalHTML = v; }, get() { return modalHTML; } });
+    return e;
+  })();
+  walletHTML = '';
+  try { sandbox.goPage('wallet'); } catch (e) { console.error('goPage(wallet) threw:', e.message); fail++; }
+  if (walletHTML.includes('class="wpass"') && walletHTML.includes("viewWalletDeal('aXcBnQ')") && !walletHTML.includes("togglePass(this)")) pass++;
+  else { fail++; console.error('Wallet pass onclick should call viewWalletDeal not togglePass — got:', walletHTML.slice(0, 600)); }
+
+  // AC2: Wallet pass renders expiry chip when d.expiry is set. Chip carries an
+  // hourglass emoji (⏱) followed by either "Today" / "Tomorrow" / "Nd left" /
+  // "Expired" — text varies with daysUntil result, but the ⏱ glyph + the
+  // legacy expiry text in d.discount line confirms the chip rendered.
+  if (walletHTML.includes('⏱')) pass++;
+  else { fail++; console.error('Expected expiry chip ⏱ glyph in wallet HTML, got:', walletHTML.slice(0, 800)); }
+
+  // AC2 edge: deal with empty expiry → no chip.
+  store['perq-mvp:deals'] = JSON.stringify([
+    { id: 'noExp1', merchant: 'TypedStore', discount: '$5 off', value: 5, redeemed: false, category: 'Other', expiry: '', createdAt: Date.now() }
+  ]);
+  vm.runInContext(code, ctx, { filename: 'preview-app.js' });
+  els['wallet-content'] = (function () {
+    const e = fakeEl('wallet-content');
+    Object.defineProperty(e, 'innerHTML', { set(v) { walletHTML = v; }, get() { return walletHTML; } });
+    return e;
+  })();
+  walletHTML = '';
+  try { sandbox.goPage('wallet'); } catch (e) { console.error('goPage(wallet) threw on no-expiry deal:', e.message); fail++; }
+  if (walletHTML.includes('class="wpass"') && !walletHTML.includes('⏱')) pass++;
+  else { fail++; console.error('Deal with no expiry should not render ⏱ chip, got:', walletHTML.slice(0, 600)); }
+
+  // AC3: Wallet pass renders one-line offer text under merchant name. The discount
+  // string ("$5 off") must appear inside the .pcoll top section (not just the
+  // dead-code .pexp expanded section). We assert the discount substring is in
+  // walletHTML AND comes BEFORE the (still-present) .pexp marker.
+  const offerIdx = walletHTML.indexOf('$5 off');
+  const pexpIdx = walletHTML.indexOf('class="pexp"');
+  if (offerIdx > 0 && pexpIdx > 0 && offerIdx < pexpIdx) pass++;
+  else { fail++; console.error('Offer line should appear in .pcoll BEFORE .pexp — offerIdx', offerIdx, 'pexpIdx', pexpIdx); }
+
+  // AC4: viewWalletDeal modal renders address row when d.address set. Maps URL
+  // and "Directions" affordance must both appear in modalHTML.
+  store['perq-mvp:deals'] = JSON.stringify([
+    { id: 'addrDeal', merchant: 'CoffeeShop', discount: '20% off', value: 4, redeemed: false, address: '500 Market St, San Francisco', createdAt: Date.now() }
+  ]);
+  vm.runInContext(code, ctx, { filename: 'preview-app.js' });
+  els['modal-overlay'] = (function () {
+    const e = fakeEl('modal-overlay');
+    Object.defineProperty(e, 'innerHTML', { set(v) { modalHTML = v; }, get() { return modalHTML; } });
+    return e;
+  })();
+  modalHTML = '';
+  sandbox.viewWalletDeal('addrDeal');
+  if (modalHTML.includes('https://www.google.com/maps/search/') && modalHTML.includes('500%20Market%20St') && modalHTML.includes('Directions')) pass++;
+  else { fail++; console.error('viewWalletDeal(addr) missing maps URL or Directions affordance, got:', modalHTML.slice(0, 1000)); }
+
+  // AC5: viewWalletDeal modal omits address row when d.address absent.
+  store['perq-mvp:deals'] = JSON.stringify([
+    { id: 'noAddrDeal', merchant: 'NoAddrShop', discount: '$5 off', value: 5, redeemed: false, createdAt: Date.now() }
+  ]);
+  vm.runInContext(code, ctx, { filename: 'preview-app.js' });
+  els['modal-overlay'] = (function () {
+    const e = fakeEl('modal-overlay');
+    Object.defineProperty(e, 'innerHTML', { set(v) { modalHTML = v; }, get() { return modalHTML; } });
+    return e;
+  })();
+  modalHTML = '';
+  sandbox.viewWalletDeal('noAddrDeal');
+  if (!modalHTML.includes('https://www.google.com/maps/search/') && !modalHTML.includes('Directions')) pass++;
+  else { fail++; console.error('viewWalletDeal(no address) unexpectedly rendered maps row, got:', modalHTML.slice(0, 1000)); }
+
+  // AC6: viewWalletDeal modal renders Delete deal button calling deleteDealFromModal.
+  if (modalHTML.includes('Delete deal') && modalHTML.includes("deleteDealFromModal('noAddrDeal')")) pass++;
+  else { fail++; console.error('viewWalletDeal missing Delete deal button — modalHTML[0..1500]:', modalHTML.slice(0, 1500)); }
+
+  // AC7: window.deleteDealFromModal exposed and is a function. (Mirror of load-test
+  // assertion, kept here so render-test self-validates the new public global.)
+  if (typeof sandbox.deleteDealFromModal === 'function') pass++;
+  else { fail++; console.error('deleteDealFromModal not exposed on window, got:', typeof sandbox.deleteDealFromModal); }
 } catch (e) {
   fail++;
   console.error('saveDealForm tests threw:', e.message);

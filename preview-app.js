@@ -578,13 +578,30 @@ function renderDealsList(active){
     const txt=brand.text;
     const du=daysUntil(d.expiry);
     const expText=du===null?'No expiry':du===0?'Expires TODAY':du===1?'Expires tomorrow':du<0?'Expired':'Expires in '+du+' days';
+    // Compact expiry chip for the always-visible top of stacked cards.
+    // Color-coded by urgency. Hidden entirely if no expiry. Spec: feature-deal-detail-modal-v2 AC2.
+    let expChip='';
+    if(du!==null){
+      let chipBg,chipTxt;
+      if(du<0){chipBg='rgba(220,38,38,0.95)';chipTxt='Expired';}
+      else if(du===0){chipBg='rgba(220,38,38,0.95)';chipTxt='Today';}
+      else if(du===1){chipBg='rgba(245,158,11,0.95)';chipTxt='Tomorrow';}
+      else if(du<=3){chipBg='rgba(245,158,11,0.95)';chipTxt=du+'d left';}
+      else{chipBg='rgba(255,255,255,0.25)';chipTxt=du+'d left';}
+      expChip='<span style="background:'+chipBg+';color:white;padding:3px 8px;border-radius:6px;font-size:9px;font-weight:700;letter-spacing:0.5px;white-space:nowrap">⏱ '+chipTxt+'</span>';
+    }
     const isLast=i===active.length-1;
-    html+='<div class="wpass" data-deal-id="'+d.id+'" onclick="togglePass(this)" data-brand-bg="'+brand.bg+'" data-brand-bg2="'+brand.bg2+'" data-brand-text="'+brand.text+'" style="border-radius:18px;padding:18px 20px;'+(isLast?'margin-bottom:14px':'margin-bottom:-90px')+';position:relative;box-shadow:'+brandCardShadow()+';color:'+txt+';background:'+bgCss+';cursor:pointer">';
+    // Tap target opens the modal (the inline expand is now dead code, kept in DOM
+    // for safety but no longer triggered). Spec: feature-deal-detail-modal-v2 AC1.
+    html+='<div class="wpass" data-deal-id="'+d.id+'" onclick="viewWalletDeal(\''+d.id+'\')" data-brand-bg="'+brand.bg+'" data-brand-bg2="'+brand.bg2+'" data-brand-text="'+brand.text+'" style="border-radius:18px;padding:18px 20px;'+(isLast?'margin-bottom:14px':'margin-bottom:-90px')+';position:relative;box-shadow:'+brandCardShadow()+';color:'+txt+';background:'+bgCss+';cursor:pointer">';
     html+='<div class="pcoll" style="display:flex;flex-direction:column;gap:60px">';
     const sharedBadge=d.shared?'<span style="background:rgba(0,0,0,0.3);padding:3px 8px;border-radius:6px;font-size:9px;font-weight:700;letter-spacing:0.5px">SHARED</span>':'';
     const sourceBadge=d.source==='local'?'<span style="background:rgba(255,255,255,0.25);padding:3px 8px;border-radius:6px;font-size:9px;font-weight:700;letter-spacing:0.5px">📍 LOCAL DEAL</span>':d.source==='online'?'<span style="background:rgba(255,255,255,0.25);padding:3px 8px;border-radius:6px;font-size:9px;font-weight:700;letter-spacing:0.5px">🌐 ONLINE DEAL</span>':d.fromCommunity?'<span style="background:rgba(255,255,255,0.25);padding:3px 8px;border-radius:6px;font-size:9px;font-weight:700;letter-spacing:0.5px">👥 COMMUNITY</span>':'';
-    const badges=[sharedBadge,sourceBadge].filter(b=>b).join(' ');
-    html+='<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px"><div style="flex:1;min-width:0"><p style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;opacity:0.85;margin:0">'+escapeHtml(d.category||'Deal')+'</p><h3 style="font-size:16px;font-weight:700;margin:2px 0 0">'+escapeHtml(d.merchant)+'</h3></div><div style="display:flex;flex-direction:column;gap:3px;align-items:flex-end;flex-shrink:0">'+badges+'</div></div>';
+    const badges=[sharedBadge,sourceBadge,expChip].filter(b=>b).join(' ');
+    // One-line offer summary under the merchant name — visible on every stacked card.
+    // Truncated to 1 line via ellipsis so long discount strings don't break layout. Spec AC3.
+    const offerLine=d.discount?'<p style="font-size:12px;font-weight:600;margin:3px 0 0;opacity:0.92;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escapeHtml(d.discount)+'</p>':'';
+    html+='<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px"><div style="flex:1;min-width:0"><p style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;opacity:0.85;margin:0">'+escapeHtml(d.category||'Deal')+'</p><h3 style="font-size:16px;font-weight:700;margin:2px 0 0">'+escapeHtml(d.merchant)+'</h3>'+offerLine+'</div><div style="display:flex;flex-direction:column;gap:3px;align-items:flex-end;flex-shrink:0">'+badges+'</div></div>';
     html+='<div style="display:flex;justify-content:space-between;align-items:flex-end"><div><p style="font-size:22px;font-weight:800;margin:0">'+escapeHtml(d.discount)+'</p><p style="font-size:11px;opacity:0.9;margin:2px 0 0">'+expText+'</p></div>';
     if(d.code)html+='<span style="background:rgba(0,0,0,0.25);padding:4px 10px;border-radius:6px;font-family:ui-monospace,monospace;font-size:11px;font-weight:600">'+escapeHtml(d.code)+'</span>';
     html+='</div></div>';
@@ -951,12 +968,24 @@ window.viewWalletDeal=function(id){
   // Image preview (only when the deal has an image — legacy/Type-a-deal entries skip cleanly)
   html+=dealImageFrame(d.image,'wallet-detail-img-'+d.id);
   // Info rows
-  html+='<div style="background:var(--surface-soft);border-radius:14px;padding:4px 14px;margin-bottom:16px">';
+  html+='<div style="background:var(--surface-soft);border-radius:14px;padding:4px 14px;margin-bottom:12px">';
   html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);font-size:14px"><span style="color:var(--text-dim)">🏷️ Merchant</span><span style="color:var(--text);font-weight:600">'+merchantText+'</span></div>';
   html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);font-size:14px"><span style="color:var(--text-dim)">💰 Discount</span><span style="color:var(--text);font-weight:600">'+(discountText||'<span style="color:var(--text-faint)">—</span>')+'</span></div>';
   html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;font-size:14px"><span style="color:var(--text-dim)">📅 Expiry</span><span style="color:'+expColor+';font-weight:600">'+escapeHtml(expRow)+'</span></div>';
   html+='</div>';
-  // Primary CTA + Share secondary CTA
+  // Address row — clickable, opens platform maps. Spec: feature-deal-detail-modal-v2 AC4-5.
+  // Same Google-Maps URL the inline-expanded view uses; Apple Maps recognizes it on iOS,
+  // Google Maps app handles it on Android. event.stopPropagation prevents the modal-overlay's
+  // backdrop-tap handler from firing when the user taps the link.
+  if(d.address){
+    const mapsUrl='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(d.address);
+    html+='<a href="'+escapeHtml(mapsUrl)+'" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--surface-soft);border-radius:14px;margin-bottom:12px;text-decoration:none;color:var(--text)">'
+      +'<svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:none;stroke:#4FACFE;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>'
+      +'<span style="flex:1;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escapeHtml(d.address)+'</span>'
+      +'<span style="font-size:11px;color:#4FACFE;font-weight:700;flex-shrink:0">Directions</span>'
+      +'</a>';
+  }
+  // Primary CTA + Share + Delete
   if(isRedeemed){
     html+='<button disabled style="width:100%;padding:14px;border-radius:14px;background:var(--surface-soft);color:var(--text-faint);border:none;font-size:15px;font-weight:800;cursor:not-allowed;margin-bottom:8px">Already used</button>';
   } else {
@@ -964,7 +993,11 @@ window.viewWalletDeal=function(id){
   }
   // Share button — secondary, outlined. Available for both active and redeemed
   // deals (sharing a "look at the deal I just used" recommendation is valid).
-  html+='<button onclick="shareDealFromModal(\''+d.id+'\')" style="width:100%;padding:13px;border-radius:14px;background:transparent;color:var(--accent-dark);border:2px solid var(--accent);font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px"><svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>Share Deal</button>';
+  html+='<button onclick="shareDealFromModal(\''+d.id+'\')" style="width:100%;padding:13px;border-radius:14px;background:transparent;color:var(--accent-dark);border:2px solid var(--accent);font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px"><svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>Share Deal</button>';
+  // Delete button — destructive, outlined faint-red. Calls deleteDealFromModal which
+  // closes modal first then runs deleteDeal (which prompts native confirm + toasts).
+  // Spec: feature-deal-detail-modal-v2 AC6-7.
+  html+='<button onclick="deleteDealFromModal(\''+d.id+'\')" style="width:100%;padding:13px;border-radius:14px;background:transparent;color:#DC2626;border:2px solid #FFE5E5;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px"><svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>Delete deal</button>';
   openModal(html);
 };
 
@@ -979,6 +1012,13 @@ window.markDealUsed=function(id){
 window.shareDealFromModal=function(id){
   closeModal();
   shareDeal(id);
+};
+
+// Wraps deleteDeal with modal close so the system confirm() and the post-delete
+// toast surface cleanly without the modal stacking context. Spec: feature-deal-detail-modal-v2 AC7.
+window.deleteDealFromModal=function(id){
+  closeModal();
+  deleteDeal(id);
 };
 
 // -------- calculateDiscount --------
