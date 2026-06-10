@@ -4,6 +4,28 @@ All notable feature changes to the Perq app are documented here.
 
 ---
 
+## [Unreleased] — 2026-06-10 (deal-detail-modal-share)
+
+### 🆕 Feature: Share Deal button on Deal Detail Modal
+
+Spec: skipped at user instruction (small follow-up to feature-deal-detail-modal).
+
+**What a user couldn't do yesterday:**
+- The Deal Detail Modal had a single primary CTA ("Mark as Used"). To share a deal from the modal, the user had to close it and tap the Share icon inside the wallet pass action row.
+
+**What a user can do today:**
+- A new **Share Deal** secondary CTA sits below "Mark as Used" inside the modal. Outlined mint button (border `var(--accent)`, label `var(--accent-dark)`) so it reads as secondary, not competing with the primary CTA.
+- Available for both active deals and already-redeemed deals (sharing a "look at the deal I just used" recommendation is valid).
+- Wraps existing `shareDeal(id)` via new `window.shareDealFromModal(id)` so the modal closes cleanly before the system share sheet (or share-options modal) opens.
+
+**Tests added:**
+- `scripts/perq-load-test.js` — `shareDealFromModal` asserted on `window` after boot.
+- `scripts/perq-render-test.js` — 2 new cases: active deal renders share button, redeemed deal also renders share button. RENDER TEST 13 → 15 PASS.
+
+**Cache version:** `?v=30` → `?v=31`.
+
+---
+
 ## [Unreleased] — 2026-06-10 (deal-detail-modal)
 
 ### 🆕 Feature: Deal Detail Modal

@@ -194,6 +194,18 @@ try {
   sandbox.viewWalletDeal('detailRedeemed');
   if (modalHTML.includes('Already used') && modalHTML.includes('disabled')) pass++;
   else { fail++; console.error('viewWalletDeal(redeemed) missing disabled "Already used" pill — got:\n' + modalHTML.slice(0, 400)); }
+
+  // Case D: viewWalletDeal renders the secondary "Share Deal" button (active deal).
+  modalHTML = '';
+  sandbox.viewWalletDeal('detailActive');
+  if (modalHTML.includes('Share Deal') && modalHTML.includes('shareDealFromModal')) pass++;
+  else { fail++; console.error('viewWalletDeal(active) missing "Share Deal" secondary CTA — got:\n' + modalHTML.slice(0, 400)); }
+
+  // Case E: Share button is also present for REDEEMED deals (sharing a used deal is valid).
+  modalHTML = '';
+  sandbox.viewWalletDeal('detailRedeemed');
+  if (modalHTML.includes('Share Deal') && modalHTML.includes('shareDealFromModal')) pass++;
+  else { fail++; console.error('viewWalletDeal(redeemed) missing "Share Deal" — should be available even for used deals'); }
 } catch (e) {
   fail++;
   console.error('viewWalletDeal tests threw:', e.message);

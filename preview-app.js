@@ -954,12 +954,15 @@ window.viewWalletDeal=function(id){
   html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);font-size:14px"><span style="color:var(--text-dim)">💰 Discount</span><span style="color:var(--text);font-weight:600">'+(discountText||'<span style="color:var(--text-faint)">—</span>')+'</span></div>';
   html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;font-size:14px"><span style="color:var(--text-dim)">📅 Expiry</span><span style="color:'+expColor+';font-weight:600">'+escapeHtml(expRow)+'</span></div>';
   html+='</div>';
-  // Primary CTA
+  // Primary CTA + Share secondary CTA
   if(isRedeemed){
-    html+='<button disabled style="width:100%;padding:14px;border-radius:14px;background:var(--surface-soft);color:var(--text-faint);border:none;font-size:15px;font-weight:800;cursor:not-allowed">Already used</button>';
+    html+='<button disabled style="width:100%;padding:14px;border-radius:14px;background:var(--surface-soft);color:var(--text-faint);border:none;font-size:15px;font-weight:800;cursor:not-allowed;margin-bottom:8px">Already used</button>';
   } else {
-    html+='<button onclick="markDealUsed(\''+d.id+'\')" style="width:100%;padding:14px;border-radius:14px;background:linear-gradient(135deg,var(--accent),var(--accent-dark));color:white;border:none;font-size:15px;font-weight:800;cursor:pointer">Mark as Used</button>';
+    html+='<button onclick="markDealUsed(\''+d.id+'\')" style="width:100%;padding:14px;border-radius:14px;background:linear-gradient(135deg,var(--accent),var(--accent-dark));color:white;border:none;font-size:15px;font-weight:800;cursor:pointer;margin-bottom:8px">Mark as Used</button>';
   }
+  // Share button — secondary, outlined. Available for both active and redeemed
+  // deals (sharing a "look at the deal I just used" recommendation is valid).
+  html+='<button onclick="shareDealFromModal(\''+d.id+'\')" style="width:100%;padding:13px;border-radius:14px;background:transparent;color:var(--accent-dark);border:2px solid var(--accent);font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px"><svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>Share Deal</button>';
   openModal(html);
 };
 
@@ -967,6 +970,13 @@ window.viewWalletDeal=function(id){
 window.markDealUsed=function(id){
   closeModal();
   redeemDeal(id);
+};
+
+// Wraps shareDeal with modal close so the system share sheet (or share modal)
+// has a clean stacking context. Returns control to existing shareDeal flow.
+window.shareDealFromModal=function(id){
+  closeModal();
+  shareDeal(id);
 };
 
 window.shareDeal=function(id){
