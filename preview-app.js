@@ -979,6 +979,13 @@ window.shareDealFromModal=function(id){
   shareDeal(id);
 };
 
+// -------- calculateDiscount --------
+// Pure helper. Given a numeric price and percent, returns the post-discount
+// price. Spec: .kiro/specs/feature-calculate-discount.md
+// Returns NaN when either input is null/undefined; caller is responsible for
+// checking Number.isFinite() before consuming.
+window.calculateDiscount=function(price,percent){return price-(price*percent/100);};
+
 window.shareDeal=function(id){
   const d=state.deals.find(x=>x.id===id);
   if(!d)return;

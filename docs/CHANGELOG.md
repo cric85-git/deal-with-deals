@@ -4,6 +4,30 @@ All notable feature changes to the Perq app are documented here.
 
 ---
 
+## [Unreleased] — 2026-06-10 (calculate-discount)
+
+### 🆕 Feature: `calculateDiscount(price, percent)` helper
+
+Spec: `.kiro/specs/feature-calculate-discount.md`. First feature shipped through supervisor v4 — Gate 0 (spec required) and Gate 4B.7 (assertion density) both enforced on this push.
+
+**What a user couldn't do yesterday:**
+- Discount math was inline string parsing (`"20% off"`, `"$10 off"`). No shared utility for computing the post-discount price for a numeric input.
+
+**What a developer can do today:**
+- `window.calculateDiscount(price, percent)` returns `price - (price * percent / 100)`. Exposed on `window` for use across the wallet pass code, savings hero, share text, and any future feature that needs structured discount math.
+
+**Honest behavior notes (documented in spec § 5 because the test caught it):**
+- `calculateDiscount(null, 10)` returns `0`, not `NaN`. JS coerces `null` to `0` in arithmetic. Callers that need to reject null must check `price == null` explicitly.
+- `calculateDiscount(undefined, anything)` and `calculateDiscount(anything, undefined)` return `NaN` (`undefined` propagates `NaN` in arithmetic).
+
+**Tests added (8 cases, all with `===` or `Number.isNaN()` assertions):**
+- `scripts/perq-load-test.js` — `calculateDiscount` asserted on `window` after boot.
+- `scripts/perq-render-test.js` — 8 cases: basic 100×10%, zero price, zero percent, full 100% discount, fractional 50×25%, null price (returns 0 due to coercion), undefined percent (NaN), undefined price (NaN). RENDER TEST 15 → 23 PASS.
+
+**Cache version:** `?v=31` → `?v=32`. Native build + cap sync ios/android complete.
+
+---
+
 ## [Unreleased] — 2026-06-10 (supervisor-v4 + spot-check)
 
 ### 🛠 Supervisor v4 — Gate 4B.7 (assertion density) + SPOT-CHECK REQUIRED
