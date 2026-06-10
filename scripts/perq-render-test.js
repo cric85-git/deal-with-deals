@@ -471,6 +471,22 @@ try {
   // but kept here so render-test self-validates the new public global).
   if (typeof sandbox.toggleDealImage === 'function') pass++;
   else { fail++; console.error('toggleDealImage not exposed on window, got:', typeof sandbox.toggleDealImage); }
+
+  // AC26: Discount row consolidates $/% toggle, discount number, value, and code
+  // onto one line. Standalone Code row and standalone Total-value row are gone.
+  // Mechanical check: f-discount-num appears BEFORE f-value, f-value BEFORE f-code,
+  // and f-code BEFORE f-category in the rendered modal HTML — proving inline order.
+  // Also: there is no longer a `<label>Code</label>` standalone row marker.
+  modalHTML = '';
+  sandbox.openDealPreview({ merchant: 'X' });
+  const idxNum = modalHTML.indexOf('id="f-discount-num"');
+  const idxValue = modalHTML.indexOf('id="f-value"');
+  const idxCode = modalHTML.indexOf('id="f-code"');
+  const idxCategory = modalHTML.indexOf('id="f-category"');
+  const inlineOrderOk = idxNum > 0 && idxValue > idxNum && idxCode > idxValue && idxCategory > idxCode;
+  const noStandaloneCodeLabel = !modalHTML.includes('<label>Code</label>');
+  if (inlineOrderOk && noStandaloneCodeLabel) pass++;
+  else { fail++; console.error('Discount row inline merge failed — order:', { num: idxNum, value: idxValue, code: idxCode, category: idxCategory }, 'standaloneCodeLabel:', !noStandaloneCodeLabel); }
 } catch (e) {
   fail++;
   console.error('saveDealForm tests threw:', e.message);

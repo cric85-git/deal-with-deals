@@ -1,4 +1,4 @@
-const CACHE_NAME = 'perq-v28-deal-image-toggle';
+const CACHE_NAME = 'perq-v29-discount-row-inline';
 const ASSETS = [
   './',
   './index.html',

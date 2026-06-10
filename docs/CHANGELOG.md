@@ -4,6 +4,32 @@ All notable feature changes to the Perq app are documented here.
 
 ---
 
+## [Unreleased] — 2026-06-10 (discount-row-inline)
+
+### 🛠 Refactor: Discount + Value + Code on one line — saves two rows of vertical space
+
+Spec amendment: `.kiro/specs/feature-deal-form-discount-expiry.md` (ACs 26-27 + 2 edge cases).
+
+**What a user complained about:**
+- "The size for Value on the discount row is too big." Right — when `%` was selected, the form added a separate "Total value ($) *" row with full-width input. Plus the standalone "Code" row below it. That meant 3 rows for what is conceptually one structured input. iPhone users had to scroll to reach Expires/Address.
+
+**What a user can do today:**
+- The Discount row is now a single inline flex line: `[ $ | % ]` segmented toggle (64px) + discount number input + Total value input (visible only when `%` selected) + Code input. The standalone Total-value row and standalone Code row are gone — folded into the Discount row.
+- Saved two rows of vertical space. Merchant + Discount/Value/Code + Category + Expires now fit on one iPhone screen with no scroll.
+- Each input uses `aria-label` (for screen readers) + `placeholder` (visual hint) since individual `<label>` tags would have crowded the line at 320-393px widths.
+- `setDiscountSymbol` was updated to toggle the `f-value` input's `display` directly — the previous wrapper `f-value-row` no longer exists. Defensive on missing element so legacy modal HTML still works during cache bridging.
+
+**Tests added (1 case, assertion-bearing):**
+- `scripts/perq-render-test.js` — AC26: openDealPreview HTML places `f-discount-num < f-value < f-code < f-category` (proves the inline merge order) AND does not contain a standalone `<label>Code</label>` row (proves the old Code row is gone). RENDER 41 → 42 PASS.
+
+**Backward compat:**
+- The `setDiscountSymbol` API surface is unchanged — same function signature, same `'$'` / `'%'` arguments. Only the internal DOM target shifted from `f-value-row` (wrapper) to `f-value` (the input itself).
+- All existing AC1-25 tests continue to pass: pre-fill detection, validation toasts, today-default expiry, image-toggle, and edge cases all unaffected.
+
+**Cache version:** `?v=35` → `?v=36`. SW `perq-v28-deal-image-toggle` → `perq-v29-discount-row-inline`. Native build + cap sync ios/android complete.
+
+---
+
 ## [Unreleased] — 2026-06-10 (deal-image-toggle)
 
 ### 🆕 Feature: collapsed thumbnail + Expand toggle, full image on saved-deal modal
