@@ -4,6 +4,26 @@ All notable feature changes to the Perq app are documented here.
 
 ---
 
+## [Unreleased] — 2026-06-10 (supervisor-v4 + spot-check)
+
+### 🛠 Supervisor v4 — Gate 4B.7 (assertion density) + SPOT-CHECK REQUIRED
+
+**Gate 4B.7 — No empty or trivial tests.**
+- For every NEW test case added to `scripts/perq-*-test.js`, the case must contain at least one real assertion. Patterns accepted: `assert.`, `assertEqual`, `assertStrictEqual`, `expect(`, `throws(`, `rejects(`, `toThrow(`, comparison operators on a return value (`===`, `!==`, `>=`, `<=`, `>`, `<`), or `.includes(`, `.match(`, `.contains(`, `.toBe(`, `.toEqual(`, Playwright `.toHaveText(` etc.
+- A new test block lacking ALL of these is "trivial" and fails 4B.7. The deny line names each trivial test by its closest preceding `console.error` message, comment, or `it/test/describe` name.
+- N/A only if no test files were modified in the commit.
+- Output table now has 15 rows.
+
+**Augmented Gate 4B.2 — SPOT-CHECK REQUIRED block.**
+- When a new feature spec is added in the diff, the supervisor emits a mandatory `SPOT-CHECK REQUIRED:` block immediately after the gate table.
+- Format: one row per declared edge case from the spec's § 5 'Edge cases + error states', listing the test that covers it and the exact assertion line. Cases with no covering test render as `Test: NOT COVERED → Assertion: —` (which also fails 4B.2 itself).
+- Block does NOT block the push. It is the human's one required touchpoint per feature — a chance to eyeball whether the declared edge cases are actually covered by real assertions before the push lands on main.
+
+**Reporter mirror.**
+- `.kiro/hooks/perq-supervisor-report.kiro.hook` v2 now mirrors v4: 15-row table, Gate 4B.7 included, SPOT-CHECK REQUIRED block emitted in the end-of-turn report whenever a new spec is in the working-tree-or-unpushed diff.
+
+---
+
 ## [Unreleased] — 2026-06-10 (supervisor-v3 + reporter)
 
 ### 🛠 Supervisor hook v3 — Gate 0 added + agentStop reporter companion
