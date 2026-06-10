@@ -195,6 +195,17 @@ async function testNativeSplashMaster(browser) {
 }
 
 (async () => {
+  // Sanity-check the native splash config so a future bump that silently
+  // drops launchShowDuration below the intended value will fail this test.
+  const cfg = JSON.parse(fs.readFileSync(path.join(ROOT, 'capacitor.config.json'), 'utf8'));
+  const lsd = cfg.plugins && cfg.plugins.SplashScreen && cfg.plugins.SplashScreen.launchShowDuration;
+  console.log('\n[0/2] Native SplashScreen config');
+  if (typeof lsd !== 'number' || lsd < 2000) bad(`launchShowDuration is ${lsd} (need >= 2000ms for a readable launch frame)`);
+  else ok(`launchShowDuration=${lsd}ms (visible native splash before auto-hide)`);
+  const bg = cfg.plugins && cfg.plugins.SplashScreen && cfg.plugins.SplashScreen.backgroundColor;
+  if (bg !== '#020817') bad(`SplashScreen.backgroundColor=${bg} (expected #020817 navy)`);
+  else ok('SplashScreen.backgroundColor=#020817');
+
   const browser = await chromium.launch();
   const ctx = await browser.newContext({ viewport: VIEWPORT });
   const page = await ctx.newPage();
