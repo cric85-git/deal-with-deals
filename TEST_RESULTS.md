@@ -1,6 +1,6 @@
 # Perq Automated Test Results
 
-Last run: 2026-06-10 (post boot-logo-transparent — replaced icon-192.png raster (white-frame PWA launcher icon) with transparent-bg boot-logo.png generated from the same wallet SVG; padding-top reverted to 26vh to align with native master)
+Last run: 2026-06-10 (post splash-svg-datauri — boot overlay logo now embedded as inline SVG data URI in the IMG src; no external file fetch, no SW cache dependency, no broken-image risk on stale clients)
 
 ## Suite 1 — `npm test` (Node script suite, runs in CI on every push)
 

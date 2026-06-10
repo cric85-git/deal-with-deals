@@ -1,4 +1,4 @@
-const CACHE_NAME = 'perq-v35-boot-logo-transparent';
+const CACHE_NAME = 'perq-v36-splash-svg-datauri';
 const ASSETS = [
   './',
   './index.html',

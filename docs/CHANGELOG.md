@@ -4,6 +4,41 @@ All notable feature changes to the Perq app are documented here.
 
 ---
 
+## [Unreleased] — 2026-06-10 (splash-svg-datauri)
+
+### 🛠 Fix: broken-image icon on splash — embed SVG as data URI
+
+User reported (with screenshot): splash showed the iOS broken-image placeholder where the wallet logo should be. Pattern: rectangular IMG outline at the correct size (104×104), tiny "?" image-failed icon centered inside.
+
+**Root cause:** stale Service Worker. The user's installed PWA had an older SW (perq-v33 or earlier) cached, which intercepted requests for the new `boot-logo.png` and returned nothing because that file wasn't in the older SW's precache list. Result: `<img src="boot-logo.png">` failed to load even though the file exists at the correct path on the live server (verified: HTTP 200, content-type image/png).
+
+This is a recurring class of bug — every external asset reference adds a chance for SW staleness, asset-pipeline timing, or precache-miss to break the splash.
+
+**Fix:** eliminate the external file dependency entirely. The boot overlay logo is now an inline SVG embedded as a data URI directly in the `<img src>` attribute:
+
+```html
+<img class="bs-logo"
+     src='data:image/svg+xml;utf8,<svg ...>...</svg>'
+     width="104" height="104"
+     decoding="sync" loading="eager" fetchpriority="high">
+```
+
+Why this is robust:
+- **No HTTP request.** The image is embedded in `preview.html` itself. When the page parses, the IMG is already complete. There is nothing for the SW to intercept, miss, or 404.
+- **Single-layer paint.** The browser decodes the SVG to a single bitmap before paint (same as a PNG `<img>`). The "progressive SVG paint" glitch from the original inline-SVG approach is impossible here because the IMG element renders atomically.
+- **Vector source.** Crisp at any DPR. Sharp on retina without needing 2× / 3× variants.
+- **No additional file to keep in sync.** The SVG content lives in one place — preview.html — sourced from the same wallet artwork as `scripts/build-splash.js` and `scripts/build-boot-logo.js` (kept around as the canonical SVG for native master regeneration; no longer referenced at runtime).
+
+**Files:**
+- `preview.html` — replaced `<img src="boot-logo.png">` with `<img src="data:image/svg+xml;utf8,...">`. Comment block updated to explain the data-URI rationale.
+- `sw.js` — `CACHE_NAME` bumped to `perq-v36-splash-svg-datauri`.
+
+**Tests:** 148/148 PASS + smoke 6/6. Logo alignment overlay y=241 vs native y=240 (delta 1px).
+
+**For users on stale caches:** the SW version bump forces an update on next launch. If a user's PWA is still showing the broken icon after the deploy, force-quit the app or clear PWA storage to evict the old cache.
+
+---
+
 ## [Unreleased] — 2026-06-10 (docs-refresh)
 
 ### 📝 Docs: refresh steering + README to reflect current canonical state
