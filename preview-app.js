@@ -2508,4 +2508,7 @@ function renderAll(){
 checkOnboarding();
 renderAll();
 scheduleReminders(); // No-op on web; schedules iOS/Android local notifications on native
+// Signal the boot splash overlay (in preview.html) that the first render
+// has completed so it can fade out.
+try{ window.__perqAppReady = true; }catch(e){}
 })();
