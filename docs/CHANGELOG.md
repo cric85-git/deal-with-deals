@@ -4,6 +4,37 @@ All notable feature changes to the Perq app are documented here.
 
 ---
 
+## [Unreleased] — 2026-06-10 (deal-form-discount-expiry)
+
+### 🛠 Refactor: deal form — discount as number+symbol toggle, expiry as Y/N gate
+
+Spec: `.kiro/specs/feature-deal-form-discount-expiry.md`. 19 ACs, 12 new test cases (8 saveDealForm + 3 openDealPreview pre-fill + 1 legacy-deal backward-compat).
+
+**What a user couldn't do well yesterday:**
+- The "Review & save" deal form (after OCR scan and "Type a deal" manual entry) had a single free-form `Discount *` text input. A `$10 off $50` deal was structurally different from `20% off` but the form treated them the same — both needed a separate `Value ($)` field that the user had to fill manually. Garbage strings like `"twenty bucks"` flowed straight into the wallet pass.
+- Expiry was rendered as an empty `<input type="date">` and treated as optional. Users skipped it because the field didn't surface that it matters, and the proximity/reminder system depends on it.
+
+**What a user can do today:**
+- Discount row has a $/% segmented toggle (default `$`) + a number input. Tapping `%` reveals a "Total value ($)" field; tapping `$` hides it. The number IS the value when `$` is selected; for `%` we compute `value = totalValue × num / 100`.
+- Expiry row has a "Has expiry?" Yes/No segmented toggle (default `No`). Tapping `Yes` reveals a date input; tapping `No` hides and clears it.
+- Validation now toasts loudly when required fields are missing: `Merchant required`, `Discount amount required`, `Total value required for % discounts`, `Pick an expiry date`. Modal stays open on any failure — no more silent garbage saves.
+- OCR pre-fill detection: regex `\d+\s*%` → `%` toggle defaults active; regex `\$\s*\d+` → `$` toggle defaults active; non-numeric string → `$` default with empty number input. Pre-fill `data.expiry` set → `Yes` + date filled; empty/undefined → `No` + date hidden.
+
+**Backward compat (spec § 5 case 8 — explicit non-action):**
+- Existing localStorage deals saved under the previous free-form scheme keep their stored shape. There is no migration. Wallet render does not crash on legacy `{discount: "20% off entire purchase"}` rows lacking a `value` field. Verified by render-test case "legacy free-form deal".
+
+**Public globals added:**
+- `window.setDiscountSymbol(sym)` — toggles `$` / `%` row state, hides/shows Total value input
+- `window.setHasExpiry(yn)` — toggles `Y` / `N` row state, hides/shows + clears date input
+
+**Tests added (12 cases, all with `===` / `.includes(` / regex assertions for Gate 4B.7):**
+- `scripts/perq-load-test.js` — `setDiscountSymbol`, `setHasExpiry`, `saveDealForm` asserted on `window` after boot
+- `scripts/perq-render-test.js` — AC7-14 (8 saveDealForm cases: 4 invalid-input rejections + 4 happy-path persistence checks), edge cases 5-7 (3 openDealPreview pre-fill cases), edge case 8 (legacy free-form deal does not crash wallet render). RENDER 23 → 35 PASS.
+
+**Cache version:** `?v=32` → `?v=33`. Native build + `cap sync ios && cap sync android` complete.
+
+---
+
 ## [Unreleased] — 2026-06-10 (calculate-discount)
 
 ### 🆕 Feature: `calculateDiscount(price, percent)` helper
