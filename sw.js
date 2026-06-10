@@ -1,4 +1,4 @@
-const CACHE_NAME = 'perq-v31-image-align-splash';
+const CACHE_NAME = 'perq-v32-splash-no-glitch';
 const ASSETS = [
   './',
   './index.html',
