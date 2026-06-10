@@ -1,4 +1,4 @@
-const CACHE_NAME = 'perq-v34-splash-raster-logo';
+const CACHE_NAME = 'perq-v35-boot-logo-transparent';
 const ASSETS = [
   './',
   './index.html',
@@ -6,7 +6,8 @@ const ASSETS = [
   './manifest.json',
   './apple-touch-icon.png',
   './icon-192.png',
-  './icon-512.png'
+  './icon-512.png',
+  './boot-logo.png'
 ];
 
 self.addEventListener('install', event => {
