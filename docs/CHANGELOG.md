@@ -4,6 +4,25 @@ All notable feature changes to the Perq app are documented here.
 
 ---
 
+## [Unreleased] — 2026-06-10 (supervisor-v3 + reporter)
+
+### 🛠 Supervisor hook v3 — Gate 0 added + agentStop reporter companion
+
+**v3 changes (preToolUse blocking gate):**
+- Adds **Gate 0 — Spec exists for new features**, inserted before Gate 1.
+- Rule: if `preview-app.js` adds any new `window.NAME = function`, Gate 0 fails unless `.kiro/specs/*.md` has a file whose content contains the literal `NAME` token. "N/A (no spec)" is NOT a valid Gate 0 state when new functions exist.
+- This would have blocked the recent `feat: add Share Deal button` commit (where `shareDealFromModal` was added without a spec at user instruction). Going forward, every new user-facing global needs a spec entry.
+- Output table now has 14 rows (Gate 0 first).
+
+**New companion: agentStop reporter (`.kiro/hooks/perq-supervisor-report.kiro.hook`)**
+- Fires once per agent turn end, runs the same gate sequence, and produces a one-shot REPORT line + table.
+- INFORMATIONAL ONLY — never denies anything. The preToolUse hook remains the only blocking authority.
+- Tolerates clean / quiescent state (single-line "no changes since last push — gates quiescent").
+- Comparison baseline adapts to working-tree dirty vs unpushed-commits vs both states.
+- Goal: replace per-shell-call APPROVE noise with a single end-of-turn rollup so the user can see push-readiness at a glance.
+
+---
+
 ## [Unreleased] — 2026-06-10 (deal-detail-modal-share)
 
 ### 🆕 Feature: Share Deal button on Deal Detail Modal
