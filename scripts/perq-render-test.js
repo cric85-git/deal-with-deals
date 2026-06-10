@@ -472,6 +472,19 @@ try {
   if (typeof sandbox.toggleDealImage === 'function') pass++;
   else { fail++; console.error('toggleDealImage not exposed on window, got:', typeof sandbox.toggleDealImage); }
 
+  // Image-frame layout fix: dealImageFrame wrapper must use display:block (no flex),
+  // because display:flex + justify-content:center + <img width:100%> caused a subpixel
+  // right-shift on iOS Safari after a fresh camera snap. Scope the assertion to the
+  // image-frame slice so other flex usages (e.g., the Expand pill button itself) are
+  // not flagged.
+  modalHTML = '';
+  sandbox.openDealPreview({ merchant: 'X' }, 'data:image/png;base64,iVBORw0KGgo=');
+  const imgFrameStart = modalHTML.indexOf('id="deal-form-img"');
+  const imgFrameImgEnd = modalHTML.indexOf('alt="Deal image"');
+  const wrapperStyleSlice = imgFrameStart > 0 ? modalHTML.slice(imgFrameStart, imgFrameImgEnd) : '';
+  if (imgFrameStart > 0 && imgFrameImgEnd > imgFrameStart && !wrapperStyleSlice.includes('display:flex')) pass++;
+  else { fail++; console.error('Image frame wrapper still uses flex — slice:', wrapperStyleSlice); }
+
   // AC26: Discount row consolidates $/% toggle, discount number, value, and code
   // onto one line. Standalone Code row and standalone Total-value row are gone.
   modalHTML = '';

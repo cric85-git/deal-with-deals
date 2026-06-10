@@ -2168,8 +2168,13 @@ function parseJsonResponse(text){
 function dealImageFrame(src,frameId){
   if(!src)return '';
   const id=frameId||'deal-img-'+Math.random().toString(36).slice(2,8);
-  return '<div id="'+id+'" data-expanded="false" style="position:relative;width:100%;background:#0a1628;border-radius:14px;margin-bottom:12px;overflow:hidden;display:flex;justify-content:center;align-items:center">'
-    +'<img src="'+src+'" alt="Deal image" style="width:100%;max-height:90px;object-fit:cover;display:block;cursor:pointer" onclick="toggleDealImage(\''+id+'\')">'
+  // Block-level wrapper. The previous version used display:flex+justify-content:center
+  // which on iOS Safari with width:100% images caused a subpixel right-shift on first
+  // paint after a fresh snap. With block layout, <img width:100%; display:block> fills
+  // the wrapper edge-to-edge with zero positioning ambiguity. The button stays
+  // absolute-positioned in the corner. Spec: feature-deal-form-discount-expiry.md edge case 16.
+  return '<div id="'+id+'" data-expanded="false" style="position:relative;width:100%;background:#0a1628;border-radius:14px;margin-bottom:12px;overflow:hidden">'
+    +'<img src="'+src+'" alt="Deal image" style="display:block;width:100%;max-height:90px;object-fit:cover;cursor:pointer" onclick="toggleDealImage(\''+id+'\')">'
     +'<button type="button" onclick="toggleDealImage(\''+id+'\')" aria-label="Expand image" style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.65);color:white;border:none;border-radius:999px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px">'
     +'<svg viewBox="0 0 24 24" style="width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>'
     +'<span data-toggle-label>Expand</span></button>'
