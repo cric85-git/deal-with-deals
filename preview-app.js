@@ -2767,6 +2767,28 @@ function renderAll(){
 //
 // Last-tap-wins: clear the pending value immediately so a re-render or a
 // follow-up tap doesn't double-open the modal.
+// QA helper — fires a notification 10 seconds out using the first
+// non-redeemed wallet deal, so the user can validate the new copy
+// structure AND the tap-to-deal-modal deep-link without waiting for a
+// real expiry. Calls into native-bridge's scheduleTestNotification which
+// uses the same kind/extra payload as production reminders so the deep-
+// link reconciliation path is exercised end-to-end.
+window.testNotification=function(){
+  if(!window.PerqNative||!window.PerqNative.isNative){
+    toast('Test notifications only work on the native iOS/Android app');
+    return;
+  }
+  var deal=state.deals.find(function(d){return !d.redeemed;});
+  if(!deal){
+    toast('Save a deal first — the test uses your wallet data');
+    return;
+  }
+  window.PerqNative.scheduleTestNotification(deal).then(function(r){
+    if(r&&r.error){toast(r.message||'Could not schedule test notification');return;}
+    toast('Notification scheduled — check in 10 seconds');
+  }).catch(function(e){console.warn('testNotification:',e);toast('Could not schedule test notification');});
+};
+
 window.openPendingDealOnReady=function(){
   var dealId=window.__pendingDealOpen;
   if(!dealId)return;

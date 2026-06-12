@@ -502,6 +502,11 @@ input[type=range]:focus{outline:none}
         <div class="settings-info"><p class="settings-row-title">Friends activity</p><p class="settings-row-sub">When friends share deals</p></div>
         <button class="toggle" data-setting="social" onclick="toggleSetting(this,'social')"></button>
       </div>
+      <div class="settings-row" onclick="testNotification()">
+        <div class="settings-icon-sm" style="background:#FEF3C7;color:#92400E"><svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+        <div class="settings-info"><p class="settings-row-title">Send test notification</p><p class="settings-row-sub">Fires in 10s using your first wallet deal — verify Perq header + tap-to-deal</p></div>
+        <svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:var(--text-dim);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
     </div>
     <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.6);margin:14px 0 8px">Data</p>
     <div class="settings-group">
@@ -598,6 +603,6 @@ input[type=range]:focus{outline:none}
 <div id="confetti-root" style="position:fixed;inset:0;pointer-events:none;z-index:9998;overflow:hidden"></div>
 <input type="file" id="capture-input" accept="image/*" capture="environment" style="display:none">
 
-<script src="preview-app.js?v=42"></script>
+<script src="preview-app.js?v=43"></script>
 </body>
 </html>

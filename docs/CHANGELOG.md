@@ -4,6 +4,37 @@ All notable feature changes to the Perq app are documented here.
 
 ---
 
+## [Unreleased] — 2026-06-12 (notification-test-button)
+
+### 🛠 QA: "Send test notification" button in Settings to validate the deep-link spec
+
+User requested a way to validate the `notification-deep-link-and-app-name` spec on real device without waiting for a real reminder to fire (would otherwise need to wait for 6 PM same-day or 10 AM on the deal's expiry day — too slow for an iteration loop).
+
+**Added:**
+- New row in **Settings → Notifications**: "Send test notification" — fires a notification 10 seconds after tap, using the user's first non-redeemed wallet deal as the source for `extra.dealId` so the deep-link reconciliation path is exercised end-to-end.
+- `window.testNotification()` (preview-app.js) — picks the deal, calls into native bridge, toasts feedback ("Notification scheduled — check in 10 seconds" on success, or a guidance message on missing-deal / blocked-permission / web-PWA paths).
+- `window.PerqNative.scheduleTestNotification(deal)` (native-bridge.js) — schedules using identical copy + payload format as production reminders; the `kind: 'test'` token in the extra payload is the only differentiator.
+
+**What it validates in 10 seconds:**
+- AC #1 — iOS notification header shows "Perq" between the icon and timestamp
+- AC #2 — copy structure (Title: `Merchant · Discount`, Body: `Expires in 2 days. Tap to open.`)
+- AC #3 — tap routes to the specific deal's detail modal, not the generic Wallet list
+
+**Files:**
+- `native-bridge.js` — new `scheduleTestNotification(deal)` exported on `window.PerqNative`
+- `preview-app.js` — new `window.testNotification` entry-point (placed alongside `openPendingDealOnReady`)
+- `preview.html` — new settings-row inside the Notifications group
+- `scripts/perq-load-test.js` — `testNotification` added to required globals
+- `.kiro/specs/feature-notification-deep-link-and-app-name.md` — new § 9b "Test utilities" section documents the helper
+- `preview.html` cache buster: `?v=42` → `?v=43`
+- `sw.js` `CACHE_NAME` bumped to `perq-v38-test-notification-button`
+
+**Tests:** 156/156 PASS + smoke 6/6. Native build + cap sync ios/android complete.
+
+**Note:** The button is intentionally always-visible right now to make iteration fast. Once the user signs off on the underlying spec (AC #1-#11), we can either keep it as a permanent QA tool or hide it behind a long-press / build flag.
+
+---
+
 ## [Unreleased] — 2026-06-12 (notification-deep-link-and-app-name)
 
 ### 🛠 Fix: notification missing app name + tap doesn't open the deal it's about

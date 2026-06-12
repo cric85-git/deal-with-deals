@@ -1,4 +1,4 @@
-const CACHE_NAME = 'perq-v37-notification-deep-link';
+const CACHE_NAME = 'perq-v38-test-notification-button';
 const ASSETS = [
   './',
   './index.html',

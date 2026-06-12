@@ -61,7 +61,7 @@ if (err) {
 }
 
 // Check key globals were exposed
-const required = ['goPage','redeemDeal','viewWalletDeal','markDealUsed','shareDealFromModal','deleteDealFromModal','calculateDiscount','setDiscountSymbol','setHasExpiry','saveDealForm','toggleDealImage','confirmShare','claimFromPool','claimBrowseDeal','doSpin','closeModal','openPendingDealOnReady'];
+const required = ['goPage','redeemDeal','viewWalletDeal','markDealUsed','shareDealFromModal','deleteDealFromModal','calculateDiscount','setDiscountSymbol','setHasExpiry','saveDealForm','toggleDealImage','confirmShare','claimFromPool','claimBrowseDeal','doSpin','closeModal','openPendingDealOnReady','testNotification'];
 const missing = required.filter(k => typeof sandbox[k] !== 'function');
 if (missing.length) {
   console.error('MISSING GLOBALS:', missing.join(','));

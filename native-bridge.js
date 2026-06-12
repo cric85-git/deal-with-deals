@@ -225,6 +225,45 @@ async function hideSplash() {
   }
 }
 
+// ============ Test notification (developer / QA helper) ============
+// Schedules a notification 10 seconds from now using the new copy format
+// (Title: "<Merchant> · <Discount>", Body: "Expires in 2 days. Tap to open.")
+// so the user can validate AC #1 (Perq label visible) and AC #3 (tap opens
+// specific deal modal) on a real device without waiting for a real expiry.
+// Uses a real deal from the wallet so the dealId in extra.dealId resolves
+// correctly when openPendingDealOnReady() looks it up.
+async function scheduleTestNotification(deal) {
+  if (!isNative || !LocalNotifications) {
+    return { error: 'not-native', message: 'Test notifications only fire on the native iOS/Android app, not the web preview.' };
+  }
+  try {
+    const perm = await LocalNotifications.requestPermissions();
+    if (perm.display !== 'granted') {
+      return { error: 'permission-denied', message: 'Notifications blocked — enable them in iOS Settings > Perq > Notifications.' };
+    }
+  } catch (e) { return { error: 'permission-error', message: 'Could not request notification permission.' }; }
+  if (!deal || !deal.id) {
+    return { error: 'no-deal', message: 'Save a deal first — the test uses real wallet data so tap-routing is verifiable.' };
+  }
+  const fireAt = new Date(Date.now() + 10_000);
+  try {
+    await LocalNotifications.schedule({
+      notifications: [{
+        id: notifIdFor(deal.id, 'test'),
+        title: `${deal.merchant} · ${deal.discount}`,
+        body: 'Expires in 2 days. Tap to open.',
+        schedule: { at: fireAt },
+        extra: { dealId: deal.id, kind: 'test' },
+        smallIcon: 'ic_stat_perq',
+        iconColor: '#10B981'
+      }]
+    });
+    return { scheduled: 1, fireAt: fireAt.toISOString() };
+  } catch (e) {
+    return { error: 'schedule-failed', message: 'Could not schedule notification.' };
+  }
+}
+
 // ============ Notification deep-link ============
 // When the user taps a Perq local notification, route them to the specific
 // deal's detail modal — not the generic Wallet list. The dealId is already
@@ -266,6 +305,7 @@ window.PerqNative = {
   isNative,
   platform,
   rescheduleExpiryReminders,
+  scheduleTestNotification,
   getCurrentLocation,
   pickPhoto,
   nativeShare,

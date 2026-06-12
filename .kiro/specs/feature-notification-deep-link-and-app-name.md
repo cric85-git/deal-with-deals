@@ -168,6 +168,20 @@ No `fetch`/XHR involved. No camera/geolocation/notification *permission* prompts
 
 ---
 
+## 9b. Test utilities (added to validate the spec on real device)
+
+Without a way to fire a notification on demand, validating AC #1 (Perq header visible) and AC #3-#7 (tap routing) requires waiting for a scheduled reminder to fire at 6 PM or 10 AM — too slow for an iteration loop. Added a debug helper:
+
+- `window.testNotification()` (in `preview-app.js`) — picks the first non-redeemed wallet deal, calls `window.PerqNative.scheduleTestNotification(deal)` to schedule a notification 10 seconds out.
+- `window.PerqNative.scheduleTestNotification(deal)` (in `native-bridge.js`) — schedules a notification using the same copy format and `extra: { dealId, kind: 'test' }` payload as production reminders, so the deep-link reconciliation path is exercised identically.
+- UI surface: new "Send test notification" row in Settings → Notifications group, with a lightning-bolt icon. Visible to anyone running the native app.
+
+The `kind: 'test'` token makes test-fired notifications distinguishable from real reminders if we ever want to filter them (e.g., not count test taps as engagement). Currently no such filter exists — the deep-link handler treats `test` and `lead`/`0d` identically: open the deal modal.
+
+This helper is intentionally always-visible for now. Once the spec is validated by the user on real device, we may either keep it (useful QA tool) or hide it behind a long-press / build-flag in a follow-up commit.
+
+---
+
 ## 10. Sign-off
 
 - [ ] Author: Kiro Agent

@@ -1,6 +1,6 @@
 # Perq Automated Test Results
 
-Last run: 2026-06-12 (post notification-deep-link-and-app-name — notification copy restructured for iOS app-name visibility; localNotificationActionPerformed listener routes tap to specific deal modal; openPendingDealOnReady reconciles cold-launch and live-tap paths; missing-deal toast handles deleted-between-schedule-and-tap)
+Last run: 2026-06-12 (post notification-test-button — added Settings → "Send test notification" row that fires a notification 10 seconds out using the first wallet deal; lets user validate AC #1 (Perq header) and AC #3 (tap-to-deal-modal) on real device without waiting for a real expiry)
 
 ## Suite 1 — `npm test` (Node script suite, runs in CI on every push)
 
