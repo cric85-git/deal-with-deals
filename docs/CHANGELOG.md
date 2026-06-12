@@ -4,6 +4,48 @@ All notable feature changes to the Perq app are documented here.
 
 ---
 
+## [Unreleased] — 2026-06-12 (notification-deep-link-and-app-name)
+
+### 🛠 Fix: notification missing app name + tap doesn't open the deal it's about
+
+Spec: `.kiro/specs/feature-notification-deep-link-and-app-name.md` (11 ACs, 9 edge cases). One new public global: `window.openPendingDealOnReady`.
+
+**Why a user complained:**
+- The iOS notification banner showed `[wallet icon] ⏰ Deal expires in 2 days` then a 2-line body — but no "Perq" source label between the icon and the timestamp. In a stack of mixed-app notifications, there was no way to identify which app sent it at a glance.
+- Tapping the notification routed to the Wallet tab and the entire deal list. The user had to scroll, scan for the merchant from memory of the body text, and tap the matching card to actually use the deal. The whole point of the reminder — "go use this specific deal" — required 3 extra taps.
+
+**What a user gets today:**
+- iOS notification renders in standard layout: `[wallet icon] Perq · 3m ago` header, then `Ice Cold Parlor · $5 off sundae` as the bold title, then `Expires in 2 days. Tap to open.` as the body. App name is back. The fix was structural: the old `⏰ Deal expires in 2 days` title plus the long 2-line body pushed iOS into compact-no-app-name mode. Removing the leading emoji and shortening the body keeps iOS in standard layout where the source label is visible.
+- Tapping the notification opens the **specific deal's detail modal** in under 500ms — same modal the user gets from tapping a wallet pass. Works whether the app is in foreground, background, or cold-launched (process killed). For cold launch, the deal modal opens immediately after the splash dismisses; no flash of the wallet list first.
+- If the deal was deleted between the notification being scheduled and the user tapping it, a toast appears: `This deal is no longer in your wallet`. User lands on the Wallet tab; no broken modal.
+- Last-tap-wins on stacked notifications — if two reminders are sitting in Notification Center, the one the user actually taps wins; the other doesn't queue.
+
+**Public global added (covered by spec § 3 AC):**
+- `window.openPendingDealOnReady()` — reads `window.__pendingDealOpen` (set by the native-bridge listener on tap), looks up the deal, and either opens the modal via `viewWalletDeal(id)` or shows the missing-deal toast. Clears `__pendingDealOpen` synchronously to enforce last-tap-wins.
+
+**Notification copy contract (`native-bridge.js`):**
+
+| Reminder type | Old | New |
+|---|---|---|
+| Lead (N days before) | Title `⏰ Deal expires in 2 days`, body `Ice Cold Parlor · $5 off sundae expires Jun 11. Don't forget to use it.` | Title `Ice Cold Parlor · $5 off sundae`, body `Expires in 2 days. Tap to open.` |
+| Day-of | Title `🔥 Final day to use this deal`, body `Ice Cold Parlor · $5 off sundae expires today. Open Perq.` | Title `Ice Cold Parlor · $5 off sundae`, body `Expires today. Last chance.` |
+
+Note: `@capacitor/local-notifications` v8 does not expose the iOS `subtitle` slot, so the relative-expiry phrase is folded into the body line. Title stays single-line and body stays under ~45 chars so iOS retains the app-name source label.
+
+**Files:**
+- `native-bridge.js` — notification title/body restructured for both lead and day-of reminders; new `bindNotificationDeepLink()` registers `LocalNotifications.addListener('localNotificationActionPerformed', …)` exactly once via `__perqNotifListenerBound` guard
+- `preview-app.js` — new `window.openPendingDealOnReady` function; bootstrap hook reads `__pendingDealOpen` after first render so cold-launched-from-notification users land directly in the deal modal
+- `scripts/perq-render-test.js` — 8 new file-content assertions covering AC #2 copy structure, AC #3-#5 routing/toast, AC #8 last-tap-wins guard
+- `scripts/perq-load-test.js` — `openPendingDealOnReady` added to required globals
+- `preview.html` — cache buster `?v=41` → `?v=42`
+- `sw.js` — `CACHE_NAME` bumped to `perq-v37-notification-deep-link`
+
+**Tests:** 156/156 PASS (gamif 20 / migration 6 / render 59 / brand 53 / splash 18) + smoke 6/6. Native build + cap sync ios/android complete.
+
+**Manual device verification needed (per spec § 6):** iOS lock-screen notification shows "Perq" header; tap routes to deal modal; cold-launch tap routes correctly after splash; deleted deal between schedule and tap shows toast.
+
+---
+
 ## [Unreleased] — 2026-06-10 (splash-svg-datauri)
 
 ### 🛠 Fix: broken-image icon on splash — embed SVG as data URI

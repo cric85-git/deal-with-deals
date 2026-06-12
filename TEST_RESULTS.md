@@ -1,6 +1,6 @@
 # Perq Automated Test Results
 
-Last run: 2026-06-10 (post splash-svg-datauri — boot overlay logo now embedded as inline SVG data URI in the IMG src; no external file fetch, no SW cache dependency, no broken-image risk on stale clients)
+Last run: 2026-06-12 (post notification-deep-link-and-app-name — notification copy restructured for iOS app-name visibility; localNotificationActionPerformed listener routes tap to specific deal modal; openPendingDealOnReady reconciles cold-launch and live-tap paths; missing-deal toast handles deleted-between-schedule-and-tap)
 
 ## Suite 1 — `npm test` (Node script suite, runs in CI on every push)
 
@@ -9,7 +9,7 @@ Last run: 2026-06-10 (post splash-svg-datauri — boot overlay logo now embedded
 | `scripts/perq-gamif-test.js` | 20 | 0 |
 | `scripts/perq-load-test.js` | LOAD OK | 0 |
 | `scripts/perq-migration-test.js` | 6 | 0 |
-| `scripts/perq-render-test.js` | 51 | 0 |
+| `scripts/perq-render-test.js` | 59 (+8 from notification-deep-link spec) | 0 |
 | `scripts/perq-brand-test.js` | 53 (+ 9 outline-warn) | 0 |
 | `scripts/perq-splash-test.js` | 18 — boot overlay raster logo at y=239px aligns with native splash y=240px (delta 1px, tolerance 10px) | 0 |
 

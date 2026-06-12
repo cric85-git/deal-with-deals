@@ -603,5 +603,71 @@ try {
   console.error('saveDealForm tests threw:', e.message);
 }
 
+// ============================================================
+// Spec: feature-notification-deep-link-and-app-name
+// ============================================================
+// Six file-content assertions covering AC #2 (copy structure),
+// AC #3-#5 (deep-link routing + missing-deal toast), AC #8 (last-tap-wins).
+//
+// These tests read native-bridge.js and preview-app.js as text and verify
+// specific tokens / patterns are present. They do NOT exercise runtime
+// behavior — that requires a Capacitor runtime which the Node test
+// harness can't simulate. The runtime contract is verified manually on
+// device per spec § 6 "Manual / device tests".
+
+try {
+  const nbText = fs.readFileSync(path.join(__dirname, '..', 'native-bridge.js'), 'utf8');
+  const paText = fs.readFileSync(path.join(__dirname, '..', 'preview-app.js'), 'utf8');
+
+  // AC #2 — title is Merchant · Discount, NO leading emoji
+  if (nbText.includes('title: `${d.merchant} · ${d.discount}`')) pass++;
+  else { fail++; console.error('notification title format missing or has leading emoji — expected `${d.merchant} · ${d.discount}`'); }
+
+  // AC #2 — lead body is "Expires in N day(s). Tap to open."
+  if (nbText.includes('`Expires in ${leadDays} ${dayWord}. Tap to open.`')) pass++;
+  else { fail++; console.error('lead notification body does not match `Expires in ${leadDays} ${dayWord}. Tap to open.`'); }
+
+  // AC #2 — day-of body is "Expires today. Last chance."
+  if (nbText.includes("'Expires today. Last chance.'")) pass++;
+  else { fail++; console.error('day-of notification body does not match `Expires today. Last chance.`'); }
+
+  // AC #3, #4 — every scheduled lead/0d notification carries extra.dealId
+  // (presence of `extra: { dealId: d.id` with kind suffix proves the payload includes the routing key)
+  const dealIdLeadMatch = nbText.includes("extra: { dealId: d.id, kind: 'lead' }");
+  const dealId0dMatch = nbText.includes("extra: { dealId: d.id, kind: '0d' }");
+  if (dealIdLeadMatch && dealId0dMatch) pass++;
+  else { fail++; console.error('notification extra.dealId payload missing for lead and/or 0d. lead=' + dealIdLeadMatch + ' 0d=' + dealId0dMatch); }
+
+  // AC #3 — localNotificationActionPerformed listener registered exactly once
+  // via __perqNotifListenerBound guard (defense against hot-reload double-bind)
+  const hasListener = nbText.includes("LocalNotifications.addListener('localNotificationActionPerformed'");
+  const hasGuard = nbText.includes('window.__perqNotifListenerBound');
+  if (hasListener && hasGuard) pass++;
+  else { fail++; console.error('localNotificationActionPerformed listener missing or unguarded. listener=' + hasListener + ' guard=' + hasGuard); }
+
+  // AC #3 — deep-link handler `openPendingDealOnReady` is exposed on window
+  // AND it calls viewWalletDeal with the dealId (proves modal opens, not just tab switch)
+  const hasFn = paText.includes('window.openPendingDealOnReady=function');
+  const callsView = paText.includes('window.viewWalletDeal(String(dealId))');
+  if (hasFn && callsView) pass++;
+  else { fail++; console.error('openPendingDealOnReady missing or does not call viewWalletDeal. fn=' + hasFn + ' callsView=' + callsView); }
+
+  // AC #5 — when dealId does not resolve, the toast string matches AC text
+  // ("This deal is no longer in your wallet") AND goPage('wallet') is called
+  // for the user to land on the deals tab.
+  const hasToast = paText.includes("'This deal is no longer in your wallet'");
+  const hasGoPage = paText.includes("window.goPage('wallet')");
+  if (hasToast && hasGoPage) pass++;
+  else { fail++; console.error('missing-deal toast or wallet route missing. toast=' + hasToast + ' goPage=' + hasGoPage); }
+
+  // AC #8 — last-tap-wins: handler clears __pendingDealOpen synchronously
+  // before doing the lookup so a re-render or duplicate tap can't double-open.
+  if (paText.includes('window.__pendingDealOpen=null;')) pass++;
+  else { fail++; console.error('last-tap-wins guard missing — handler must clear window.__pendingDealOpen=null; before lookup'); }
+} catch (e) {
+  fail++;
+  console.error('notification-deep-link content checks threw:', e.message);
+}
+
 console.log(`RENDER TEST: PASS ${pass}, FAIL ${fail}`);
 process.exit(fail === 0 ? 0 : 1);

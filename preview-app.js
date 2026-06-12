@@ -2757,6 +2757,36 @@ function renderAll(){
   renderSettings();
 }
 
+// -------- Notification deep-link reconciliation --------
+// When the user taps an expiry-reminder notification, native-bridge.js's
+// `localNotificationActionPerformed` listener stashes the dealId on
+// window.__pendingDealOpen. This function reads it, looks up the deal, and
+// either opens the detail modal (live tap or cold-launch tap) or shows a
+// "no longer in your wallet" toast if the deal was deleted between schedule
+// and tap. Spec: feature-notification-deep-link-and-app-name AC #3-#5, #8.
+//
+// Last-tap-wins: clear the pending value immediately so a re-render or a
+// follow-up tap doesn't double-open the modal.
+window.openPendingDealOnReady=function(){
+  var dealId=window.__pendingDealOpen;
+  if(!dealId)return;
+  window.__pendingDealOpen=null;
+  var deal=state.deals.find(function(d){return String(d.id)===String(dealId);});
+  // Always land on the Wallet tab — that's where deal modals are scoped.
+  if(typeof window.goPage==='function'){try{window.goPage('wallet');}catch(e){}}
+  if(!deal){
+    // Deal was deleted between notification schedule and tap.
+    if(typeof toast==='function')toast('This deal is no longer in your wallet');
+    return;
+  }
+  // Open the deal-detail modal directly — same modal the user gets from
+  // tapping a wallet pass or the ⓘ button. AC #6 (redeemed) and AC #7
+  // (expired) are handled inside viewWalletDeal's existing branches.
+  if(typeof window.viewWalletDeal==='function'){
+    try{window.viewWalletDeal(String(dealId));}catch(e){console.warn('viewWalletDeal threw:',e);}
+  }
+};
+
 // -------- Init --------
 checkOnboarding();
 renderAll();
@@ -2764,4 +2794,8 @@ scheduleReminders(); // No-op on web; schedules iOS/Android local notifications 
 // Signal the boot splash overlay (in preview.html) that the first render
 // has completed so it can fade out.
 try{ window.__perqAppReady = true; }catch(e){}
+// If the user cold-launched the app by tapping a notification, the dealId
+// is already on window.__pendingDealOpen. Reconcile now that state.deals
+// is loaded and renders are mounted.
+try{ if(window.__pendingDealOpen) window.openPendingDealOnReady(); }catch(e){}
 })();

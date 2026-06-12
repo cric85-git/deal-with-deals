@@ -1,4 +1,4 @@
-const CACHE_NAME = 'perq-v36-splash-svg-datauri';
+const CACHE_NAME = 'perq-v37-notification-deep-link';
 const ASSETS = [
   './',
   './index.html',

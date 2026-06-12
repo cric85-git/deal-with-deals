@@ -88,26 +88,31 @@ async function rescheduleExpiryReminders(deals, settings) {
     const expiryMs = new Date(d.expiry + 'T23:59:59').getTime();
     if (isNaN(expiryMs) || expiryMs <= now) continue;
 
-    // Lead-time reminder at 6 PM local
+    // Lead-time reminder at 6 PM local.
+    // Title: "<Merchant> · <Discount>" — single line, no leading emoji.
+    // Body: short one-liner that fits without pushing iOS into compact mode
+    //       (which hides the "Perq" source label). Spec:
+    //       feature-notification-deep-link-and-app-name AC #1, #2.
     const tLead = atHour(expiryMs - leadDays*DAY, 18);
     if (tLead > now + 60_000) {
+      const dayWord = leadDays === 1 ? 'day' : 'days';
       toSchedule.push({
         id: notifIdFor(d.id, 'lead'),
-        title: `⏰ Deal expires in ${leadDays} ${leadDays === 1 ? 'day' : 'days'}`,
-        body: `${d.merchant} · ${d.discount} expires ${fmtShortDate(d.expiry)}. Don't forget to use it.`,
+        title: `${d.merchant} · ${d.discount}`,
+        body: `Expires in ${leadDays} ${dayWord}. Tap to open.`,
         schedule: { at: new Date(tLead) },
         extra: { dealId: d.id, kind: 'lead' },
         smallIcon: 'ic_stat_perq',
         iconColor: '#10B981'
       });
     }
-    // Day-of at 10 AM local
+    // Day-of at 10 AM local — last chance reminder.
     const t0 = atHour(expiryMs, 10);
     if (t0 > now + 60_000) {
       toSchedule.push({
         id: notifIdFor(d.id, '0d'),
-        title: '🔥 Final day to use this deal',
-        body: `${d.merchant} · ${d.discount} expires today. Open Perq.`,
+        title: `${d.merchant} · ${d.discount}`,
+        body: 'Expires today. Last chance.',
         schedule: { at: new Date(t0) },
         extra: { dealId: d.id, kind: '0d' },
         smallIcon: 'ic_stat_perq',
@@ -220,6 +225,42 @@ async function hideSplash() {
   }
 }
 
+// ============ Notification deep-link ============
+// When the user taps a Perq local notification, route them to the specific
+// deal's detail modal — not the generic Wallet list. The dealId is already
+// in `extra.dealId` (set at schedule time above). Spec:
+// feature-notification-deep-link-and-app-name AC #3, #4, #8.
+//
+// The handler stashes the dealId on window.__pendingDealOpen and, if the web
+// layer is already mounted, calls openPendingDealOnReady() directly. On cold
+// launch, preview-app.js's bootstrap reads __pendingDealOpen after first
+// render. Last-tap-wins: each tap overwrites the pending value; we never
+// queue. The __perqNotifListenerBound guard ensures the listener registers
+// exactly once per app lifetime even if this module is hot-reloaded.
+function bindNotificationDeepLink() {
+  if (!isNative || !LocalNotifications) return;
+  if (window.__perqNotifListenerBound) return;
+  window.__perqNotifListenerBound = true;
+  try {
+    LocalNotifications.addListener('localNotificationActionPerformed', (action) => {
+      const dealId = action && action.notification && action.notification.extra && action.notification.extra.dealId;
+      if (!dealId) {
+        // Legacy or non-deal notification (e.g., weekly digest) — no-op,
+        // user just lands on whatever tab the app last had.
+        return;
+      }
+      window.__pendingDealOpen = String(dealId);
+      if (typeof window.openPendingDealOnReady === 'function') {
+        try { window.openPendingDealOnReady(); } catch (e) { console.warn('[PerqNative] openPendingDealOnReady threw:', e); }
+      }
+      // If the web layer hasn't mounted yet (cold launch), preview-app.js
+      // will call openPendingDealOnReady() once __perqAppReady flips true.
+    });
+  } catch (e) {
+    console.warn('[PerqNative] localNotificationActionPerformed bind failed:', e);
+  }
+}
+
 // ============ Public API ============
 window.PerqNative = {
   isNative,
@@ -238,6 +279,8 @@ if (isNative) {
   } else {
     document.addEventListener('DOMContentLoaded', () => setTimeout(hideSplash, 100));
   }
+  // Bind notification tap → deal-modal handler exactly once
+  bindNotificationDeepLink();
 }
 
 console.log('[PerqNative] Initialized · platform=' + platform);
