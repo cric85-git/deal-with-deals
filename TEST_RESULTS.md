@@ -1,6 +1,6 @@
 # Perq Automated Test Results
 
-Last run: 2026-06-12 (post notification-test-button — added Settings → "Send test notification" row that fires a notification 10 seconds out using the first wallet deal; lets user validate AC #1 (Perq header) and AC #3 (tap-to-deal-modal) on real device without waiting for a real expiry)
+Last run: 2026-06-12 (post notification-banner-brand-prefix — title now leads with "Perq · " so iOS banner mode shows brand identifier even when the source-app-name header is omitted in compact 2-line layout)
 
 ## Suite 1 — `npm test` (Node script suite, runs in CI on every push)
 

@@ -4,6 +4,40 @@ All notable feature changes to the Perq app are documented here.
 
 ---
 
+## [Unreleased] — 2026-06-12 (notification-banner-brand-prefix)
+
+### 🛠 Fix: notification banner missing "Perq" label when phone is unlocked
+
+User confirmed the lock-screen notification renders correctly with the "Perq" source label, but the **iOS banner** (when phone is unlocked and a notification arrives) shows only `[icon] Magic Tires · 10% off on $50 / Expires in 2 days. Tap to open.` with no app name visible anywhere.
+
+**Root cause:** This is a documented iOS quirk, not a Perq bug. iOS banners use a compact 2-line layout that often omits the app-name header to save vertical space. The lock screen and Notification Center always include the app name; the banner does only when `UNMutableNotificationContent.subtitle` is set, which forces the 3-line layout. **Capacitor v8's `@capacitor/local-notifications` plugin does not expose the `subtitle` field cross-platform**, so we cannot use that path without patching the plugin.
+
+**Fix:** Brand-prefix the title. Title format went from `<Merchant> · <Discount>` to `Perq · <Merchant> · <Discount>`. The brand identifier is now part of the title text itself — guaranteed visible everywhere iOS renders the title, including compact banner mode where the source-app-name header is omitted.
+
+**Trade-off accepted:** Lock screen and Notification Center will show "Perq" twice (once as iOS source label above the title, once in the title text itself). The redundancy is the cost of guaranteed brand presence in banner mode. The alternative — patching `node_modules/@capacitor/local-notifications/ios/Plugin/Plugin.swift` via patch-package to set `content.subtitle` — was deferred as too heavy a maintenance commitment for a one-line copy fix.
+
+**Notification copy:**
+
+| Surface | Before | After |
+|---|---|---|
+| Lead reminder title | `Magic Tires · 10% off on $50` | `Perq · Magic Tires · 10% off on $50` |
+| Day-of reminder title | `Magic Tires · 10% off on $50` | `Perq · Magic Tires · 10% off on $50` |
+| Test notification title | `Magic Tires · 10% off on $50` | `Perq · Magic Tires · 10% off on $50` |
+| All bodies | (unchanged) | (unchanged) |
+
+**Files:**
+- `native-bridge.js` — title prefix `Perq · ` added to lead, day-of, and test notifications
+- `scripts/perq-render-test.js` — assertion updated to require the brand prefix
+- `.kiro/specs/feature-notification-deep-link-and-app-name.md` — AC #2 + UI contract sections updated to document the prefix and the iOS subtitle-slot rationale
+- `preview.html` — cache buster `?v=43` → `?v=44`
+- `sw.js` — `CACHE_NAME` bumped to `perq-v39-banner-brand-prefix`
+
+**Tests:** 156/156 PASS (gamif 20 / migration 6 / render 59 / brand 53 / splash 18) + smoke 6/6.
+
+**To validate:** rebuild the iOS app via Xcode ▶ Play. In Settings → "Send test notification", tap. Within 10 seconds, with phone unlocked, the banner should now show `Perq · <Merchant> · <Discount>` clearly.
+
+---
+
 ## [Unreleased] — 2026-06-12 (notification-test-button)
 
 ### 🛠 QA: "Send test notification" button in Settings to validate the deep-link spec

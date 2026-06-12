@@ -89,16 +89,21 @@ async function rescheduleExpiryReminders(deals, settings) {
     if (isNaN(expiryMs) || expiryMs <= now) continue;
 
     // Lead-time reminder at 6 PM local.
-    // Title: "<Merchant> · <Discount>" — single line, no leading emoji.
-    // Body: short one-liner that fits without pushing iOS into compact mode
-    //       (which hides the "Perq" source label). Spec:
-    //       feature-notification-deep-link-and-app-name AC #1, #2.
+    // Title prefixed with "Perq · " so the brand is always visible in
+    // every iOS notification surface, including compact banner mode where
+    // iOS would otherwise omit the app-name header. Lock screen and
+    // Notification Center will show "Perq" twice (once as iOS source label,
+    // once in the title) — the redundancy is acceptable because banner
+    // mode would otherwise show no brand identifier at all. Capacitor v8
+    // LocalNotifications doesn't expose UNMutableNotificationContent.subtitle
+    // which would be the iOS-canonical fix. Spec:
+    // feature-notification-deep-link-and-app-name AC #1, #2.
     const tLead = atHour(expiryMs - leadDays*DAY, 18);
     if (tLead > now + 60_000) {
       const dayWord = leadDays === 1 ? 'day' : 'days';
       toSchedule.push({
         id: notifIdFor(d.id, 'lead'),
-        title: `${d.merchant} · ${d.discount}`,
+        title: `Perq · ${d.merchant} · ${d.discount}`,
         body: `Expires in ${leadDays} ${dayWord}. Tap to open.`,
         schedule: { at: new Date(tLead) },
         extra: { dealId: d.id, kind: 'lead' },
@@ -111,7 +116,7 @@ async function rescheduleExpiryReminders(deals, settings) {
     if (t0 > now + 60_000) {
       toSchedule.push({
         id: notifIdFor(d.id, '0d'),
-        title: `${d.merchant} · ${d.discount}`,
+        title: `Perq · ${d.merchant} · ${d.discount}`,
         body: 'Expires today. Last chance.',
         schedule: { at: new Date(t0) },
         extra: { dealId: d.id, kind: '0d' },
@@ -250,7 +255,7 @@ async function scheduleTestNotification(deal) {
     await LocalNotifications.schedule({
       notifications: [{
         id: notifIdFor(deal.id, 'test'),
-        title: `${deal.merchant} · ${deal.discount}`,
+        title: `Perq · ${deal.merchant} · ${deal.discount}`,
         body: 'Expires in 2 days. Tap to open.',
         schedule: { at: fireAt },
         extra: { dealId: deal.id, kind: 'test' },

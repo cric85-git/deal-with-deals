@@ -619,9 +619,11 @@ try {
   const nbText = fs.readFileSync(path.join(__dirname, '..', 'native-bridge.js'), 'utf8');
   const paText = fs.readFileSync(path.join(__dirname, '..', 'preview-app.js'), 'utf8');
 
-  // AC #2 — title is Merchant · Discount, NO leading emoji
-  if (nbText.includes('title: `${d.merchant} · ${d.discount}`')) pass++;
-  else { fail++; console.error('notification title format missing or has leading emoji — expected `${d.merchant} · ${d.discount}`'); }
+  // AC #2 — title is `Perq · Merchant · Discount`, NO leading emoji.
+  // Brand prefix forces iOS banner mode to render brand identifier even
+  // when it omits the source-app-name header.
+  if (nbText.includes('title: `Perq · ${d.merchant} · ${d.discount}`')) pass++;
+  else { fail++; console.error('notification title format missing brand prefix — expected `Perq · ${d.merchant} · ${d.discount}`'); }
 
   // AC #2 — lead body is "Expires in N day(s). Tap to open."
   if (nbText.includes('`Expires in ${leadDays} ${dayWord}. Tap to open.`')) pass++;

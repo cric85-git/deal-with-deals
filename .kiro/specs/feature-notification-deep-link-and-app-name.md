@@ -39,7 +39,7 @@ All boxes checked. No open-gap items are touched.
 | # | Trigger / Surface | Expected behavior |
 |---|---|---|
 | 1 | iOS lock screen / notification center / banner — any Perq expiry reminder | iOS notification header shows `[wallet icon]` + `Perq` + timestamp on the same line. The text "Perq" appears explicitly. Verified by a screenshot in the spec sign-off section. |
-| 2 | Notification copy structure | Title: `<Merchant> · <Discount>` (e.g., `Ice Cold Parlor · $5 off sundae`) — no leading emoji. Body: short one-liner combining relative-expiry + CTA: `Expires in N days. Tap to open.` / `Expires today. Last chance.` / `Expires tomorrow. Tap to open.`. Note: `@capacitor/local-notifications` v8 does not expose the iOS `subtitle` slot, so expiry detail is folded into the body. Title stays single-line and body stays ≤ 1.5 lines so iOS retains the app-name source label in the header. |
+| 2 | Notification copy structure | Title: `Perq · <Merchant> · <Discount>` (e.g., `Perq · Ice Cold Parlor · $5 off sundae`) — brand prefix forces banner mode to show brand identifier even when iOS omits the source-app-name header. Body: short one-liner combining relative-expiry + CTA: `Expires in N days. Tap to open.` / `Expires today. Last chance.`. Note: `@capacitor/local-notifications` v8 does not expose the iOS `subtitle` slot which would be the iOS-canonical way to force the 3-line layout that always includes the app-name header. As workaround, the title is brand-prefixed. Lock screen and Notification Center will show "Perq" twice (once as iOS source label, once in the title) — the minor redundancy is the cost of guaranteed brand presence in compact banner mode. |
 | 3 | User taps a Perq expiry-reminder notification when the app is already running in the background | The Wallet tab is selected AND the deal-detail modal for the exact `dealId` from the notification's `extra` payload opens within 500ms of the tap. No intermediate "all deals" view. |
 | 4 | User taps a Perq expiry-reminder notification when the app process is killed (cold launch) | The app boots, the splash sequence completes normally, then the deal-detail modal for the exact `dealId` opens within 200ms after `window.__perqAppReady === true`. The user does NOT see the deals list flash before the modal opens. |
 | 5 | Notification's `extra.dealId` references a deal that no longer exists (user deleted it after notification was scheduled) | The Wallet tab is selected, NO modal opens, a toast appears: `This deal is no longer in your wallet`. Toast auto-dismisses after 3s. |
@@ -58,10 +58,10 @@ All boxes checked. No open-gap items are touched.
 
 - iOS notification source label: must read exactly `Perq` (matches `CFBundleDisplayName`)
 - iOS notification icon: existing `ic_stat_perq` for Android, app icon for iOS
-- Title: ≤ 64 chars (`Merchant · Discount` typical, e.g., `Ice Cold Parlor · $5 off sundae` = 31 chars)
-- Body: ≤ 64 chars to keep iOS rendering in standard layout where source-label is visible (e.g., `Expires in 2 days. Tap to open.` = 31 chars)
+- Title: `Perq · <Merchant> · <Discount>`, ≤ 80 chars (e.g., `Perq · Ice Cold Parlor · $5 off sundae` = 38 chars). Brand prefix is intentional — iOS banner mode often suppresses the source-app-name header and the brand prefix guarantees identification regardless of iOS layout.
+- Body: ≤ 64 chars (e.g., `Expires in 2 days. Tap to open.` = 31 chars)
 - No emoji prefix on title (the alarm clock `⏰` was visually duplicating the system alarm icon AND adding length that pushed iOS into compact no-app-name mode — remove it)
-- iOS `subtitle` slot: not used (Capacitor v8 LocalNotifications API does not expose it cross-platform)
+- iOS `subtitle` slot: not used (Capacitor v8 LocalNotifications API does not expose it cross-platform). If we ever need to drop the brand prefix from the title, we'd need to patch `node_modules/@capacitor/local-notifications/ios/Plugin/Plugin.swift` via patch-package to set `content.subtitle` from the JS payload — a heavier maintenance commitment we deferred.
 
 ### Surface: Wallet page after deep-link tap
 
