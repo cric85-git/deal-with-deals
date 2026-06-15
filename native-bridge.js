@@ -30,6 +30,21 @@ if (isNative) {
   }
 }
 
+// ============ Permission counter helper ============
+// Spec: feature-action-counters AC #4 — bump permission counters exactly
+// once per install (granted-once / denied-once) using localStorage flags.
+// Idempotent so subsequent OS-cached requestPermissions() calls don't
+// double-count. Calls window.bumpMetric defensively in case preview-app.js
+// hasn't loaded yet (no-op when missing).
+function bumpPermOnce(metricKey, flagSuffix) {
+  try {
+    const flagKey = 'perq-mvp:permFlag:' + flagSuffix;
+    if (window.localStorage && window.localStorage.getItem(flagKey)) return;
+    if (window.localStorage) window.localStorage.setItem(flagKey, '1');
+    if (typeof window.bumpMetric === 'function') window.bumpMetric(metricKey);
+  } catch (e) { /* never let counter bumps break a native flow */ }
+}
+
 // ============ Notification scheduling ============
 // Builds a deterministic 32-bit integer ID from a deal id string for cancel/replace.
 function notifIdFor(dealId, suffix) {
@@ -65,6 +80,9 @@ async function rescheduleExpiryReminders(deals, settings) {
 
   // Permission gate
   const perm = await LocalNotifications.requestPermissions();
+  // Spec: feature-action-counters — record permission outcome once.
+  bumpPermOnce(perm.display === 'granted' ? 'notificationPermissionGranted' : 'notificationPermissionDenied',
+    perm.display === 'granted' ? 'notif-granted' : 'notif-denied');
   if (perm.display !== 'granted') return { scheduled: 0, skipped: 'permission-denied' };
 
   // Cancel all pending Perq notifications first to avoid duplicates
@@ -181,7 +199,10 @@ async function getCurrentLocation() {
   }
   try {
     const perm = await Geolocation.requestPermissions();
-    if (perm.location !== 'granted' && perm.coarseLocation !== 'granted') return null;
+    const granted = perm.location === 'granted' || perm.coarseLocation === 'granted';
+    bumpPermOnce(granted ? 'geoPermissionGranted' : 'geoPermissionDenied',
+      granted ? 'geo-granted' : 'geo-denied');
+    if (!granted) return null;
     const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 });
     return { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy };
   } catch (e) {
@@ -243,6 +264,8 @@ async function scheduleTestNotification(deal) {
   }
   try {
     const perm = await LocalNotifications.requestPermissions();
+    bumpPermOnce(perm.display === 'granted' ? 'notificationPermissionGranted' : 'notificationPermissionDenied',
+      perm.display === 'granted' ? 'notif-granted' : 'notif-denied');
     if (perm.display !== 'granted') {
       return { error: 'permission-denied', message: 'Notifications blocked — enable them in iOS Settings > Perq > Notifications.' };
     }

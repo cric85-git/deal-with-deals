@@ -4,6 +4,43 @@ All notable feature changes to the Perq app are documented here.
 
 ---
 
+## [Unreleased] — 2026-06-15 (action-counters)
+
+### 🆕 Feature: lifetime activity counters surfaced in Settings
+
+Spec: `.kiro/specs/feature-action-counters.md` (11 ACs, 41 counters across 9 categories). Adds `state.metrics`, `window.bumpMetric(key)`, `window.toggleActivityStats()`, `window.resetActionCounters()`.
+
+**Why this matters:**
+Today there is no way to answer questions like *how many photos has this user snapped vs uploaded? how many redemptions? how many spins, missions, tier-ups, programs added?* — even though every loop in the app generates events that would tell us. The user explicitly asked for analytics across all actions, with one constraint: data must stay on device.
+
+**What a user gets today:**
+- Settings → Activity stats → tap to expand → 41 lifetime counters grouped into 9 categories (Capture, Discover, Share, Redeem, Lifecycle, Rewards, Programs, Engagement, OCR, Permissions). Each row shows label and current count. Footer text reaffirms data never leaves the device.
+- "Reset stats" button at the bottom of the panel — confirm prompt → all counters zero out.
+- Counters update synchronously on every action: page views, claim/share/redeem/delete, snap vs upload attribution, dedupe blocks, mission/tier transitions, OCR success/failure, permission grants/denies. Saves to localStorage on every bump so a crash mid-action doesn't lose the increment.
+
+**Local-only contract (per Open Gap #2):**
+This is NOT an external analytics pipe. No PostHog, Plausible, GA, Segment, or custom event collector. Counts live in `state.metrics` (localStorage key `perq-mvp:metrics`) and are surfaced to the user as a UX feature. The steering doc (`.kiro/steering/perq.md` Open Gap #2) carries a clarifying note so a future session does not tear the system out under the impression it violates the no-analytics rule.
+
+**Defensive behavior (per spec § 5):**
+- `bumpMetric` on an unknown key still increments AND emits `console.warn` so devs catch typos without losing data.
+- Non-number existing values are coerced to 0 before increment.
+- Permission counters use a localStorage flag (`perq-mvp:permFlag:<suffix>`) to enforce once-per-install semantics so OS-cached requestPermissions calls don't double-count.
+- Migration: missing keys are back-filled at 0; existing values preserved (AC #2, #3).
+
+**Files:**
+- `preview-app.js` — added `K.metrics`, `METRIC_KEYS` (41 entries), `state.metrics` load, `migrateMetrics()`, `window.bumpMetric()`, `pendingDealImageSource` session flag, `METRIC_LABELS` (label/category map for the panel), `renderActivityStatsBody()`, `window.toggleActivityStats()`, `window.resetActionCounters()`. Wired bumps into `goPage`, `claimFromPool`, `claimBrowseDeal`, `confirmShare`, `unshareDeal`, `deleteDeal`, `redeemDeal`, `triggerCamera`/`triggerLibrary` + capture-input change handler, `saveDealForm`, `doSpin`, `completeMission`, `checkTierUp`, `checkUnlocks`, `addProgram` (loyalty save), `extractDealFromImage` + `runScanFlow`, `openPendingDealOnReady`, share-modal social buttons.
+- `native-bridge.js` — added `bumpPermOnce()` helper. Wired into `rescheduleExpiryReminders`, `scheduleTestNotification`, `getCurrentLocation`.
+- `preview.html` — Activity stats settings panel (header + collapsible body). Cache buster `?v=46` → `?v=47`.
+- `sw.js` — `CACHE_NAME` `perq-v41-reshare-community` → `perq-v42-action-counters`.
+- `scripts/perq-migration-test.js` — 3 new tests (AC #1 new user, AC #2 existing user, AC #3 partial-rollout preservation). Total 9 PASS (was 6).
+- `scripts/perq-render-test.js` — 10 new tests (bumpMetric exposed/unknown-key warn/non-number coerce, page-view bump, claim bump, share-fresh awards both, share-reshare awards counter not points, dedupe-block bump, panel renders ≥38 rows, reset zeros all). Total 81 PASS (was 71).
+- `scripts/perq-load-test.js` — added `bumpMetric`, `toggleActivityStats`, `resetActionCounters` to required-globals list.
+- `.kiro/steering/perq.md` — Open Gap #2 carries clarifying note distinguishing local counters from event pipes.
+
+**Tests:** 181/181 PASS (gamif 20 / load OK / migration 9 / render 81 / brand 53 / splash 18) + smoke 6/6.
+
+---
+
 ## [Unreleased] — 2026-06-12 (reshare-community-claims)
 
 ### 🆕 Feature: allow re-sharing community-claimed deals back to the pool

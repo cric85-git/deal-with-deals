@@ -5,8 +5,42 @@
 const KEY='perq-mvp:';
 const K={
   profile:KEY+'profile',deals:KEY+'deals',programs:KEY+'programs',loyalty:KEY+'loyalty',
-  rewards:KEY+'rewards',settings:KEY+'settings',onboarded:KEY+'onboarded'
+  rewards:KEY+'rewards',settings:KEY+'settings',onboarded:KEY+'onboarded',
+  metrics:KEY+'metrics'
 };
+
+// Action counters — every key is initialized to 0 by migrateMetrics() below.
+// Local-only by design (Spec: feature-action-counters). Persisted to
+// localStorage on every bump. NEVER transmitted externally.
+const METRIC_KEYS=[
+  // Capture
+  'photosSnapped','photosUploaded','dealsEnteredManual',
+  'dealsAddedFromSnap','dealsAddedFromUpload','dealsAddedFromShare',
+  'dealAddBlockedDedupe',
+  // Discover / Claim
+  'browseDealsClaimed','communityDealsClaimed',
+  // Share
+  'dealsSharedFresh','dealsResharedToCommunity','dealsUnsharedFromCommunity',
+  'socialSharesUsed',
+  // Redeem
+  'dealsRedeemedShowCashier','dealsRedeemedCodeCopy',
+  'dealsRedeemedOnline','dealsRedeemedGeneric',
+  // Lifecycle
+  'dealsDeleted','dealsExpiredUnused',
+  // Rewards
+  'pointsEarnedTotal','pointsSpentTotal','spinsCompleted',
+  'missionsCompleted','tierUps','unlocksClaimed',
+  // Programs (loyalty)
+  'programsAdded','programsBalanceUpdated','programsExpired',
+  // Engagement
+  'walletViewOpened','browseViewOpened','rewardsViewOpened',
+  'communityViewOpened','settingsViewOpened','notificationsTapped',
+  // OCR diagnostics
+  'ocrAttempted','ocrSucceeded','ocrFailed',
+  // Permissions
+  'notificationPermissionGranted','notificationPermissionDenied',
+  'geoPermissionGranted','geoPermissionDenied'
+];
 
 const TIERS=[
   {name:'BRONZE',min:0,emoji:'🥉',colors:['#A07248','#8B5A2B'],next:100},
@@ -23,6 +57,7 @@ let state={
   loyalty:load(K.loyalty,[]),
   rewards:load(K.rewards,{points:0,spins:0,streak:0,saved:0,lastClaim:null,missions:{date:null,done:{}},lastSeenTier:'BRONZE',unlocksSeen:[]}),
   settings:load(K.settings,{reminders:true,proximity:true,social:false,reminderDays:2,proximityMiles:1}),
+  metrics:load(K.metrics,{}),
   selectedPrefs:[]
 };
 
@@ -50,6 +85,40 @@ let currentBrowseTab='local';
   state.settings=s;
   save(K.settings,state.settings);
 })();
+
+// Migration: ensure state.metrics has every counter key from METRIC_KEYS
+// (back-fills missing keys at 0 for existing users; preserves any existing
+// values). Spec: feature-action-counters AC #1, #2, #3.
+(function migrateMetrics(){
+  const m=state.metrics||{};
+  let changed=false;
+  for(const k of METRIC_KEYS){
+    if(typeof m[k]!=='number'){m[k]=0;changed=true;}
+  }
+  state.metrics=m;
+  if(changed)save(K.metrics,state.metrics);
+})();
+
+// Counter bump helper. Local-only by design — never transmits anywhere.
+// Spec: feature-action-counters AC #4, #10, #11.
+//   - Unknown keys are still incremented (no data loss on typo) but warned.
+//   - Non-number values are coerced to 0 before incrementing (defensive
+//     against corrupted state).
+//   - Saves synchronously so a crash mid-action doesn't lose the increment.
+window.bumpMetric=function(key){
+  if(!state.metrics)state.metrics={};
+  if(METRIC_KEYS.indexOf(key)===-1){
+    console.warn('[metrics] Unknown counter key:',key);
+  }
+  const cur=state.metrics[key];
+  state.metrics[key]=(typeof cur==='number'?cur:0)+1;
+  save(K.metrics,state.metrics);
+};
+
+// Session flag — set when user picks "Camera" or "Photo Library" in the
+// snap action sheet. Read by saveDealForm to attribute the save to either
+// dealsAddedFromSnap or dealsAddedFromUpload. Cleared after each save.
+let pendingDealImageSource=null; // 'camera' | 'library' | null
 
 // Migration: every profile gets a referralCode + referral counter
 (function migrateProfile(){
@@ -408,6 +477,9 @@ window.goPage=function(page){
   if(page==='rewards')renderRewards();
   if(page==='settings')renderSettings();
   if(page==='community')renderCommunity();
+  // Spec: feature-action-counters AC #4 — page-view counters
+  const viewKey={wallet:'walletViewOpened',browse:'browseViewOpened',rewards:'rewardsViewOpened',community:'communityViewOpened',settings:'settingsViewOpened'}[page];
+  if(viewKey&&typeof window.bumpMetric==='function')window.bumpMetric(viewKey);
 };
 
 window.setWalletFilter=function(f){
@@ -741,6 +813,7 @@ window.claimFromPool=function(id){
     createdAt:Date.now()
   };
   state.deals.push(newDeal);
+  if(typeof window.bumpMetric==='function')window.bumpMetric('communityDealsClaimed');
   // Increment claim count on pool
   p.claimCount=(p.claimCount||0)+1;
   save('perq-mvp:communityPool',pool);
@@ -750,6 +823,7 @@ window.claimFromPool=function(id){
     original.claimCount=(original.claimCount||0)+1;
     const sharePts=applyMultiplier(5);
     state.rewards.points+=sharePts;
+    if(typeof window.bumpMetric==='function')window.bumpMetric('pointsEarnedTotal');
     if(original.claimCount%5===0){
       state.rewards.spins=(state.rewards.spins||0)+1;
       toast('🎉 +'+sharePts+' pts · +1 bonus spin (5 claims!)');
@@ -949,6 +1023,14 @@ window.redeemDeal=function(id){
   const pts=applyMultiplier(10);
   state.rewards.points+=pts;
   state.rewards.saved+=parseFloat(d.value)||0;
+  // Spec: feature-action-counters AC #4 — generic redeem counter (Mark as
+  // Used / inline "Mark redeemed"). Mode-specific counters
+  // (dealsRedeemedShowCashier / CodeCopy / Online) get wired when Spec #6
+  // (snap-ocr-multi-deal-and-codes) introduces those flows.
+  if(typeof window.bumpMetric==='function'){
+    window.bumpMetric('dealsRedeemedGeneric');
+    if(pts>0)window.bumpMetric('pointsEarnedTotal');
+  }
   if(state.rewards.lastClaim!==todayStr()){
     const yest=new Date();yest.setDate(yest.getDate()-1);
     if(state.rewards.lastClaim===yest.toISOString().slice(0,10))state.rewards.streak+=1;
@@ -1109,20 +1191,23 @@ window.shareDeal=function(id){
   }
 
   // Social share options (always available)
+  // Spec: feature-action-counters AC #4 — each tap on Message/WhatsApp/
+  // Email/Copy bumps socialSharesUsed exactly once.
+  const ssBump='window.bumpMetric&&window.bumpMetric(\'socialSharesUsed\')';
   html+='<p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);margin:8px 0 8px">Or share with someone specific</p>';
   html+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px">'+
-    '<a href="'+buildSmsHref(text)+'" style="text-decoration:none;background:#F0F0F0;border-radius:14px;padding:14px 8px;text-align:center;color:#1A1A1A">'+
+    '<a href="'+buildSmsHref(text)+'" onclick="'+ssBump+'" style="text-decoration:none;background:#F0F0F0;border-radius:14px;padding:14px 8px;text-align:center;color:#1A1A1A">'+
       '<div style="width:36px;height:36px;border-radius:50%;background:#34D399;color:white;margin:0 auto 6px;display:flex;align-items:center;justify-content:center">'+
       '<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'+
       '</div><span style="font-size:11px;font-weight:600">Message</span></a>'+
-    '<a href="'+buildWhatsAppHref(text)+'" target="_blank" rel="noopener" style="text-decoration:none;background:#F0F0F0;border-radius:14px;padding:14px 8px;text-align:center;color:#1A1A1A">'+
+    '<a href="'+buildWhatsAppHref(text)+'" target="_blank" rel="noopener" onclick="'+ssBump+'" style="text-decoration:none;background:#F0F0F0;border-radius:14px;padding:14px 8px;text-align:center;color:#1A1A1A">'+
       '<div style="width:36px;height:36px;border-radius:50%;background:#25D366;color:white;margin:0 auto 6px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900">W</div>'+
       '<span style="font-size:11px;font-weight:600">WhatsApp</span></a>'+
-    '<a href="'+buildMailtoHref('Deal on Perq',text)+'" style="text-decoration:none;background:#F0F0F0;border-radius:14px;padding:14px 8px;text-align:center;color:#1A1A1A">'+
+    '<a href="'+buildMailtoHref('Deal on Perq',text)+'" onclick="'+ssBump+'" style="text-decoration:none;background:#F0F0F0;border-radius:14px;padding:14px 8px;text-align:center;color:#1A1A1A">'+
       '<div style="width:36px;height:36px;border-radius:50%;background:#4FACFE;color:white;margin:0 auto 6px;display:flex;align-items:center;justify-content:center">'+
       '<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>'+
       '</div><span style="font-size:11px;font-weight:600">Email</span></a>'+
-    '<button onclick="copyShareText(\''+d.id+'\')" style="background:#F0F0F0;border:none;border-radius:14px;padding:14px 8px;text-align:center;color:#1A1A1A;cursor:pointer">'+
+    '<button onclick="'+ssBump+';copyShareText(\''+d.id+'\')" style="background:#F0F0F0;border:none;border-radius:14px;padding:14px 8px;text-align:center;color:#1A1A1A;cursor:pointer">'+
       '<div style="width:36px;height:36px;border-radius:50%;background:#6366F1;color:white;margin:0 auto 6px;display:flex;align-items:center;justify-content:center">'+
       '<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>'+
       '</div><span style="font-size:11px;font-weight:600">Copy link</span></button>'+
@@ -1241,7 +1326,8 @@ window.confirmShare=function(id){
   d.sharedAt=Date.now();
   d.claimCount=d.claimCount||0;
   const sharePts=isReshare?0:applyMultiplier(5*shareMultiplier());
-  if(sharePts>0)state.rewards.points+=sharePts;
+  if(sharePts>0){state.rewards.points+=sharePts;if(typeof window.bumpMetric==='function')window.bumpMetric('pointsEarnedTotal');}
+  if(typeof window.bumpMetric==='function')window.bumpMetric(isReshare?'dealsResharedToCommunity':'dealsSharedFresh');
   save(K.deals,state.deals);save(K.rewards,state.rewards);
   // Save to community pool (local-first; will become a backend call later).
   // Re-shares create a fresh pool entry under the re-sharer's name; the
@@ -1285,6 +1371,7 @@ window.unshareDeal=function(id){
   // Remove from community pool
   const pool=load('perq-mvp:communityPool',[]).filter(p=>p.id!==id);
   save('perq-mvp:communityPool',pool);
+  if(typeof window.bumpMetric==='function')window.bumpMetric('dealsUnsharedFromCommunity');
   closeModal();
   toast('Pulled from community pool');
   renderAll();
@@ -1294,6 +1381,7 @@ window.deleteDeal=function(id){
   if(!confirm('Delete this deal?'))return;
   state.deals=state.deals.filter(d=>d.id!==id);
   save(K.deals,state.deals);
+  if(typeof window.bumpMetric==='function')window.bumpMetric('dealsDeleted');
   toast('Deleted');
   scheduleReminders();
   renderAll();
@@ -1426,9 +1514,11 @@ window.claimBrowseDeal=function(idOrMerchant,source,maybeDiscount,maybeCategory,
   // Spec: feature-deal-dedupe AC #7 (claim path).
   const dup=window.findDuplicateDeal({merchant:d.merchant,discount:d.discount,expiry:d.expiry||'',code:d.code||''});
   if(dup){
+    if(typeof window.bumpMetric==='function')window.bumpMetric('dealAddBlockedDedupe');
     toast('You already saved this deal — '+dup.merchant);
     return;
   }
+  if(typeof window.bumpMetric==='function')window.bumpMetric('browseDealsClaimed');
   state.deals.push({
     id:uid(),
     merchant:d.merchant,
@@ -1533,6 +1623,13 @@ function completeMission(missionId){
   if(state.rewards.missions.done[missionId])return false;
   state.rewards.missions.done[missionId]=Date.now();
   state.rewards.points+=tmpl.pts;
+  // Spec: feature-action-counters AC #4 — bump only on the false→true
+  // transition (the early-return above guarantees we're past idempotent
+  // re-saves) and credit the point award to pointsEarnedTotal.
+  if(typeof window.bumpMetric==='function'){
+    window.bumpMetric('missionsCompleted');
+    if(tmpl.pts>0)window.bumpMetric('pointsEarnedTotal');
+  }
   save(K.rewards,state.rewards);
   toast('🎯 Mission complete: '+tmpl.label+' · +'+tmpl.pts+' pts');
   // Check if all missions for the day done -> bonus spin
@@ -1556,6 +1653,10 @@ function checkTierUp(){
     const newIdx=TIERS.findIndex(t=>t.name===newTier.name);
     if(newIdx>oldIdx){
       state.rewards.lastSeenTier=newTier.name;
+      // Spec: feature-action-counters AC #4 — bump only on actual tier
+      // promotion (Bronze→Silver, Silver→Gold, Gold→Platinum), not on
+      // every check.
+      if(typeof window.bumpMetric==='function')window.bumpMetric('tierUps');
       save(K.rewards,state.rewards);
       celebrateTierUp(newTier);
     } else {
@@ -1573,6 +1674,9 @@ function checkUnlocks(){
   for(const u of UNLOCKS){
     if(state.rewards.points>=u.pts && !seen.includes(u.id)){
       state.rewards.unlocksSeen=[...seen,u.id];
+      // Spec: feature-action-counters AC #4 — bump on the not-seen→seen
+      // transition (idempotent — same unlock id won't bump twice).
+      if(typeof window.bumpMetric==='function')window.bumpMetric('unlocksClaimed');
       save(K.rewards,state.rewards);
       // Trigger the actual perk delivery
       deliverUnlockPerk(u);
@@ -1817,6 +1921,9 @@ window.doSpin=function(){
   if(spinning||state.rewards.spins<1)return;
   spinning=true;
   state.rewards.spins-=1;
+  // Spec: feature-action-counters AC #4 — every successful spin counts.
+  // Bumped before the timer so a navigation away mid-spin still records it.
+  if(typeof window.bumpMetric==='function')window.bumpMetric('spinsCompleted');
   const slices=[
     {label:'+10 pts',pts:10},{label:'Bonus deal!',pts:5},{label:'+25 pts',pts:25},
     {label:'Mystery 🎁',pts:5},{label:'+5 pts',pts:5},{label:'JACKPOT 100 pts!',pts:100},
@@ -1841,6 +1948,8 @@ window.doSpin=function(){
     const resultEl=document.getElementById('spin-result');
     if(resultEl)resultEl.textContent='🎉 '+label;
     state.rewards.points+=earned;
+    // Spec: feature-action-counters AC #4 — every points award counts.
+    if(earned>0&&typeof window.bumpMetric==='function')window.bumpMetric('pointsEarnedTotal');
     if(slice.respin)state.rewards.spins+=1;
     save(K.rewards,state.rewards);
     spinning=false;
@@ -1898,10 +2007,16 @@ window.openSnapSheet=function(){
 
 window.triggerCamera=function(){
   const i=document.getElementById('capture-input');
+  // Spec: feature-action-counters — record image source for saveDealForm
+  // attribution (dealsAddedFromSnap vs dealsAddedFromUpload). The actual
+  // photosSnapped bump fires below in the change handler only when a file
+  // is returned (cancellation does NOT increment).
+  pendingDealImageSource='camera';
   i.setAttribute('capture','environment');i.click();
 };
 window.triggerLibrary=function(){
   const i=document.getElementById('capture-input');
+  pendingDealImageSource='library';
   i.removeAttribute('capture');i.click();
 };
 
@@ -1917,6 +2032,12 @@ document.getElementById('capture-input').addEventListener('change',(e)=>{
     if(mode==='loyalty'){
       runLoyaltyScanFlow(compressed);
     } else {
+      // Spec: feature-action-counters AC #4 — bump photo-source counter
+      // only when a file is actually returned (not on cancel).
+      if(typeof window.bumpMetric==='function'){
+        if(pendingDealImageSource==='camera')window.bumpMetric('photosSnapped');
+        else if(pendingDealImageSource==='library')window.bumpMetric('photosUploaded');
+      }
       pendingDealImage=compressed;
       runScanFlow(pendingDealImage);
     }
@@ -2072,6 +2193,13 @@ async function runScanFlow(imageDataUrl){
   let extractError=null;
   try{extracted=await extractPromise;}
   catch(e){extractError=e;}
+  // Spec: feature-action-counters AC #4 — single resolution point for OCR
+  // outcome. A non-empty payload counts as success; null / error / empty
+  // object all count as failure.
+  if(typeof window.bumpMetric==='function'){
+    const ok=!extractError&&extracted&&typeof extracted==='object'&&Object.keys(extracted).length>0;
+    window.bumpMetric(ok?'ocrSucceeded':'ocrFailed');
+  }
 
   // Final step
   if(extractError&&extractError.message==='NO_KEY'){
@@ -2098,8 +2226,11 @@ function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 // Priority: 1) deployed proxy URL  2) user's API key (auto-detects provider)  3) error
 const OCR_PROXY_URL='https://perq-ocr-proxy.shailbhatt.workers.dev'; // Deployed proxy
 async function extractDealFromImage(imageDataUrl){
+  // Spec: feature-action-counters AC #4 — every OCR submission counts as
+  // an attempt regardless of outcome. Success / failure tracked at return.
+  if(typeof window.bumpMetric==='function')window.bumpMetric('ocrAttempted');
   const match=imageDataUrl.match(/^data:(image\/[a-z]+);base64,(.+)$/);
-  if(!match)throw new Error('Invalid image format');
+  if(!match){if(typeof window.bumpMetric==='function')window.bumpMetric('ocrFailed');throw new Error('Invalid image format');}
   const mediaType=match[1];
   const b64=match[2];
 
@@ -2386,6 +2517,7 @@ window.saveDealForm=function(){
   // Spec: feature-deal-dedupe AC #1.
   const dup=window.findDuplicateDeal({merchant:m,discount:discountStr,expiry:expiry,code:codeVal});
   if(dup){
+    if(typeof window.bumpMetric==='function')window.bumpMetric('dealAddBlockedDedupe');
     toast('You already saved this deal — '+dup.merchant);
     return;
   }
@@ -2400,6 +2532,16 @@ window.saveDealForm=function(){
     image:pendingDealImage||null,
     redeemed:false,createdAt:Date.now()
   });
+  // Spec: feature-action-counters AC #4 — attribute the save to its image
+  // source (camera/library) or to the manual-entry path. The session flag
+  // `pendingDealImageSource` is set in triggerCamera / triggerLibrary and
+  // cleared here so the next save reattributes correctly.
+  if(typeof window.bumpMetric==='function'){
+    if(pendingDealImageSource==='camera')window.bumpMetric('dealsAddedFromSnap');
+    else if(pendingDealImageSource==='library')window.bumpMetric('dealsAddedFromUpload');
+    else window.bumpMetric('dealsEnteredManual');
+  }
+  pendingDealImageSource=null;
   state.rewards.spins+=1;
   save(K.deals,state.deals);save(K.rewards,state.rewards);
   pendingDealImage=null;
@@ -2534,6 +2676,8 @@ window.saveProgram=function(){
     expiry:document.getElementById('rp-expiry').value||null,
     addedAt:Date.now()
   });
+  // Spec: feature-action-counters AC #4 — programsAdded bumps once per save.
+  if(typeof window.bumpMetric==='function')window.bumpMetric('programsAdded');
   save(K.programs,state.programs);
   closeModal();
   toast('✓ Program added');
@@ -2592,6 +2736,118 @@ window.saveLoyalty=function(){
   renderAll();
 };
 
+// -------- Activity stats panel (Spec: feature-action-counters § 4) --------
+// User-facing label + category for every counter key in METRIC_KEYS.
+// Order = render order. Categories are visual-only headers; the underlying
+// state.metrics object is flat.
+const METRIC_LABELS=[
+  // Capture
+  {cat:'Capture',key:'photosSnapped',label:'Photos snapped from camera'},
+  {cat:'Capture',key:'photosUploaded',label:'Photos uploaded from library'},
+  {cat:'Capture',key:'dealsEnteredManual',label:'Deals entered manually'},
+  {cat:'Capture',key:'dealsAddedFromSnap',label:'Deals saved from camera snap'},
+  {cat:'Capture',key:'dealsAddedFromUpload',label:'Deals saved from photo upload'},
+  {cat:'Capture',key:'dealsAddedFromShare',label:'Deals saved from share import'},
+  {cat:'Capture',key:'dealAddBlockedDedupe',label:'Duplicate-deal saves blocked'},
+  // Discover / Claim
+  {cat:'Discover',key:'browseDealsClaimed',label:'Deals claimed from Browse'},
+  {cat:'Discover',key:'communityDealsClaimed',label:'Deals claimed from community'},
+  // Share
+  {cat:'Share',key:'dealsSharedFresh',label:'Deals shared (first-time, +5 pts)'},
+  {cat:'Share',key:'dealsResharedToCommunity',label:'Deals shared back to community (0 pts)'},
+  {cat:'Share',key:'dealsUnsharedFromCommunity',label:'Deals pulled from community pool'},
+  {cat:'Share',key:'socialSharesUsed',label:'Social share buttons tapped'},
+  // Redeem
+  {cat:'Redeem',key:'dealsRedeemedShowCashier',label:'Redeemed via Show Cashier'},
+  {cat:'Redeem',key:'dealsRedeemedCodeCopy',label:'Redeemed via Code & Copy'},
+  {cat:'Redeem',key:'dealsRedeemedOnline',label:'Redeemed via Online flow'},
+  {cat:'Redeem',key:'dealsRedeemedGeneric',label:'Marked as Used (generic)'},
+  // Lifecycle
+  {cat:'Lifecycle',key:'dealsDeleted',label:'Deals deleted'},
+  {cat:'Lifecycle',key:'dealsExpiredUnused',label:'Deals expired unused'},
+  // Rewards
+  {cat:'Rewards',key:'pointsEarnedTotal',label:'Points earned (lifetime)'},
+  {cat:'Rewards',key:'pointsSpentTotal',label:'Points spent (lifetime)'},
+  {cat:'Rewards',key:'spinsCompleted',label:'Spins completed'},
+  {cat:'Rewards',key:'missionsCompleted',label:'Missions completed'},
+  {cat:'Rewards',key:'tierUps',label:'Tier promotions'},
+  {cat:'Rewards',key:'unlocksClaimed',label:'Unlock perks claimed'},
+  // Programs
+  {cat:'Programs',key:'programsAdded',label:'Loyalty programs added'},
+  {cat:'Programs',key:'programsBalanceUpdated',label:'Program balances updated'},
+  {cat:'Programs',key:'programsExpired',label:'Programs expired'},
+  // Engagement
+  {cat:'Engagement',key:'walletViewOpened',label:'Wallet views'},
+  {cat:'Engagement',key:'browseViewOpened',label:'Browse views'},
+  {cat:'Engagement',key:'rewardsViewOpened',label:'Rewards views'},
+  {cat:'Engagement',key:'communityViewOpened',label:'Community views'},
+  {cat:'Engagement',key:'settingsViewOpened',label:'Settings views'},
+  {cat:'Engagement',key:'notificationsTapped',label:'Notifications tapped'},
+  // OCR diagnostics
+  {cat:'OCR',key:'ocrAttempted',label:'OCR scans attempted'},
+  {cat:'OCR',key:'ocrSucceeded',label:'OCR scans succeeded'},
+  {cat:'OCR',key:'ocrFailed',label:'OCR scans failed'},
+  // Permissions
+  {cat:'Permissions',key:'notificationPermissionGranted',label:'Notification permission granted'},
+  {cat:'Permissions',key:'notificationPermissionDenied',label:'Notification permission denied'},
+  {cat:'Permissions',key:'geoPermissionGranted',label:'Location permission granted'},
+  {cat:'Permissions',key:'geoPermissionDenied',label:'Location permission denied'}
+];
+
+// Inject one row per counter into #activity-stats-body. Grouped by category
+// with a small caps header per group.
+function renderActivityStatsBody(){
+  const body=document.getElementById('activity-stats-body');
+  if(!body)return;
+  const m=state.metrics||{};
+  let html='';
+  let lastCat=null;
+  for(const row of METRIC_LABELS){
+    if(row.cat!==lastCat){
+      lastCat=row.cat;
+      html+='<p style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin:14px 0 4px;padding:0 2px">'+escapeHtml(row.cat)+'</p>';
+    }
+    const val=typeof m[row.key]==='number'?m[row.key]:0;
+    html+='<div data-metric-row="'+row.key+'" style="display:flex;justify-content:space-between;align-items:center;padding:8px 2px;font-size:13px;border-bottom:1px solid var(--border)">'
+      +'<span style="color:var(--text);flex:1;line-height:1.3">'+escapeHtml(row.label)+'</span>'
+      +'<span style="color:var(--text-dim);font-family:ui-monospace,monospace;font-weight:700;margin-left:12px">'+val+'</span>'
+    +'</div>';
+  }
+  // Reset button at bottom of expanded panel.
+  html+='<button onclick="resetActionCounters()" style="margin-top:14px;width:100%;padding:11px;border-radius:12px;background:transparent;color:#DC2626;border:1px solid #FFE5E5;font-size:13px;font-weight:700;cursor:pointer">Reset stats</button>';
+  // Footer note — reaffirms the local-only contract from the spec.
+  html+='<p style="font-size:10px;color:var(--text-faint);margin:10px 2px 0;line-height:1.4;text-align:center">Counts live on this device only. They never leave Perq.</p>';
+  body.innerHTML=html;
+}
+
+window.toggleActivityStats=function(){
+  const body=document.getElementById('activity-stats-body');
+  const chev=document.getElementById('activity-stats-chevron');
+  const sub=document.getElementById('activity-stats-sub');
+  if(!body)return;
+  const open=body.style.display!=='block';
+  if(open){
+    renderActivityStatsBody();
+    body.style.display='block';
+    if(chev)chev.style.transform='rotate(90deg)';
+    if(sub)sub.textContent='Tap header to collapse';
+  } else {
+    body.style.display='none';
+    if(chev)chev.style.transform='';
+    if(sub)sub.textContent='Tap to see lifetime counts · stays on this device';
+  }
+};
+
+window.resetActionCounters=function(){
+  if(!confirm('Reset all activity stats to zero? This cannot be undone.'))return;
+  const fresh={};
+  for(const k of METRIC_KEYS)fresh[k]=0;
+  state.metrics=fresh;
+  save(K.metrics,state.metrics);
+  renderActivityStatsBody();
+  toast('Activity stats reset');
+};
+
 // -------- Settings --------
 function renderSettings(){
   if(state.profile){
@@ -2600,6 +2856,10 @@ function renderSettings(){
     document.getElementById('profile-name-display').textContent=state.profile.name;
     document.getElementById('profile-email-display').textContent=state.profile.email||'Tap to add email';
   }
+  // Spec: feature-action-counters AC #5 — keep the activity-stats body in
+  // sync so opening it always shows current values. (No-op if collapsed.)
+  const statsBody=document.getElementById('activity-stats-body');
+  if(statsBody&&statsBody.style.display==='block')renderActivityStatsBody();
   // Referral stats
   const refStatsEl=document.getElementById('referral-stats');
   if(refStatsEl){
@@ -2863,6 +3123,10 @@ window.openPendingDealOnReady=function(){
     if(typeof toast==='function')toast('This deal is no longer in your wallet');
     return;
   }
+  // Spec: feature-action-counters AC #4 — count notification taps that
+  // resolved to a real wallet deal. Missing-deal taps don't count (the
+  // user's intent didn't land on actionable content).
+  if(typeof window.bumpMetric==='function')window.bumpMetric('notificationsTapped');
   // Open the deal-detail modal directly — same modal the user gets from
   // tapping a wallet pass or the ⓘ button. AC #6 (redeemed) and AC #7
   // (expired) are handled inside viewWalletDeal's existing branches.

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'perq-v41-reshare-community';
+const CACHE_NAME = 'perq-v42-action-counters';
 const ASSETS = [
   './',
   './index.html',

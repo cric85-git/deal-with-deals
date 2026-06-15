@@ -871,5 +871,159 @@ try {
   console.error('notification-deep-link content checks threw:', e.message);
 }
 
+// ============================================================
+// Spec: feature-action-counters (10 render tests)
+// ============================================================
+// Validates AC #4, #5, #6, #10, #11. Uses runIsolated for clean per-test
+// state. Tests cover the bumpMetric helper contract, the ~38-counter
+// inventory, page-view + claim + share + dedupe wiring, the Settings panel
+// render, and the reset-stats flow.
+
+try {
+  // T1 (AC #4) — bumpMetric exposed as window global, increments by 1, saves
+  let sb = runIsolated(() => {
+    store['perq-mvp:profile'] = JSON.stringify({ name: 'A' });
+  });
+  if (typeof sb.bumpMetric === 'function') pass++;
+  else { fail++; console.error('AC1: bumpMetric not exposed as window global'); }
+  sb.bumpMetric('walletViewOpened');
+  sb.bumpMetric('walletViewOpened');
+  const m1 = JSON.parse(store['perq-mvp:metrics'] || '{}');
+  if (m1.walletViewOpened === 2) pass++;
+  else { fail++; console.error('AC1: bumpMetric did not increment to 2, got:', m1.walletViewOpened); }
+
+  // T2 (AC #10) — unknown key still increments + warns
+  sb = runIsolated(() => {});
+  let warned = false;
+  const origWarn = console.warn;
+  console.warn = (...args) => { if (String(args.join(' ')).includes('Unknown counter key')) warned = true; };
+  sb.bumpMetric('totallyMadeUpKey');
+  console.warn = origWarn;
+  const m2 = JSON.parse(store['perq-mvp:metrics'] || '{}');
+  if (m2.totallyMadeUpKey === 1 && warned) pass++;
+  else { fail++; console.error('AC10: unknown key handling failed. value=' + m2.totallyMadeUpKey + ' warned=' + warned); }
+
+  // T3 (AC #11) — non-number value coerced to 0 before increment
+  sb = runIsolated(() => {
+    store['perq-mvp:metrics'] = JSON.stringify({ walletViewOpened: 'corrupted' });
+  });
+  sb.bumpMetric('walletViewOpened');
+  const m3 = JSON.parse(store['perq-mvp:metrics'] || '{}');
+  if (m3.walletViewOpened === 1) pass++;
+  else { fail++; console.error('AC11: non-number coerce failed, expected 1, got:', m3.walletViewOpened); }
+
+  // T4 (AC #4) — goPage('wallet') bumps walletViewOpened
+  sb = runIsolated(() => {
+    store['perq-mvp:profile'] = JSON.stringify({ name: 'A' });
+  });
+  const beforeWv = (JSON.parse(store['perq-mvp:metrics'] || '{}').walletViewOpened) || 0;
+  try { sb.goPage('wallet'); } catch (e) { /* renderWallet may NPE on some fakes — counter still bumps before that */ }
+  const afterWv = (JSON.parse(store['perq-mvp:metrics'] || '{}').walletViewOpened) || 0;
+  if (afterWv === beforeWv + 1) pass++;
+  else { fail++; console.error('AC4-goPage: walletViewOpened not bumped. before=' + beforeWv + ' after=' + afterWv); }
+
+  // T5 (AC #4) — claimFromPool bumps communityDealsClaimed
+  sb = runIsolated(() => {
+    store['perq-mvp:profile'] = JSON.stringify({ name: 'A' });
+    store['perq-mvp:rewards'] = JSON.stringify({ points: 0, spins: 0, missions: { date: null, done: {} }, lastSeenTier: 'BRONZE', unlocksSeen: [] });
+    store['perq-mvp:communityPool'] = JSON.stringify([
+      { id: 'pool1', sharedBy: 'Alice', merchant: 'Subway', discount: '$3 off', category: 'Dining', code: '', expiry: '2026-12-01', value: 3, claimCount: 0 }
+    ]);
+  });
+  try { sb.claimFromPool('pool1'); } catch (e) { /* renderAll may throw — counter bump is synchronous before that */ }
+  const m5 = JSON.parse(store['perq-mvp:metrics'] || '{}');
+  if (m5.communityDealsClaimed === 1) pass++;
+  else { fail++; console.error('AC4-claim: communityDealsClaimed not bumped, got:', m5.communityDealsClaimed); }
+
+  // T6 (AC #4) — confirmShare on fresh share bumps dealsSharedFresh AND pointsEarnedTotal
+  sb = runIsolated(() => {
+    store['perq-mvp:profile'] = JSON.stringify({ name: 'A' });
+    store['perq-mvp:rewards'] = JSON.stringify({ points: 50, spins: 0, missions: { date: null, done: {} }, lastSeenTier: 'BRONZE', unlocksSeen: [] });
+    store['perq-mvp:deals'] = JSON.stringify([
+      { id: 'fresh1', merchant: 'Whole Foods', discount: '$5 off', category: 'Groceries', code: '', expiry: '2026-12-01', value: 5, redeemed: false, createdAt: Date.now() }
+    ]);
+  });
+  try { sb.confirmShare('fresh1'); } catch (e) {}
+  const m6 = JSON.parse(store['perq-mvp:metrics'] || '{}');
+  if (m6.dealsSharedFresh === 1 && (m6.pointsEarnedTotal || 0) >= 1) pass++;
+  else { fail++; console.error('AC4-share-fresh: counters wrong. fresh=' + m6.dealsSharedFresh + ' points=' + m6.pointsEarnedTotal); }
+
+  // T7 (AC #4) — confirmShare on community re-share bumps dealsResharedToCommunity but NOT pointsEarnedTotal
+  sb = runIsolated(() => {
+    store['perq-mvp:profile'] = JSON.stringify({ name: 'A' });
+    store['perq-mvp:rewards'] = JSON.stringify({ points: 50, spins: 0, missions: { date: null, done: {} }, lastSeenTier: 'BRONZE', unlocksSeen: [] });
+    store['perq-mvp:deals'] = JSON.stringify([
+      { id: 're1', merchant: 'Trader Joes', discount: '$2 off', category: 'Groceries', code: '', expiry: '2026-12-01', value: 2, fromCommunity: true, sharedByOriginal: 'Bob', redeemed: false, createdAt: Date.now() }
+    ]);
+  });
+  try { sb.confirmShare('re1'); } catch (e) {}
+  const m7 = JSON.parse(store['perq-mvp:metrics'] || '{}');
+  if (m7.dealsResharedToCommunity === 1 && !m7.pointsEarnedTotal) pass++;
+  else { fail++; console.error('AC4-reshare: counters wrong. reshared=' + m7.dealsResharedToCommunity + ' points=' + m7.pointsEarnedTotal); }
+
+  // T8 (AC #4) — saveDealForm dedupe block bumps dealAddBlockedDedupe
+  sb = runIsolated((sandboxEls) => {
+    store['perq-mvp:profile'] = JSON.stringify({ name: 'A' });
+    store['perq-mvp:deals'] = JSON.stringify([
+      { id: 'd1', merchant: 'Pizza Hut', discount: '$13.99 off', expiry: '2026-07-26', code: '', value: 13.99, category: 'Dining', address: '', notes: '', redeemed: false, createdAt: Date.now() }
+    ]);
+    store['perq-mvp:rewards'] = JSON.stringify({ points: 0, spins: 0, missions: { date: null, done: {} }, lastSeenTier: 'BRONZE', unlocksSeen: [] });
+    sandboxEls['f-merchant'] = { value: 'Pizza Hut' };
+    sandboxEls['f-symbol'] = { value: '$' };
+    sandboxEls['f-discount-num'] = { value: '13.99' };
+    sandboxEls['f-value'] = { value: '' };
+    sandboxEls['f-has-expiry'] = { value: 'Y' };
+    sandboxEls['f-expiry'] = { value: '2026-07-26' };
+    sandboxEls['f-code'] = { value: '' };
+    sandboxEls['f-category'] = { value: 'Dining' };
+    sandboxEls['f-address'] = { value: '' };
+  });
+  try { sb.saveDealForm(); } catch (e) {}
+  const m8 = JSON.parse(store['perq-mvp:metrics'] || '{}');
+  if (m8.dealAddBlockedDedupe === 1) pass++;
+  else { fail++; console.error('AC4-dedupe: dealAddBlockedDedupe not bumped, got:', m8.dealAddBlockedDedupe); }
+
+  // T9 (AC #5) — Settings panel render produces a row for every counter key
+  sb = runIsolated(() => {
+    store['perq-mvp:profile'] = JSON.stringify({ name: 'A' });
+  });
+  // Trigger toggle to expand and render; capture body innerHTML by tracking
+  // assignments to el.innerHTML on activity-stats-body
+  let capturedBodyHTML = '';
+  const bodyEl = sb._getEl ? sb._getEl('activity-stats-body') : null;
+  // _getEl may return undefined if id wasn't yet asked for; force a getElementById
+  const ensuredBody = sb.document.getElementById('activity-stats-body');
+  Object.defineProperty(ensuredBody, 'innerHTML', {
+    set(v) { capturedBodyHTML = v; },
+    get() { return capturedBodyHTML; }
+  });
+  // Style is a Proxy that always returns ''; force display !== 'block' so toggle opens
+  try { sb.toggleActivityStats(); } catch (e) {}
+  // Count the number of metric-row entries; should be >=38 (spec said ~38;
+  // final inventory tallied to 41 with category split — see § 3.1).
+  const matches = capturedBodyHTML.match(/data-metric-row="[^"]+"/g) || [];
+  if (matches.length >= 38) pass++;
+  else { fail++; console.error('AC5: panel rendered ' + matches.length + ' rows, expected >= 38'); }
+
+  // T10 (AC #6) — resetActionCounters zeroes all counters and re-saves
+  sb = runIsolated(() => {
+    store['perq-mvp:metrics'] = JSON.stringify({
+      photosSnapped: 12, dealsRedeemedGeneric: 5, walletViewOpened: 99, customLeftover: 7
+    });
+  });
+  try { sb.resetActionCounters(); } catch (e) {}
+  const m10 = JSON.parse(store['perq-mvp:metrics'] || '{}');
+  // After reset: every METRIC_KEY should be 0; the unknown 'customLeftover'
+  // should be gone (reset rebuilds from canonical key list).
+  const allZero = Object.values(m10).every(v => v === 0);
+  const hasAllKeys = m10.photosSnapped === 0 && m10.walletViewOpened === 0 && m10.dealsRedeemedGeneric === 0;
+  const droppedJunk = !('customLeftover' in m10);
+  if (allZero && hasAllKeys && droppedJunk) pass++;
+  else { fail++; console.error('AC6: reset did not zero everything. allZero=' + allZero + ' hasAllKeys=' + hasAllKeys + ' droppedJunk=' + droppedJunk + ' state=' + JSON.stringify(m10)); }
+} catch (e) {
+  fail++;
+  console.error('action-counters tests threw:', e.message, e.stack && e.stack.split('\n').slice(0,3).join(' | '));
+}
+
 console.log(`RENDER TEST: PASS ${pass}, FAIL ${fail}`);
 process.exit(fail === 0 ? 0 : 1);

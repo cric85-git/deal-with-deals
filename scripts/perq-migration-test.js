@@ -62,6 +62,84 @@ if (r.lastSeenTier === 'SILVER') pass++; else { fail++; console.error('lastSeenT
 
 if (Array.isArray(r.unlocksSeen)) pass++; else { fail++; console.error('unlocksSeen not array'); }
 
+// ============================================================
+// Spec: feature-action-counters — 3 migration tests for state.metrics
+// ============================================================
+// AC #1: NEW user (no prior state.metrics) gets all 38 keys at 0
+// AC #2: EXISTING user with no state.metrics key gets all keys back-filled at 0
+// AC #3: PARTIAL state.metrics preserves existing values, fills missing keys at 0
+
+function runMetricsMigration(seedStoreOverrides) {
+  const localStore = Object.assign({}, seedStoreOverrides || {});
+  const localCtx = vm.createContext({
+    console, setTimeout, clearTimeout,
+    document: fakeDoc, navigator: { clipboard: null },
+    location: { origin: 'http://test', pathname: '/', reload() {} },
+    localStorage: {
+      getItem: (k) => localStore[k] === undefined ? null : localStore[k],
+      setItem: (k, v) => { localStore[k] = String(v); },
+      removeItem: (k) => { delete localStore[k]; }
+    },
+    fetch: () => Promise.reject(new Error('no network')),
+    FileReader: function() { this.readAsDataURL = () => {}; },
+    Image: function() { Object.defineProperty(this, 'src', { set() { setTimeout(() => this.onerror && this.onerror(), 0); } }); },
+    alert: () => {}, confirm: () => true, prompt: () => ''
+  });
+  localCtx.window = localCtx;
+  vm.runInContext(code, localCtx, { filename: 'preview-app.js' });
+  return localStore;
+}
+
+// T7 (AC #1) — NEW user: state.metrics absent on boot, all keys initialized to 0
+{
+  const s = runMetricsMigration({});
+  const m = JSON.parse(s['perq-mvp:metrics'] || '{}');
+  const expected = ['photosSnapped','dealsRedeemedGeneric','walletViewOpened','tierUps','programsAdded','ocrAttempted','notificationPermissionGranted','geoPermissionGranted'];
+  let allZero = true, allPresent = true;
+  for (const k of expected) {
+    if (!(k in m)) { allPresent = false; break; }
+    if (m[k] !== 0) { allZero = false; break; }
+  }
+  // Also count keys — should be at least 38
+  const keyCount = Object.keys(m).length;
+  if (allPresent && allZero && keyCount >= 38) pass++;
+  else { fail++; console.error('AC1 NEW user: allPresent=' + allPresent + ' allZero=' + allZero + ' keyCount=' + keyCount); }
+}
+
+// T8 (AC #2) — EXISTING user with no state.metrics gets all keys back-filled at 0
+{
+  // Simulate a returning user who has rewards/deals but never had metrics.
+  const s = runMetricsMigration({
+    'perq-mvp:rewards': JSON.stringify({ points: 500, spins: 2, missions: { date: null, done: {} }, lastSeenTier: 'GOLD', unlocksSeen: [] }),
+    'perq-mvp:deals': JSON.stringify([{ id: 'old', merchant: 'Costco', discount: '$10 off', value: 10, redeemed: false, createdAt: Date.now() }])
+  });
+  const m = JSON.parse(s['perq-mvp:metrics'] || '{}');
+  // Existing data preserved
+  const r = JSON.parse(s['perq-mvp:rewards']);
+  const d = JSON.parse(s['perq-mvp:deals']);
+  const dataPreserved = r.points === 500 && d.length === 1 && d[0].id === 'old';
+  // Metrics keys filled
+  const metricsFilled = m.photosSnapped === 0 && m.dealsRedeemedGeneric === 0 && Object.keys(m).length >= 38;
+  if (dataPreserved && metricsFilled) pass++;
+  else { fail++; console.error('AC2 EXISTING user: dataPreserved=' + dataPreserved + ' metricsFilled=' + metricsFilled); }
+}
+
+// T9 (AC #3) — PARTIAL state.metrics: existing values preserved, missing keys filled at 0
+{
+  const s = runMetricsMigration({
+    'perq-mvp:metrics': JSON.stringify({
+      photosSnapped: 17,
+      walletViewOpened: 42,
+      legacyJunkKey: 99   // Survives migration (back-fill is additive only)
+    })
+  });
+  const m = JSON.parse(s['perq-mvp:metrics'] || '{}');
+  const preserved = m.photosSnapped === 17 && m.walletViewOpened === 42 && m.legacyJunkKey === 99;
+  const filled = m.dealsRedeemedGeneric === 0 && m.tierUps === 0 && m.communityDealsClaimed === 0;
+  if (preserved && filled) pass++;
+  else { fail++; console.error('AC3 PARTIAL user: preserved=' + preserved + ' filled=' + filled + ' state=' + JSON.stringify(m).slice(0,300)); }
+}
+
 console.log(`MIGRATION TEST: PASS ${pass}, FAIL ${fail}`);
 console.log('Final rewards:', JSON.stringify(r));
 process.exit(fail === 0 ? 0 : 1);

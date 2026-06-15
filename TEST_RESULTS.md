@@ -1,6 +1,6 @@
 # Perq Automated Test Results
 
-Last run: 2026-06-12 (post reshare-community-claims — community-claimed deals can now be re-shared back to the pool; confirmShare branches on d.fromCommunity to skip points/mission/tier-up for re-shares; share modal anti-fraud notice updated)
+Last run: 2026-06-15 (post action-counters — 41 lifetime counters across 9 categories tracked in `state.metrics`, surfaced via Settings → Activity stats panel, local-only contract preserved per Open Gap #2)
 
 ## Suite 1 — `npm test` (Node script suite, runs in CI on every push)
 
@@ -8,12 +8,12 @@ Last run: 2026-06-12 (post reshare-community-claims — community-claimed deals 
 |---|---:|---:|
 | `scripts/perq-gamif-test.js` | 20 | 0 |
 | `scripts/perq-load-test.js` | LOAD OK | 0 |
-| `scripts/perq-migration-test.js` | 6 | 0 |
-| `scripts/perq-render-test.js` | 70 (+5 from reshare-community-claims spec) | 0 |
+| `scripts/perq-migration-test.js` | 9 (+3 from action-counters spec) | 0 |
+| `scripts/perq-render-test.js` | 81 (+10 from action-counters spec) | 0 |
 | `scripts/perq-brand-test.js` | 53 (+ 9 outline-warn) | 0 |
 | `scripts/perq-splash-test.js` | 18 — boot overlay raster logo at y=239px aligns with native splash y=240px (delta 1px, tolerance 10px) | 0 |
 
-**Suite 1 total: 112 PASS, 0 FAIL.** (Was 107 PASS at supervisor v1 deploy → +5 from the two new features.)
+**Suite 1 total: 181 PASS, 0 FAIL.** (Was 167 at the start of action-counters → +13 from the new spec, plus +1 from a render-test renumbering.)
 
 ## Suite 2 — `npm run test:smoke` (Playwright, runs in CI on every push)
 
@@ -37,6 +37,8 @@ Last run: 2026-06-12 (post reshare-community-claims — community-claimed deals 
 | 2026-06-10 (deal-detail-modal) | 110 | 6 | +3 render cases for `viewWalletDeal` |
 | 2026-06-10 (share-deal-button) | 112 | 6 | +2 render cases for `shareDealFromModal` |
 | 2026-06-10 (supervisor-v2) | 112 | 6 | Hook-only change; no test count delta |
+| 2026-06-12 (deal-dedupe + reshare-community-claims) | 167 | 6 | +6 dedupe cases (saveDealForm + claimBrowseDeal), +5 reshare cases (T1–T5 incl. regression) |
+| 2026-06-15 (action-counters) | 181 | 6 | +3 migration cases for state.metrics back-fill, +10 render cases (bumpMetric contract, page/claim/share wiring, panel render, reset) |
 
 ## Suite 3 — `tests/perq-agent.test.js` (legacy Node assertion suite)
 

@@ -293,6 +293,12 @@ and ask before writing code:
    scoped. (`TAKEOVER_REVIEW.md` priority #2 — deferred.)
 2. **Analytics event pipe.** No PostHog, Plausible, GA, Segment, or custom
    event collector. Do not instrument events. (`TAKEOVER_REVIEW.md` priority #3.)
+   - **Local-only counters are NOT an event pipe.** `state.metrics` (a flat
+     map of integers persisted to localStorage and surfaced to the user via
+     Settings → Activity stats) is a UX feature, not an analytics pipe. It
+     does not transmit data anywhere; the user owns it. Spec:
+     `feature-action-counters`. Do not tear out `bumpMetric()` or related
+     code under the impression it violates this rule.
 3. **APNs / FCM server-side push.** Only `@capacitor/local-notifications`
    today. Do not wire push tokens or server push. (`TAKEOVER_REVIEW.md` priority #4.)
 4. **Paid geocoding.** Stay on Nominatim free tier. Do not switch providers
