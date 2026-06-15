@@ -4,6 +4,46 @@ All notable feature changes to the Perq app are documented here.
 
 ---
 
+## [Unreleased] — 2026-06-12 (deal-dedupe)
+
+### 🛠 Fix: same deal could be saved twice — block duplicates with a clear toast
+
+Spec: `.kiro/specs/feature-deal-dedupe.md` (9 ACs). One new public global: `window.findDuplicateDeal`.
+
+**Why a user complained:**
+- Screenshot evidence: two identical "Pizza Hut · $13.99 off · 45d left" cards stacked in the wallet. Every add path (`saveDealForm`, `claimBrowseDeal`) pushed straight into `state.deals` with zero duplicate detection. A user who tapped Save twice, snapped the same coupon twice, or claimed the same Browse deal twice ended up with redundant entries cluttering the wallet, double-counting in any future "potential savings" calculation, and producing duplicate expiry-reminder notifications.
+
+**What a user gets today:**
+- Try to save a deal that exactly matches an existing **non-redeemed** wallet entry → the add is blocked, toast appears: `You already saved this deal — Pizza Hut`. Modal stays open so user can adjust or close.
+- Same dedupe fires on Browse-tab claims (`claimBrowseDeal`).
+- Match rule is intentionally precise: merchant + discount + expiry + code must ALL match (after normalization). Different code = legitimate variant (online vs in-store coupon). Different expiry = different campaign. Both still allowed.
+- Re-saving a deal that's already redeemed IS allowed — user intentionally adding the same offer back after using the prior one.
+
+**Match rule (per spec § 5):**
+- Merchant: case-insensitive + trimmed (`"Pizza Hut"` ≡ `"  pizza hut "`)
+- Discount: exact string match (`saveDealForm` already normalizes to `'$X off'` or `'X% off'` format)
+- Expiry: exact ISO date or both empty
+- Code: exact + null/undefined/empty all normalize to empty string
+
+**Out of scope (per spec § 8):**
+- Fuzzy merchant matching (e.g., `"Pizza Hut"` vs `"PizzaHut"`) — too fragile, would need a normalization library
+- Cross-device dedupe — wallet is local-only per Open Gap #1
+- Pool-claim dedupe — `claimFromPool` already has its own pool-id dedupe (line 692)
+- Bonus-drop dedupe — system-driven `deliverUnlockPerk` is intentionally random; out of scope
+
+**Files:**
+- `preview-app.js` — new `window.findDuplicateDeal(candidate)` helper near top; dedupe check inserted into `saveDealForm` (line ~2330) before the push; same check inserted into `claimBrowseDeal` (line ~1392) before the push
+- `scripts/perq-render-test.js` — 6 new test cases isolated via per-test `dedupeRun()` sandbox factory: T1 empty-wallet null, T2 case+whitespace match, T3 different-code allowed, T4 different-expiry allowed, T5 redeemed-match allowed, T6 saveDealForm integration block
+- `scripts/perq-load-test.js` — `findDuplicateDeal` added to required globals
+- `preview.html` — cache buster `?v=44` → `?v=45`
+- `sw.js` — `CACHE_NAME` bumped to `perq-v40-deal-dedupe`
+
+**Tests:** 162/162 PASS (gamif 20 / migration 6 / render 65 / brand 53 / splash 18) + smoke 6/6.
+
+**Manual device verification:** snap or share-import the same deal twice; second save should toast `You already saved this deal — <merchant>` and not duplicate. Then mark the deal as used; re-snap the same deal; this time it SHOULD save (redeemed exclusion per AC #4).
+
+---
+
 ## [Unreleased] — 2026-06-12 (notification-banner-brand-prefix)
 
 ### 🛠 Fix: notification banner missing "Perq" label when phone is unlocked

@@ -1,6 +1,6 @@
 # Perq Automated Test Results
 
-Last run: 2026-06-12 (post notification-banner-brand-prefix — title now leads with "Perq · " so iOS banner mode shows brand identifier even when the source-app-name header is omitted in compact 2-line layout)
+Last run: 2026-06-12 (post deal-dedupe — added findDuplicateDeal helper + dedupe checks in saveDealForm and claimBrowseDeal so identical merchant/discount/expiry/code combos can no longer be saved twice; redeemed matches still allowed per AC #4)
 
 ## Suite 1 — `npm test` (Node script suite, runs in CI on every push)
 
@@ -9,7 +9,7 @@ Last run: 2026-06-12 (post notification-banner-brand-prefix — title now leads 
 | `scripts/perq-gamif-test.js` | 20 | 0 |
 | `scripts/perq-load-test.js` | LOAD OK | 0 |
 | `scripts/perq-migration-test.js` | 6 | 0 |
-| `scripts/perq-render-test.js` | 59 (+8 from notification-deep-link spec) | 0 |
+| `scripts/perq-render-test.js` | 65 (+6 from deal-dedupe spec) | 0 |
 | `scripts/perq-brand-test.js` | 53 (+ 9 outline-warn) | 0 |
 | `scripts/perq-splash-test.js` | 18 — boot overlay raster logo at y=239px aligns with native splash y=240px (delta 1px, tolerance 10px) | 0 |
 

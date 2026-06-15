@@ -101,6 +101,34 @@ function fmtDate(s){if(!s)return '—';return new Date(s).toLocaleDateString(und
 function daysUntil(s){if(!s)return null;return Math.round((new Date(s).getTime()-new Date(todayStr()).getTime())/86400000);}
 function escapeHtml(s){if(s==null)return '';return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 
+// Block adding a duplicate of an existing non-redeemed wallet deal.
+// Spec: feature-deal-dedupe AC #1, #5, #9.
+//
+// Match rule: a candidate is a duplicate of an existing wallet entry
+// when ALL of these hold:
+//   - merchant matches (case-insensitive + trimmed)
+//   - discount string matches exactly (already normalized to "$X off"
+//     or "X% off" by saveDealForm)
+//   - expiry matches exactly (both empty counts as match)
+//   - code matches exactly (null/undefined/'' all normalize to '')
+// Redeemed deals are skipped — re-saving a deal you already used is
+// intentional (AC #4). Returns the matching deal or null.
+window.findDuplicateDeal=function(candidate){
+  if(!candidate||!candidate.merchant)return null;
+  var cm=String(candidate.merchant||'').toLowerCase().trim();
+  var cd=String(candidate.discount||'');
+  var ce=String(candidate.expiry||'');
+  var cc=String(candidate.code||'').trim();
+  return state.deals.find(function(d){
+    if(d.redeemed)return false;
+    var dm=String(d.merchant||'').toLowerCase().trim();
+    var dd=String(d.discount||'');
+    var de=String(d.expiry||'');
+    var dc=String(d.code||'').trim();
+    return dm===cm&&dd===cd&&de===ce&&dc===cc;
+  })||null;
+};
+
 // -------- Referral + sharing infrastructure --------
 const PERQ_PUBLIC_URL='https://cric85-git.github.io/deal-with-deals/preview.html';
 
@@ -1375,6 +1403,13 @@ window.claimBrowseDeal=function(idOrMerchant,source,maybeDiscount,maybeCategory,
     d={merchant:idOrMerchant,discount:source,category:maybeDiscount,code:maybeCategory,expiry:maybeCode};
     source=null;
   }
+  // Dedupe: block claiming the same Browse deal twice.
+  // Spec: feature-deal-dedupe AC #7 (claim path).
+  const dup=window.findDuplicateDeal({merchant:d.merchant,discount:d.discount,expiry:d.expiry||'',code:d.code||''});
+  if(dup){
+    toast('You already saved this deal — '+dup.merchant);
+    return;
+  }
   state.deals.push({
     id:uid(),
     merchant:d.merchant,
@@ -2327,11 +2362,19 @@ window.saveDealForm=function(){
     expiry=document.getElementById('f-expiry').value;
     if(!expiry){toast('Pick an expiry date');return;}
   }
+  const codeVal=document.getElementById('f-code').value.trim();
+  // Dedupe: block exact match against an existing non-redeemed deal.
+  // Spec: feature-deal-dedupe AC #1.
+  const dup=window.findDuplicateDeal({merchant:m,discount:discountStr,expiry:expiry,code:codeVal});
+  if(dup){
+    toast('You already saved this deal — '+dup.merchant);
+    return;
+  }
   state.deals.push({
     id:uid(),merchant:m,discount:discountStr,
     category:document.getElementById('f-category').value,
     value:value,
-    code:document.getElementById('f-code').value.trim(),
+    code:codeVal,
     expiry:expiry,
     address:document.getElementById('f-address').value.trim(),
     notes:'',

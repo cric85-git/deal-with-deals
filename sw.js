@@ -1,4 +1,4 @@
-const CACHE_NAME = 'perq-v39-banner-brand-prefix';
+const CACHE_NAME = 'perq-v40-deal-dedupe';
 const ASSETS = [
   './',
   './index.html',
