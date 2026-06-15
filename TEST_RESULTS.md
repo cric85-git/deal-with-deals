@@ -1,6 +1,6 @@
 # Perq Automated Test Results
 
-Last run: 2026-06-12 (post deal-dedupe — added findDuplicateDeal helper + dedupe checks in saveDealForm and claimBrowseDeal so identical merchant/discount/expiry/code combos can no longer be saved twice; redeemed matches still allowed per AC #4)
+Last run: 2026-06-12 (post reshare-community-claims — community-claimed deals can now be re-shared back to the pool; confirmShare branches on d.fromCommunity to skip points/mission/tier-up for re-shares; share modal anti-fraud notice updated)
 
 ## Suite 1 — `npm test` (Node script suite, runs in CI on every push)
 
@@ -9,7 +9,7 @@ Last run: 2026-06-12 (post deal-dedupe — added findDuplicateDeal helper + dedu
 | `scripts/perq-gamif-test.js` | 20 | 0 |
 | `scripts/perq-load-test.js` | LOAD OK | 0 |
 | `scripts/perq-migration-test.js` | 6 | 0 |
-| `scripts/perq-render-test.js` | 65 (+6 from deal-dedupe spec) | 0 |
+| `scripts/perq-render-test.js` | 70 (+5 from reshare-community-claims spec) | 0 |
 | `scripts/perq-brand-test.js` | 53 (+ 9 outline-warn) | 0 |
 | `scripts/perq-splash-test.js` | 18 — boot overlay raster logo at y=239px aligns with native splash y=240px (delta 1px, tolerance 10px) | 0 |
 

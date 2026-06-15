@@ -1,4 +1,4 @@
-const CACHE_NAME = 'perq-v40-deal-dedupe';
+const CACHE_NAME = 'perq-v41-reshare-community';
 const ASSETS = [
   './',
   './index.html',

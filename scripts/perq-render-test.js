@@ -604,47 +604,148 @@ try {
 }
 
 // ============================================================
-// Spec: feature-deal-dedupe
+// Shared isolated-sandbox helper for reshare + dedupe specs
 // ============================================================
-// Six assertions covering AC #1, #2, #3, #4, #5, #9. Each test reseeds
-// store['perq-mvp:deals'] and re-runs the IIFE so state is isolated.
-
-function dedupeRun(seedDeals) {
-  const ctxLocal = vm.createContext({});
-  const sb = ctxLocal;
-  // Mirror the global setup from the top of this file
-  sb.console = console;
-  sb.window = sb;
-  sb.localStorage = {
+// Builds a fresh vm context per test, clears store, seeds it, captures
+// modal-overlay innerHTML mutations. Used by feature-reshare-community-claims
+// AND feature-deal-dedupe test blocks below.
+function runIsolated(seedFn) {
+  // Clear all store keys so the prior test's state doesn't leak
+  for (const k of Object.keys(store)) delete store[k];
+  let capturedModalHTML = '';
+  const localEls = {};
+  // Synthesize a generic fake element factory (mirrors fakeEl at top of file
+  // but scoped per-test so it doesn't pollute the outer els map)
+  function mkEl(id) {
+    const e = {
+      id, textContent: '', value: '', innerHTML: '',
+      style: new Proxy({}, { set() { return true; }, get() { return ''; } }),
+      classList: { add() {}, remove() {}, toggle() { return true; }, contains: () => false },
+      setAttribute() {}, removeAttribute() {}, getAttribute: () => null,
+      appendChild() {}, removeChild() {},
+      addEventListener() {}, removeEventListener() {},
+      querySelector: () => mkEl('child'),
+      querySelectorAll: () => [],
+      onclick: null, dataset: {}, scrollTop: 0,
+      files: [], src: '', disabled: false
+    };
+    return e;
+  }
+  // Seed lets the test set up form values on specific element ids
+  if (typeof seedFn === 'function') seedFn(localEls);
+  const ctx = vm.createContext({});
+  ctx.console = console;
+  ctx.window = ctx;
+  ctx.localStorage = {
     getItem: (k) => store[k] || null,
     setItem: (k, v) => { store[k] = String(v); },
     removeItem: (k) => { delete store[k]; },
     clear: () => { for (const k of Object.keys(store)) delete store[k]; }
   };
-  sb.document = {
-    getElementById: (id) => els[id] || null,
+  ctx.document = {
+    getElementById: (id) => {
+      if (id === 'modal-overlay') {
+        return {
+          id, classList: { add() {}, remove() {}, toggle() { return true; }, contains: () => false },
+          style: new Proxy({}, { set() { return true; }, get() { return ''; } }),
+          set innerHTML(v) { capturedModalHTML = v; },
+          get innerHTML() { return capturedModalHTML; },
+          addEventListener() {}, querySelector: () => null, querySelectorAll: () => []
+        };
+      }
+      if (localEls[id]) return localEls[id];
+      // Auto-create a generic fakeEl for any id the app asks for (e.g.,
+      // profile-avatar, reminders-sub) so renderSettings init doesn't NPE.
+      localEls[id] = mkEl(id);
+      return localEls[id];
+    },
+    createElement: () => mkEl('synthetic'),
     querySelector: () => null,
     querySelectorAll: () => [],
     addEventListener: () => {},
-    body: { classList: { add: () => {}, remove: () => {} } },
+    body: { appendChild: () => {}, removeChild: () => {}, classList: { add: () => {}, remove: () => {} } },
     documentElement: { classList: { add: () => {}, remove: () => {} } }
   };
-  sb.setTimeout = setTimeout;
-  sb.setInterval = setInterval;
-  sb.clearTimeout = clearTimeout;
-  sb.clearInterval = clearInterval;
-  sb.requestAnimationFrame = (cb) => setTimeout(cb, 0);
-  sb.location = { href: '', hash: '', search: '' };
-  sb.matchMedia = () => ({ matches: false, addEventListener: () => {} });
-  sb.navigator = { userAgent: 'node-test', share: undefined, clipboard: { writeText: () => Promise.resolve() } };
-  sb.alert = () => {};
-  sb.confirm = () => true;
-  sb.prompt = () => '';
-  sb.fetch = () => Promise.reject(new Error('no-network-in-test'));
-  store['perq-mvp:deals'] = JSON.stringify(seedDeals);
-  store['perq-mvp:rewards'] = JSON.stringify({ points: 0, spins: 0, lastSpinAwardDate: '', missions: { save: false, use: false, share: false }, lastSeenTier: 'Bronze', unlocksSeen: [] });
-  vm.runInContext(code, sb, { filename: 'preview-app.js' });
-  return sb;
+  ctx.setTimeout = setTimeout; ctx.setInterval = setInterval;
+  ctx.clearTimeout = clearTimeout; ctx.clearInterval = clearInterval;
+  ctx.requestAnimationFrame = (cb) => setTimeout(cb, 0);
+  ctx.location = { href: '', hash: '', search: '' };
+  ctx.matchMedia = () => ({ matches: false, addEventListener: () => {} });
+  ctx.navigator = { userAgent: 'node-test', share: undefined, clipboard: { writeText: () => Promise.resolve() } };
+  ctx.alert = () => {}; ctx.confirm = () => true; ctx.prompt = () => '';
+  ctx.fetch = () => Promise.reject(new Error('no-network-in-test'));
+  ctx._getModalHTML = () => capturedModalHTML;
+  ctx._getEl = (id) => localEls[id];
+  vm.runInContext(code, ctx, { filename: 'preview-app.js' });
+  return ctx;
+}
+
+// ============================================================
+// Spec: feature-reshare-community-claims
+// ============================================================
+// Five assertions covering AC #1, #2, #4, #5, #7.
+
+try {
+  // T1 (AC #1) — share modal renders 'Share back to community · 0 pts' button
+  // when d.fromCommunity is true (was hidden today).
+  let sb = runIsolated(() => {
+    store['perq-mvp:deals'] = JSON.stringify([
+      { id: 'cdeal1', merchant: 'Pizza Hut', discount: '$13.99 off', category: 'Dining', code: '', expiry: '2026-08-01', value: 13.99, fromCommunity: true, sharedByOriginal: 'Alice', poolId: 'orig-1', redeemed: false, createdAt: Date.now() }
+    ]);
+    store['perq-mvp:rewards'] = JSON.stringify({ points: 100, spins: 0, missions: { save: false, use: false, share: false }, lastSeenTier: 'Bronze', unlocksSeen: [] });
+    store['perq-mvp:profile'] = JSON.stringify({ name: 'Bob' });
+  });
+  sb.shareDeal('cdeal1');
+  const html1 = sb._getModalHTML();
+  if (html1.includes('Share back to community · 0 pts (already earned)') && html1.includes("confirmShare('cdeal1')")) pass++;
+  else { fail++; console.error('T1: share-back button not rendered for fromCommunity deal. modal HTML[0..1500]:', html1.slice(0,1500)); }
+
+  // T2 (AC #4) — anti-fraud notice block copy includes "no points are awarded"
+  if (html1.includes('no points are awarded')) pass++;
+  else { fail++; console.error('T2: anti-fraud notice copy not updated — expected substring "no points are awarded"'); }
+
+  // T3 (AC #2) — confirmShare on fromCommunity deal: state.rewards.points unchanged
+  const initialPts1 = JSON.parse(store['perq-mvp:rewards']).points;
+  sb.confirmShare('cdeal1');
+  const finalPts1 = JSON.parse(store['perq-mvp:rewards']).points;
+  if (finalPts1 === initialPts1) pass++;
+  else { fail++; console.error('T3: confirmShare on fromCommunity deal awarded points — went ' + initialPts1 + ' -> ' + finalPts1); }
+
+  // T4 (AC #2, #7) — pool entry created with current user as sharedBy
+  const pool1 = JSON.parse(store['perq-mvp:communityPool'] || '[]');
+  const entry = pool1.find(p => p.id === 'cdeal1');
+  if (entry && entry.sharedBy === 'Bob' && entry.merchant === 'Pizza Hut') pass++;
+  else { fail++; console.error('T4: re-share pool entry missing or wrong sharedBy. pool:', JSON.stringify(pool1).slice(0,500)); }
+
+  // T5 (AC #5) — REGRESSION: confirmShare on a NON-community deal still awards points
+  const sb2 = runIsolated(() => {
+    store['perq-mvp:deals'] = JSON.stringify([
+      { id: 'mydeal1', merchant: 'Starbucks', discount: '$5 off', category: 'Dining', code: '', expiry: '2026-08-01', value: 5, redeemed: false, createdAt: Date.now() }
+    ]);
+    store['perq-mvp:rewards'] = JSON.stringify({ points: 50, spins: 0, missions: { save: false, use: false, share: false }, lastSeenTier: 'Bronze', unlocksSeen: [] });
+    store['perq-mvp:profile'] = JSON.stringify({ name: 'Bob' });
+  });
+  const initialPts2 = JSON.parse(store['perq-mvp:rewards']).points;
+  sb2.confirmShare('mydeal1');
+  const finalPts2 = JSON.parse(store['perq-mvp:rewards']).points;
+  if (finalPts2 > initialPts2) pass++;
+  else { fail++; console.error('T5 REGRESSION: confirmShare on user-owned deal did NOT award points — went ' + initialPts2 + ' -> ' + finalPts2); }
+} catch (e) {
+  fail++;
+  console.error('reshare-community-claims content checks threw:', e.message, e.stack && e.stack.split('\n').slice(0,3).join(' | '));
+}
+
+// ============================================================
+// Spec: feature-deal-dedupe
+// ============================================================
+// Six assertions covering AC #1, #2, #3, #4, #5, #9. Uses runIsolated
+// helper above for clean per-test state.
+
+function dedupeRun(seedDeals) {
+  return runIsolated(() => {
+    store['perq-mvp:deals'] = JSON.stringify(seedDeals);
+    store['perq-mvp:rewards'] = JSON.stringify({ points: 0, spins: 0, lastSpinAwardDate: '', missions: { save: false, use: false, share: false }, lastSeenTier: 'Bronze', unlocksSeen: [] });
+  });
 }
 
 try {
@@ -676,18 +777,23 @@ try {
   if (sb.findDuplicateDeal({ merchant: 'Pizza Hut', discount: '$13.99 off', expiry: '2026-07-26', code: '' }) === null) pass++;
   else { fail++; console.error('T5: findDuplicateDeal should ignore redeemed matches per AC #4'); }
 
-  // T6 (AC #1) — saveDealForm blocks duplicate add, leaves store unchanged
-  sb = dedupeRun([exemplar]);
+  // T6 (AC #1) — saveDealForm blocks duplicate add, leaves store unchanged.
+  // Form values seeded into the isolated sandbox's els map via seedFn so the
+  // sandbox's getElementById returns them.
+  sb = runIsolated((sandboxEls) => {
+    store['perq-mvp:deals'] = JSON.stringify([exemplar]);
+    store['perq-mvp:rewards'] = JSON.stringify({ points: 0, spins: 0, missions: { save: false, use: false, share: false }, lastSeenTier: 'Bronze', unlocksSeen: [] });
+    sandboxEls['f-merchant'] = { value: 'Pizza Hut' };
+    sandboxEls['f-symbol'] = { value: '$' };
+    sandboxEls['f-discount-num'] = { value: '13.99' };
+    sandboxEls['f-value'] = { value: '' };
+    sandboxEls['f-has-expiry'] = { value: 'Y' };
+    sandboxEls['f-expiry'] = { value: '2026-07-26' };
+    sandboxEls['f-code'] = { value: '' };
+    sandboxEls['f-category'] = { value: 'Dining' };
+    sandboxEls['f-address'] = { value: '' };
+  });
   const initialDealsCount = JSON.parse(store['perq-mvp:deals']).length;
-  els['f-merchant'] = { value: 'Pizza Hut' };
-  els['f-symbol'] = { value: '$' };
-  els['f-discount-num'] = { value: '13.99' };
-  els['f-value'] = { value: '' };
-  els['f-has-expiry'] = { value: 'Y' };
-  els['f-expiry'] = { value: '2026-07-26' };
-  els['f-code'] = { value: '' };
-  els['f-category'] = { value: 'Dining' };
-  els['f-address'] = { value: '' };
   try { sb.saveDealForm(); } catch (e) { /* dedupe path returns via toast */ }
   const finalDealsCount = JSON.parse(store['perq-mvp:deals']).length;
   if (finalDealsCount === initialDealsCount) pass++;

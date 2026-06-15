@@ -1076,11 +1076,13 @@ window.shareDeal=function(id){
     (d.expiry?'<p style="font-size:11px;opacity:0.85;margin:6px 0 0">Expires '+fmtDate(d.expiry)+'</p>':'')+
   '</div>';
 
-  // Anti-fraud notice if claimed from community
+  // Anti-fraud notice if claimed from community.
+  // Spec: feature-reshare-community-claims AC #4. Re-shares ARE allowed
+  // but earn no points (original sharer already earned them).
   if(fromCommunity){
     html+='<div style="background:#FFFBEB;border:1px solid #FBBF24;border-radius:12px;padding:12px;margin-bottom:14px">'+
       '<p style="font-size:12px;font-weight:700;color:#92400E;margin:0 0 4px;display:flex;align-items:center;gap:6px">⚠️ Community-claimed deal</p>'+
-      '<p style="font-size:11px;color:#78350F;margin:0;line-height:1.5">This was claimed from the community pool (originally shared by <strong>'+escapeHtml(d.sharedByOriginal||'someone')+'</strong>). You can share via Message/WhatsApp/Email/Copy link, but it can\'t be re-pooled to prevent farming points.</p>'+
+      '<p style="font-size:11px;color:#78350F;margin:0;line-height:1.5">This was claimed from the community pool (originally shared by <strong>'+escapeHtml(d.sharedByOriginal||'someone')+'</strong>). You can share back to the community pool for free, but no points are awarded since the original sharer already earned them.</p>'+
     '</div>';
   } else {
     html+='<div style="background:#F0F9FF;border:1px solid #4FACFE;border-radius:12px;padding:12px;margin-bottom:14px">'+
@@ -1091,14 +1093,19 @@ window.shareDeal=function(id){
     '</div>';
   }
 
-  // Community pool button (only if not from community)
-  if(!fromCommunity){
-    if(sharedAlready){
-      html+='<div style="background:#EAFBF4;border:1px solid #00C9A7;border-radius:10px;padding:10px;margin-bottom:14px;font-size:12px;color:#065F46;font-weight:600;text-align:center">✓ Shared with community · '+claimed+' claim'+(claimed===1?'':'s')+' · earned '+(claimed*5+5)+' pts</div>';
-      html+='<button onclick="unshareDeal(\''+d.id+'\')" style="width:100%;background:#FFE5E5;color:#DC2626;border:none;padding:12px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:14px">Pull from community pool</button>';
-    } else {
-      html+='<button onclick="confirmShare(\''+d.id+'\')" style="width:100%;background:#1A1A1A;color:white;border:none;padding:14px;border-radius:14px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:14px">📤 Share to community pool · +5 pts</button>';
-    }
+  // Community pool button.
+  // Spec: feature-reshare-community-claims AC #1, #5. Re-shares of
+  // fromCommunity deals are allowed but show "0 pts" label and award
+  // nothing in confirmShare (handled there). Original-deal shares show
+  // the standard "+5 pts" label and award full points.
+  if(sharedAlready){
+    const earnedNote=fromCommunity?' (no new pts since you claimed this)':' · earned '+(claimed*5+5)+' pts';
+    html+='<div style="background:#EAFBF4;border:1px solid #00C9A7;border-radius:10px;padding:10px;margin-bottom:14px;font-size:12px;color:#065F46;font-weight:600;text-align:center">✓ Shared with community · '+claimed+' claim'+(claimed===1?'':'s')+earnedNote+'</div>';
+    html+='<button onclick="unshareDeal(\''+d.id+'\')" style="width:100%;background:#FFE5E5;color:#DC2626;border:none;padding:12px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:14px">Pull from community pool</button>';
+  } else if(fromCommunity){
+    html+='<button onclick="confirmShare(\''+d.id+'\')" style="width:100%;background:#1A1A1A;color:white;border:none;padding:14px;border-radius:14px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:14px">📤 Share back to community · 0 pts (already earned)</button>';
+  } else {
+    html+='<button onclick="confirmShare(\''+d.id+'\')" style="width:100%;background:#1A1A1A;color:white;border:none;padding:14px;border-radius:14px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:14px">📤 Share to community pool · +5 pts</button>';
   }
 
   // Social share options (always available)
@@ -1224,13 +1231,21 @@ window.copyReferralLink=function(){
 window.confirmShare=function(id){
   const d=state.deals.find(x=>x.id===id);
   if(!d)return;
+  // Re-shares of community-claimed deals are allowed but earn zero points.
+  // The original sharer already earned share-points + per-claim points;
+  // re-sharer adds no new value. Spec: feature-reshare-community-claims
+  // AC #2, #5. Skip mission completion + tier-up check too — both are
+  // tied to point-earning shares, not pool population.
+  const isReshare=d.fromCommunity===true;
   d.shared=true;
   d.sharedAt=Date.now();
   d.claimCount=d.claimCount||0;
-  const sharePts=applyMultiplier(5*shareMultiplier());
-  state.rewards.points+=sharePts;
+  const sharePts=isReshare?0:applyMultiplier(5*shareMultiplier());
+  if(sharePts>0)state.rewards.points+=sharePts;
   save(K.deals,state.deals);save(K.rewards,state.rewards);
-  // Also save to community pool (local-first; will become a backend call later)
+  // Save to community pool (local-first; will become a backend call later).
+  // Re-shares create a fresh pool entry under the re-sharer's name; the
+  // original pool entry (if still present) is independent and unaffected.
   const pool=load('perq-mvp:communityPool',[]);
   if(!pool.find(p=>p.id===d.id)){
     pool.push({
@@ -1251,9 +1266,13 @@ window.confirmShare=function(id){
     save('perq-mvp:communityPool',pool);
   }
   closeModal();
-  toast('🎉 Shared with community · +'+sharePts+' pts');
-  completeMission('share');
-  checkTierUp();
+  if(isReshare){
+    toast('Shared back · 0 pts (already earned on first claim)');
+  } else {
+    toast('🎉 Shared with community · +'+sharePts+' pts');
+    completeMission('share');
+    checkTierUp();
+  }
   goPage('community');
 };
 

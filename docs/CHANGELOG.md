@@ -4,6 +4,37 @@ All notable feature changes to the Perq app are documented here.
 
 ---
 
+## [Unreleased] — 2026-06-12 (reshare-community-claims)
+
+### 🆕 Feature: allow re-sharing community-claimed deals back to the pool
+
+Spec: `.kiro/specs/feature-reshare-community-claims.md` (9 ACs).
+
+**Why a user complained:**
+Today a user who claims a deal from the community pool then changes their mind has only one option: delete the deal, which destroys community value. The "Share to community pool" button is hidden by an `if(!fromCommunity)` guard in `shareDeal()` and the modal warns "it can't be re-pooled to prevent farming points." Sensible intent (anti-farming), but it closes off a legitimate flow.
+
+**What a user gets today:**
+- Open the share modal on a community-claimed deal → "Share back to community · 0 pts (already earned)" button is now visible (was hidden).
+- Tapping it adds the deal to the pool under the current user's name. **Zero points awarded** to the re-sharer (`d.fromCommunity === true` branch in `confirmShare` skips the `state.rewards.points` increment, the `completeMission('share')` call, and the `checkTierUp()` call).
+- Toast on success: `Shared back · 0 pts (already earned on first claim)`.
+- Anti-fraud notice in the modal updated: was "it can't be re-pooled to prevent farming points" → now "you can share back to the community pool for free, but no points are awarded since the original sharer already earned them."
+
+**Non-community deals are UNCHANGED:**
+- Fresh user shares still award `applyMultiplier(5 * shareMultiplier())` points
+- `completeMission('share')` still fires
+- `checkTierUp()` still runs
+- T5 regression test guards this.
+
+**Files:**
+- `preview-app.js` — `shareDeal()`: removed `if(!fromCommunity)` button-hide guard, restructured to render different button labels based on `d.fromCommunity`. `confirmShare()`: branches on `d.fromCommunity` to skip points + mission + tier-up. Anti-fraud notice copy updated.
+- `scripts/perq-render-test.js` — new shared `runIsolated(seedFn)` test sandbox factory (auto-creates fake elements for any id, captures modal-overlay innerHTML, supports document.createElement). 5 new test cases for this spec; refactored dedupe tests to use the new factory.
+- `preview.html` — cache buster `?v=45` → `?v=46`
+- `sw.js` — `CACHE_NAME` bumped to `perq-v41-reshare-community`
+
+**Tests:** 167/167 PASS (gamif 20 / migration 6 / render 70 / brand 53 / splash 18) + smoke 6/6.
+
+---
+
 ## [Unreleased] — 2026-06-12 (deal-dedupe)
 
 ### 🛠 Fix: same deal could be saved twice — block duplicates with a clear toast
