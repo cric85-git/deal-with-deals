@@ -1025,5 +1025,279 @@ try {
   console.error('action-counters tests threw:', e.message, e.stack && e.stack.split('\n').slice(0,3).join(' | '));
 }
 
+// ============================================================
+// Spec: feature-wallet-savings-states-and-lifecycle (14 render tests)
+// ============================================================
+// Validates AC #1, #2, #3, #4, #5, #8, #10, #11, #14, #16, #17, #18, #19, #22.
+// Uses runIsolated for clean per-test state. Tests cover: hero state machine
+// (Z/P/A/B), bucket classification + sort, recently-used + recently-expired
+// section render/omit logic, expired-share blocking at both shareDeal and
+// confirmShare entry points, and wallet-sub count exclusion of muted sections.
+//
+// IMPORTANT: renderWallet is inside the IIFE (not on window). Tests trigger
+// it via sb.goPage('wallet') which IS a window global and calls renderWallet
+// internally. We capture DOM mutations via Object.defineProperty on the
+// specific element ids the spec identifies in § 4 (savings-label, total-saved,
+// savings-label-2, total-saved-2, savings-divider, wallet-content, wallet-sub).
+
+// Helper: pre-install textContent + style spies on a hero element so renderWallet's
+// writes are captured. Returns an accessor object with .text and .styleDisplay.
+function installHeroSpy(el) {
+  const captured = { text: '', styleDisplay: '' };
+  Object.defineProperty(el, 'textContent', {
+    set(v) { captured.text = v; },
+    get() { return captured.text; },
+    configurable: true
+  });
+  Object.defineProperty(el, 'style', {
+    value: new Proxy({}, {
+      set(target, prop, value) {
+        if (prop === 'display') captured.styleDisplay = value;
+        target[prop] = value;
+        return true;
+      },
+      get(target, prop) { return target[prop] || ''; }
+    }),
+    configurable: true
+  });
+  return captured;
+}
+
+// Helper: inline daysUntil mirroring preview-app.js implementation. Used by
+// tests that need to assert sort order without exposing the IIFE-internal one.
+function _daysUntil(s) {
+  if (!s) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  return Math.round((new Date(s).getTime() - today.getTime()) / 86400000);
+}
+
+try {
+  const todayMs = Date.now();
+  const day = 86400000;
+  const isoDate = (ms) => new Date(ms).toISOString().slice(0, 10);
+
+  // T1 (AC #1) — hero State Z: empty wallet → "Start adding deals to save", no $0 shown
+  let sb = runIsolated(() => {
+    store['perq-mvp:profile'] = JSON.stringify({ name: 'A' });
+    store['perq-mvp:deals'] = JSON.stringify([]);
+  });
+  let lblSpy = installHeroSpy(sb.document.getElementById('savings-label'));
+  let amtSpy = installHeroSpy(sb.document.getElementById('total-saved'));
+  try { sb.goPage('wallet'); } catch (e) {}
+  if (lblSpy.text === 'Start adding deals to save' && amtSpy.styleDisplay === 'none') pass++;
+  else { fail++; console.error('AC1 hero State Z: label="' + lblSpy.text + '" amtDisplay="' + amtSpy.styleDisplay + '"'); }
+
+  // T2 (AC #2) — hero State P: active deals, no redeemed → "Potential savings · $X"
+  sb = runIsolated(() => {
+    store['perq-mvp:profile'] = JSON.stringify({ name: 'A' });
+    store['perq-mvp:deals'] = JSON.stringify([
+      { id: 'p1', merchant: 'M1', discount: '$10 off', value: 10, redeemed: false, expiry: isoDate(todayMs + 5 * day), createdAt: 1 },
+      { id: 'p2', merchant: 'M2', discount: '$15 off', value: 15, redeemed: false, expiry: isoDate(todayMs + 10 * day), createdAt: 2 }
+    ]);
+  });
+  lblSpy = installHeroSpy(sb.document.getElementById('savings-label'));
+  amtSpy = installHeroSpy(sb.document.getElementById('total-saved'));
+  try { sb.goPage('wallet'); } catch (e) {}
+  if (lblSpy.text === 'Potential savings' && amtSpy.text === '$25') pass++;
+  else { fail++; console.error('AC2 hero State P: label="' + lblSpy.text + '" amt="' + amtSpy.text + '"'); }
+
+  // T3 (AC #3) — hero State A: redeemed only, no active → "Total saved · $Y"
+  sb = runIsolated(() => {
+    store['perq-mvp:profile'] = JSON.stringify({ name: 'A' });
+    store['perq-mvp:deals'] = JSON.stringify([
+      { id: 'a1', merchant: 'M1', discount: '$20 off', value: 20, redeemed: true, redeemedAt: todayMs - 2 * day, createdAt: 1 },
+      { id: 'a2', merchant: 'M2', discount: '$30 off', value: 30, redeemed: true, redeemedAt: todayMs - 4 * day, createdAt: 2 }
+    ]);
+  });
+  lblSpy = installHeroSpy(sb.document.getElementById('savings-label'));
+  amtSpy = installHeroSpy(sb.document.getElementById('total-saved'));
+  try { sb.goPage('wallet'); } catch (e) {}
+  if (lblSpy.text === 'Total saved' && amtSpy.text === '$50') pass++;
+  else { fail++; console.error('AC3 hero State A: label="' + lblSpy.text + '" amt="' + amtSpy.text + '"'); }
+
+  // T4 (AC #4) — hero State B: both redeemed AND active → dual-line layout
+  sb = runIsolated(() => {
+    store['perq-mvp:profile'] = JSON.stringify({ name: 'A' });
+    store['perq-mvp:deals'] = JSON.stringify([
+      { id: 'b1', merchant: 'M1', discount: '$5 off',  value: 5,  redeemed: true,  redeemedAt: todayMs - 1 * day, createdAt: 1 },
+      { id: 'b2', merchant: 'M2', discount: '$15 off', value: 15, redeemed: false, expiry: isoDate(todayMs + 5 * day), createdAt: 2 }
+    ]);
+  });
+  lblSpy = installHeroSpy(sb.document.getElementById('savings-label'));
+  amtSpy = installHeroSpy(sb.document.getElementById('total-saved'));
+  const lbl2Spy = installHeroSpy(sb.document.getElementById('savings-label-2'));
+  const amt2Spy = installHeroSpy(sb.document.getElementById('total-saved-2'));
+  const divSpy  = installHeroSpy(sb.document.getElementById('savings-divider'));
+  try { sb.goPage('wallet'); } catch (e) {}
+  if (lblSpy.text === 'Saved this year' && amtSpy.text === '$5' &&
+      lbl2Spy.text === 'Still to claim' && amt2Spy.text === '$15' &&
+      divSpy.styleDisplay === '' && lbl2Spy.styleDisplay === '' && amt2Spy.styleDisplay === '') pass++;
+  else { fail++; console.error('AC4 hero State B: lbl="' + lblSpy.text + '" amt="' + amtSpy.text + '" lbl2="' + lbl2Spy.text + '" amt2="' + amt2Spy.text + '" divDisp="' + divSpy.styleDisplay + '"'); }
+
+  // T5 (AC #5) — only-expired wallet (no active, no redeemed) → State Z
+  sb = runIsolated(() => {
+    store['perq-mvp:profile'] = JSON.stringify({ name: 'A' });
+    store['perq-mvp:deals'] = JSON.stringify([
+      { id: 'e1', merchant: 'M1', discount: '$10 off', value: 10, redeemed: false, expiry: isoDate(todayMs - 2 * day), createdAt: 1 }
+    ]);
+  });
+  lblSpy = installHeroSpy(sb.document.getElementById('savings-label'));
+  amtSpy = installHeroSpy(sb.document.getElementById('total-saved'));
+  try { sb.goPage('wallet'); } catch (e) {}
+  if (lblSpy.text === 'Start adding deals to save' && amtSpy.styleDisplay === 'none') pass++;
+  else { fail++; console.error('AC5 only-expired → State Z: label="' + lblSpy.text + '" amtDisplay="' + amtSpy.styleDisplay + '"'); }
+
+  // T6 (AC #8) — active deals sort by daysUntil ASC, null-last (verified via rendered HTML)
+  sb = runIsolated(() => {
+    store['perq-mvp:profile'] = JSON.stringify({ name: 'A' });
+    store['perq-mvp:deals'] = JSON.stringify([
+      { id: 'late',   merchant: 'M-late',   discount: '$1', value: 1, redeemed: false, expiry: isoDate(todayMs + 90 * day), category: 'Other', createdAt: 1 },
+      { id: 'soon',   merchant: 'M-soon',   discount: '$1', value: 1, redeemed: false, expiry: isoDate(todayMs +  2 * day), category: 'Other', createdAt: 2 },
+      { id: 'noexp',  merchant: 'M-noexp',  discount: '$1', value: 1, redeemed: false, expiry: '',                          category: 'Other', createdAt: 3 },
+      { id: 'middle', merchant: 'M-middle', discount: '$1', value: 1, redeemed: false, expiry: isoDate(todayMs + 30 * day), category: 'Other', createdAt: 4 }
+    ]);
+  });
+  let walletHTML6 = '';
+  const wc6 = sb.document.getElementById('wallet-content');
+  Object.defineProperty(wc6, 'innerHTML', { set(v) { walletHTML6 = v; }, get() { return walletHTML6; }, configurable: true });
+  try { sb.goPage('wallet'); } catch (e) {}
+  // Extract the order of data-deal-id from the rendered HTML
+  const idMatches6 = (walletHTML6.match(/data-deal-id="([^"]+)"/g) || []).map(m => m.match(/"([^"]+)"/)[1]);
+  if (idMatches6.join(',') === 'soon,middle,late,noexp') pass++;
+  else { fail++; console.error('AC8 sort: expected soon,middle,late,noexp got ' + idMatches6.join(',')); }
+
+  // T7 (AC #10, #11) — recently-used section renders for redeemed deal in 7-day window
+  sb = runIsolated(() => {
+    store['perq-mvp:profile'] = JSON.stringify({ name: 'A' });
+    store['perq-mvp:deals'] = JSON.stringify([
+      { id: 'u1', merchant: 'Pizza Hut', discount: '$5 off', value: 5, redeemed: true, redeemedAt: todayMs - 2 * day, createdAt: 1 }
+    ]);
+  });
+  let walletHTML7 = '';
+  const wc7 = sb.document.getElementById('wallet-content');
+  Object.defineProperty(wc7, 'innerHTML', { set(v) { walletHTML7 = v; }, get() { return walletHTML7; }, configurable: true });
+  try { sb.goPage('wallet'); } catch (e) {}
+  if (walletHTML7.includes('Recently used') && walletHTML7.includes('USED') && walletHTML7.includes('Pizza Hut')) pass++;
+  else { fail++; console.error('AC10/11 recently-used render: html len=' + walletHTML7.length + ' snippet=' + walletHTML7.slice(0, 200)); }
+
+  // T8 (AC #13) — recently-used section omitted when all redeemed are >7 days old
+  sb = runIsolated(() => {
+    store['perq-mvp:profile'] = JSON.stringify({ name: 'A' });
+    store['perq-mvp:deals'] = JSON.stringify([
+      { id: 'u2', merchant: 'Old Pizza', discount: '$5 off', value: 5, redeemed: true, redeemedAt: todayMs - 14 * day, createdAt: 1 }
+    ]);
+  });
+  let walletHTML8 = '';
+  const wc8 = sb.document.getElementById('wallet-content');
+  Object.defineProperty(wc8, 'innerHTML', { set(v) { walletHTML8 = v; }, get() { return walletHTML8; }, configurable: true });
+  try { sb.goPage('wallet'); } catch (e) {}
+  if (!walletHTML8.includes('Recently used') && !walletHTML8.includes('Old Pizza')) pass++;
+  else { fail++; console.error('AC13 recently-used omit: html=' + walletHTML8.slice(0, 200)); }
+
+  // T9 (AC #14, #15) — recently-expired section renders for deal expired in 5-day window
+  sb = runIsolated(() => {
+    store['perq-mvp:profile'] = JSON.stringify({ name: 'A' });
+    store['perq-mvp:deals'] = JSON.stringify([
+      { id: 'x1', merchant: 'Sephora', discount: '$10 off', value: 10, redeemed: false, expiry: isoDate(todayMs - 2 * day), createdAt: 1 }
+    ]);
+  });
+  let walletHTML9 = '';
+  const wc9 = sb.document.getElementById('wallet-content');
+  Object.defineProperty(wc9, 'innerHTML', { set(v) { walletHTML9 = v; }, get() { return walletHTML9; }, configurable: true });
+  try { sb.goPage('wallet'); } catch (e) {}
+  if (walletHTML9.includes('Recently expired') && walletHTML9.includes('EXPIRED') && walletHTML9.includes('Sephora')) pass++;
+  else { fail++; console.error('AC14/15 recently-expired render: html len=' + walletHTML9.length + ' snippet=' + walletHTML9.slice(0, 200)); }
+
+  // T10 (AC #16) — recently-expired section omitted when all expired are >5 days old
+  sb = runIsolated(() => {
+    store['perq-mvp:profile'] = JSON.stringify({ name: 'A' });
+    store['perq-mvp:deals'] = JSON.stringify([
+      { id: 'x2', merchant: 'Old Sephora', discount: '$10 off', value: 10, redeemed: false, expiry: isoDate(todayMs - 10 * day), createdAt: 1 }
+    ]);
+  });
+  let walletHTML10 = '';
+  const wc10 = sb.document.getElementById('wallet-content');
+  Object.defineProperty(wc10, 'innerHTML', { set(v) { walletHTML10 = v; }, get() { return walletHTML10; }, configurable: true });
+  try { sb.goPage('wallet'); } catch (e) {}
+  if (!walletHTML10.includes('Recently expired') && !walletHTML10.includes('Old Sephora')) pass++;
+  else { fail++; console.error('AC16 recently-expired omit: html=' + walletHTML10.slice(0, 200)); }
+
+  // T11 (AC #17) — section ordering: Active → Recently used → Recently expired
+  sb = runIsolated(() => {
+    store['perq-mvp:profile'] = JSON.stringify({ name: 'A' });
+    store['perq-mvp:deals'] = JSON.stringify([
+      { id: 'o1', merchant: 'ActiveDeal',  discount: '$1', value: 1, redeemed: false, expiry: isoDate(todayMs + 5 * day), createdAt: 1 },
+      { id: 'o2', merchant: 'UsedDeal',    discount: '$2', value: 2, redeemed: true,  redeemedAt: todayMs - 2 * day,      createdAt: 2 },
+      { id: 'o3', merchant: 'ExpiredDeal', discount: '$3', value: 3, redeemed: false, expiry: isoDate(todayMs - 2 * day), createdAt: 3 }
+    ]);
+  });
+  let walletHTML11 = '';
+  const wc11 = sb.document.getElementById('wallet-content');
+  Object.defineProperty(wc11, 'innerHTML', { set(v) { walletHTML11 = v; }, get() { return walletHTML11; }, configurable: true });
+  try { sb.goPage('wallet'); } catch (e) {}
+  const idxActive  = walletHTML11.indexOf('🎟️ Deals · 1');
+  const idxUsed    = walletHTML11.indexOf('Recently used · 1');
+  const idxExpired = walletHTML11.indexOf('Recently expired · 1');
+  if (idxActive >= 0 && idxUsed > idxActive && idxExpired > idxUsed) pass++;
+  else { fail++; console.error('AC17 ordering: active=' + idxActive + ' used=' + idxUsed + ' expired=' + idxExpired); }
+
+  // T12 (AC #19) — shareDeal blocked on expired deal — toast fires (via toast el),
+  // and crucially: no share modal is opened (modal-overlay innerHTML stays empty).
+  // The internal `toast()` writes msg to document.getElementById('toast').textContent;
+  // we spy on that element to capture the toast text without reaching into the IIFE.
+  sb = runIsolated(() => {
+    store['perq-mvp:profile'] = JSON.stringify({ name: 'A' });
+    store['perq-mvp:deals'] = JSON.stringify([
+      { id: 's1', merchant: 'X', discount: '$1 off', value: 1, redeemed: false, expiry: isoDate(todayMs - 3 * day), createdAt: 1 }
+    ]);
+  });
+  let toastText12 = '';
+  const toastEl12 = sb.document.getElementById('toast');
+  Object.defineProperty(toastEl12, 'textContent', { set(v) { toastText12 = v; }, get() { return toastText12; }, configurable: true });
+  try { sb.shareDeal('s1'); } catch (e) {}
+  const modalAfterShare = sb._getModalHTML();
+  if (toastText12.includes("can't be shared") && modalAfterShare === '') pass++;
+  else { fail++; console.error('AC19 shareDeal blocked: toast="' + toastText12 + '" modalLen=' + modalAfterShare.length); }
+
+  // T13 (AC #22) — confirmShare defensive guard blocks expired deal even when invoked directly.
+  // No side effects allowed: no d.shared flip, no community pool entry, no points awarded.
+  sb = runIsolated(() => {
+    store['perq-mvp:profile'] = JSON.stringify({ name: 'A' });
+    store['perq-mvp:deals'] = JSON.stringify([
+      { id: 's2', merchant: 'Y', discount: '$1 off', value: 1, redeemed: false, expiry: isoDate(todayMs - 3 * day), createdAt: 1 }
+    ]);
+    store['perq-mvp:rewards'] = JSON.stringify({ points: 100, spins: 0, missions: { date: null, done: {} }, lastSeenTier: 'BRONZE', unlocksSeen: [] });
+  });
+  let toastText13 = '';
+  const toastEl13 = sb.document.getElementById('toast');
+  Object.defineProperty(toastEl13, 'textContent', { set(v) { toastText13 = v; }, get() { return toastText13; }, configurable: true });
+  try { sb.confirmShare('s2'); } catch (e) {}
+  const dealsAfter = JSON.parse(store['perq-mvp:deals']);
+  const pool = JSON.parse(store['perq-mvp:communityPool'] || '[]');
+  const rewardsAfter = JSON.parse(store['perq-mvp:rewards']);
+  if (toastText13.includes("can't be shared") && !dealsAfter[0].shared && pool.length === 0 && rewardsAfter.points === 100) pass++;
+  else { fail++; console.error('AC22 confirmShare blocked: toast="' + toastText13 + '" shared=' + dealsAfter[0].shared + ' poolLen=' + pool.length + ' points=' + rewardsAfter.points); }
+
+  // T14 (AC #18) — wallet-sub count excludes recently-used and recently-expired
+  sb = runIsolated(() => {
+    store['perq-mvp:profile'] = JSON.stringify({ name: 'A' });
+    store['perq-mvp:deals'] = JSON.stringify([
+      { id: 'c1', merchant: 'A', discount: '$1', value: 1, redeemed: false, expiry: isoDate(todayMs + 5 * day), createdAt: 1 },
+      { id: 'c2', merchant: 'B', discount: '$1', value: 1, redeemed: true,  redeemedAt: todayMs - 1 * day,      createdAt: 2 },
+      { id: 'c3', merchant: 'C', discount: '$1', value: 1, redeemed: false, expiry: isoDate(todayMs - 3 * day), createdAt: 3 }
+    ]);
+  });
+  const subEl = sb.document.getElementById('wallet-sub');
+  let subText = '';
+  Object.defineProperty(subEl, 'textContent', { set(v) { subText = v; }, get() { return subText; }, configurable: true });
+  try { sb.goPage('wallet'); } catch (e) {}
+  if (subText === '1 item saved') pass++;
+  else { fail++; console.error('AC18 wallet-sub count: text="' + subText + '" (expected "1 item saved")'); }
+
+} catch (e) {
+  fail++;
+  console.error('wallet-states-and-lifecycle tests threw:', e.message, e.stack && e.stack.split('\n').slice(0,3).join(' | '));
+}
+
 console.log(`RENDER TEST: PASS ${pass}, FAIL ${fail}`);
 process.exit(fail === 0 ? 0 : 1);

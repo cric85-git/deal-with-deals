@@ -1,4 +1,4 @@
-const CACHE_NAME = 'perq-v42-action-counters';
+const CACHE_NAME = 'perq-v43-wallet-states-and-lifecycle';
 const ASSETS = [
   './',
   './index.html',

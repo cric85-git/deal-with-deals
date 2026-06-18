@@ -1,6 +1,6 @@
 # Perq Automated Test Results
 
-Last run: 2026-06-15 (post action-counters — 41 lifetime counters across 9 categories tracked in `state.metrics`, surfaced via Settings → Activity stats panel, local-only contract preserved per Open Gap #2)
+Last run: 2026-06-18 (post wallet-states-and-lifecycle — four-state savings hero (Z/P/A/B), active deals sorted by expiry asc null-last, recently-used section with 7-day visibility window, recently-expired section with 5-day visibility window, hard block on sharing expired deals at both `shareDeal` and `confirmShare` entry points)
 
 ## Suite 1 — `npm test` (Node script suite, runs in CI on every push)
 
@@ -8,12 +8,12 @@ Last run: 2026-06-15 (post action-counters — 41 lifetime counters across 9 cat
 |---|---:|---:|
 | `scripts/perq-gamif-test.js` | 20 | 0 |
 | `scripts/perq-load-test.js` | LOAD OK | 0 |
-| `scripts/perq-migration-test.js` | 9 (+3 from action-counters spec) | 0 |
-| `scripts/perq-render-test.js` | 81 (+10 from action-counters spec) | 0 |
+| `scripts/perq-migration-test.js` | 10 (+1 from wallet-states-and-lifecycle spec — legacy redeemedAt back-fill across 4 corruption shapes) | 0 |
+| `scripts/perq-render-test.js` | 95 (+14 from wallet-states-and-lifecycle spec — hero state machine, sort, recently-used/expired sections, share guards, sub-header count) | 0 |
 | `scripts/perq-brand-test.js` | 53 (+ 9 outline-warn) | 0 |
 | `scripts/perq-splash-test.js` | 18 — boot overlay raster logo at y=239px aligns with native splash y=240px (delta 1px, tolerance 10px) | 0 |
 
-**Suite 1 total: 181 PASS, 0 FAIL.** (Was 167 at the start of action-counters → +13 from the new spec, plus +1 from a render-test renumbering.)
+**Suite 1 total: 196 PASS, 0 FAIL.** (Was 181 at the start of wallet-states-and-lifecycle → +15 from the new spec.)
 
 ## Suite 2 — `npm run test:smoke` (Playwright, runs in CI on every push)
 

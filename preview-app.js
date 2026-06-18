@@ -48,6 +48,16 @@ const TIERS=[
   {name:'GOLD',min:300,emoji:'🥇',colors:['#FFD700','#FFA500'],next:750},
   {name:'PLATINUM',min:750,emoji:'💎',colors:['#6366F1','#3B82F6'],next:Infinity}
 ];
+
+// Visibility windows for the wallet's lifecycle sections.
+// Spec: feature-wallet-savings-states-and-lifecycle § 3.1.
+// Redeemed deals live in the "Recently used" section for 7 days post-redemption
+// (positive memory, useful for cashier-dispute resolution). Expired-unused
+// deals live in "Recently expired" for 5 days post-expiry (behavioral nudge,
+// shorter so the wallet doesn't fill with regret). Tunable; if feedback says
+// either is wrong, change the constant — we do NOT add a Settings toggle.
+const REDEEMED_VISIBILITY_DAYS=7;
+const EXPIRED_VISIBILITY_DAYS=5;
 const CATEGORIES=['Groceries','Dining','Apparel','Travel','Beauty','Home','Electronics','Other'];
 
 let state={
@@ -97,6 +107,23 @@ let currentBrowseTab='local';
   }
   state.metrics=m;
   if(changed)save(K.metrics,state.metrics);
+})();
+
+// Migration: legacy redeemed deals without redeemedAt get back-filled to 0.
+// Spec: feature-wallet-savings-states-and-lifecycle AC #26.
+// Treats them as "redeemed long ago" — they immediately fall outside the
+// REDEEMED_VISIBILITY_DAYS window so they don't show in the recently-used
+// section. Honest: we don't know the real timestamp, so we don't pretend.
+(function migrateRedeemedAt(){
+  if(!Array.isArray(state.deals))return;
+  let changed=false;
+  for(const d of state.deals){
+    if(d&&typeof d==='object'&&d.redeemed===true&&(d.redeemedAt==null||typeof d.redeemedAt!=='number')){
+      d.redeemedAt=0;
+      changed=true;
+    }
+  }
+  if(changed)save(K.deals,state.deals);
 })();
 
 // Counter bump helper. Local-only by design — never transmits anywhere.
@@ -554,44 +581,193 @@ window.openDealCard=function(id){
 };
 
 // -------- Wallet (unified — deals + programs + loyalty + savings hero) --------
+// Spec: feature-wallet-savings-states-and-lifecycle § 3.2-3.4. Renders:
+//   1. Savings hero — four-state machine (Z/P/A/B) computed from bucket counts
+//   2. Active deals — sorted by daysUntil(expiry) ascending, null-last
+//   3. Recently used — redeemed within REDEEMED_VISIBILITY_DAYS, sorted by redeemedAt desc
+//   4. Recently expired — unredeemed-and-past-expiry within EXPIRED_VISIBILITY_DAYS, sorted by expiry desc
+//   5. Reward programs (unchanged)
+//   6. Loyalty cards (unchanged)
 function renderWallet(){
-  // Savings hero (now lives at top of Wallet)
-  const redeemedDeals=state.deals.filter(d=>d.redeemed);
-  const totalRedeemed=redeemedDeals.reduce((s,d)=>s+(parseFloat(d.value)||0),0);
-  const potentialFromActive=state.deals.filter(d=>!d.redeemed).reduce((s,d)=>s+(parseFloat(d.value)||0),0);
-  const lblEl=document.getElementById('savings-label');
-  const amtEl=document.getElementById('total-saved');
-  const streakEl=document.getElementById('streak-text');
-  if(lblEl&&amtEl){
-    if(redeemedDeals.length>0){
-      lblEl.textContent='Total saved this year';
-      amtEl.textContent='$'+totalRedeemed.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  // ----- Bucket classification (pure derivation from state.deals) -----
+  // Active = not redeemed AND (no expiry OR expiry in future)
+  // Recently used = redeemed within 7-day window
+  // Recently expired = not redeemed, past expiry, within 5-day window
+  // Archived = older than either window — counts toward lifetime tally only
+  const now=Date.now();
+  const redeemedWindowMs=REDEEMED_VISIBILITY_DAYS*86400000;
+  const expiredWindowMs=EXPIRED_VISIBILITY_DAYS*86400000;
+  const active=[];
+  const recentlyUsed=[];
+  const recentlyExpired=[];
+  for(const d of state.deals){
+    if(!d||typeof d!=='object')continue;
+    if(d.redeemed){
+      const ra=(typeof d.redeemedAt==='number')?d.redeemedAt:0;
+      if(now-ra<=redeemedWindowMs)recentlyUsed.push(d);
+      // else archived (still counts toward Total saved but not visible)
     } else {
-      lblEl.textContent='Potential savings';
-      amtEl.textContent='$'+potentialFromActive.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+      const du=daysUntil(d.expiry);
+      if(du===null||du>=0){
+        active.push(d);
+      } else {
+        // Past expiry, never redeemed — recently expired or archived
+        const expMs=new Date(d.expiry).getTime();
+        if(!isNaN(expMs)&&now-expMs<=expiredWindowMs)recentlyExpired.push(d);
+        // else archived expired — invisible (still in state.deals)
+      }
     }
   }
-  if(streakEl){
-    streakEl.textContent=
-      state.rewards.streak>0
-        ?'+$'+totalRedeemed+' saved · '+state.rewards.streak+' day streak 🔥'
-        :(state.deals.length>0?'Tap a deal and mark it redeemed to bank the savings':'Save your first deal to start a streak');
+
+  // ----- Hero state machine (Z / P / A / B) -----
+  // Z: empty wallet OR only-archived/recently-expired (no actionable savings)
+  // P: ≥1 active deal, no redemptions ever
+  // A: ≥1 redeemed deal, no active deals
+  // B: both ≥1 redeemed AND ≥1 active
+  const allRedeemed=state.deals.filter(d=>d&&d.redeemed===true);
+  const totalSaved=allRedeemed.reduce((s,d)=>s+(parseFloat(d.value)||0),0);
+  const totalPotential=active.reduce((s,d)=>s+(parseFloat(d.value)||0),0);
+  let heroState;
+  if(state.deals.length===0)heroState='Z';
+  else if(allRedeemed.length===0&&active.length===0)heroState='Z'; // only-expired wallet
+  else if(allRedeemed.length===0)heroState='P';
+  else if(active.length===0)heroState='A';
+  else heroState='B';
+
+  const lblEl=document.getElementById('savings-label');
+  const amtEl=document.getElementById('total-saved');
+  const lbl2El=document.getElementById('savings-label-2');
+  const amt2El=document.getElementById('total-saved-2');
+  const divEl=document.getElementById('savings-divider');
+  const streakEl=document.getElementById('streak-text');
+  function fmt$(n){return '$'+n.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',');}
+
+  // Reset secondary elements first (default hidden)
+  if(lbl2El)lbl2El.style.display='none';
+  if(amt2El)amt2El.style.display='none';
+  if(divEl)divEl.style.display='none';
+
+  if(heroState==='Z'){
+    if(lblEl){
+      lblEl.textContent='Start adding deals to save';
+      lblEl.style.fontSize='14px';
+      lblEl.style.textTransform='none';
+      lblEl.style.letterSpacing='0';
+      lblEl.style.opacity='0.85';
+    }
+    if(amtEl)amtEl.style.display='none';
+  } else if(heroState==='P'){
+    if(lblEl){
+      lblEl.textContent='Potential savings';
+      lblEl.style.fontSize='11px';
+      lblEl.style.textTransform='uppercase';
+      lblEl.style.letterSpacing='1.5px';
+      lblEl.style.opacity='0.7';
+    }
+    if(amtEl){
+      amtEl.style.display='';
+      amtEl.style.fontSize='38px';
+      amtEl.textContent=fmt$(totalPotential);
+    }
+  } else if(heroState==='A'){
+    if(lblEl){
+      lblEl.textContent='Total saved';
+      lblEl.style.fontSize='11px';
+      lblEl.style.textTransform='uppercase';
+      lblEl.style.letterSpacing='1.5px';
+      lblEl.style.opacity='0.7';
+    }
+    if(amtEl){
+      amtEl.style.display='';
+      amtEl.style.fontSize='38px';
+      amtEl.textContent=fmt$(totalSaved);
+    }
+  } else { // 'B'
+    if(lblEl){
+      lblEl.textContent='Saved this year';
+      lblEl.style.fontSize='11px';
+      lblEl.style.textTransform='uppercase';
+      lblEl.style.letterSpacing='1.5px';
+      lblEl.style.opacity='0.7';
+    }
+    if(amtEl){
+      amtEl.style.display='';
+      amtEl.style.fontSize='32px';
+      amtEl.textContent=fmt$(totalSaved);
+    }
+    if(divEl)divEl.style.display='';
+    if(lbl2El){
+      lbl2El.style.display='';
+      lbl2El.textContent='Still to claim';
+    }
+    if(amt2El){
+      amt2El.style.display='';
+      amt2El.textContent=fmt$(totalPotential);
+    }
   }
 
+  // Streak text (state-aware copy per § 3.4)
+  if(streakEl){
+    if(heroState==='Z'){
+      streakEl.textContent='Save your first deal to start a streak';
+    } else if(heroState==='P'){
+      streakEl.textContent=state.rewards.streak>0
+        ?'+$'+totalSaved+' saved · '+state.rewards.streak+' day streak 🔥'
+        :'Tap a deal and mark it redeemed to bank the savings';
+    } else if(heroState==='A'){
+      streakEl.textContent=state.rewards.streak>0
+        ?'+$'+totalSaved+' saved · '+state.rewards.streak+' day streak 🔥'
+        :'Snap your next deal to keep saving';
+    } else { // 'B'
+      streakEl.textContent=state.rewards.streak>0
+        ?'+$'+totalSaved+' saved · '+state.rewards.streak+' day streak 🔥'
+        :'Tap a deal and mark it redeemed to bank more';
+    }
+  }
+
+  // ----- Sort each bucket -----
+  // Active: by daysUntil ascending, null-last (most-urgent at top)
+  active.sort((a,b)=>{
+    const da=daysUntil(a.expiry);
+    const db=daysUntil(b.expiry);
+    if(da===null&&db===null)return 0;
+    if(da===null)return 1;
+    if(db===null)return -1;
+    return da-db;
+  });
+  // Recently used: by redeemedAt descending (most-recently-used first)
+  recentlyUsed.sort((a,b)=>(b.redeemedAt||0)-(a.redeemedAt||0));
+  // Recently expired: by expiry descending (most-recently-expired first)
+  recentlyExpired.sort((a,b)=>{
+    const ea=new Date(a.expiry).getTime();
+    const eb=new Date(b.expiry).getTime();
+    return eb-ea;
+  });
+
+  // ----- Tabs + sub-header (count active only — recently-used/expired excluded) -----
   document.querySelectorAll('.wallet-tab').forEach(t=>t.classList.toggle('active',t.getAttribute('data-wfilter')===walletFilter));
   const c=document.getElementById('wallet-content');
-  const dealsCount=state.deals.filter(d=>!d.redeemed).length;
+  const dealsCount=active.length;
   const totalCount=dealsCount+state.programs.length+state.loyalty.length;
   const subEl=document.getElementById('wallet-sub');
   if(subEl)subEl.textContent=totalCount===0?'Empty wallet':totalCount+' item'+(totalCount===1?'':'s')+' saved';
 
+  // ----- Sections -----
   let html='';
   if(walletFilter==='all'||walletFilter==='deals'){
-    const active=state.deals.filter(d=>!d.redeemed);
     if(active.length>0){
       if(walletFilter==='all')html+='<p style="color:rgba(255,255,255,0.6);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin:8px 0 12px">🎟️ Deals · '+active.length+'</p>';
-      html+=renderDealsList(active);
-    } else if(walletFilter==='deals'){
+      html+=renderDealsList(active,{section:'active'});
+    }
+    if(recentlyUsed.length>0){
+      html+='<p style="color:rgba(255,255,255,0.6);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin:24px 0 12px">✓ Recently used · '+recentlyUsed.length+'</p>';
+      html+=renderDealsList(recentlyUsed,{section:'used'});
+    }
+    if(recentlyExpired.length>0){
+      html+='<p style="color:rgba(255,255,255,0.6);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin:24px 0 12px">⏰ Recently expired · '+recentlyExpired.length+'</p>';
+      html+=renderDealsList(recentlyExpired,{section:'expired'});
+    }
+    if(walletFilter==='deals'&&active.length===0&&recentlyUsed.length===0&&recentlyExpired.length===0){
       html+=emptyWalletSection('🎟️','No deals yet','Snap a coupon to add your first deal','openSnapSheet');
     }
   }
@@ -614,7 +790,7 @@ function renderWallet(){
     }
   }
 
-  if(walletFilter==='all'&&totalCount===0){
+  if(walletFilter==='all'&&active.length===0&&recentlyUsed.length===0&&recentlyExpired.length===0&&state.programs.length===0&&state.loyalty.length===0){
     html=emptyWalletSection('📭','Your wallet is empty','Snap a deal, add a card, or track points','openSnapSheet');
   }
 
@@ -670,18 +846,31 @@ function renderCommunity(){
   c.innerHTML=html;
 }
 
-function renderDealsList(active){
+// Renders a stack of deal cards. opts.section controls the chip + opacity:
+//   'active' (default) — color-coded urgency chip, full opacity
+//   'used'             — ✓ USED badge in semi-transparent black, opacity 0.55
+//   'expired'          — ⏰ EXPIRED badge in red, opacity 0.55
+// Spec: feature-wallet-savings-states-and-lifecycle § 3.4 + § 4.
+function renderDealsList(deals,opts){
+  opts=opts||{};
+  const section=opts.section||'active';
+  const isMuted=section==='used'||section==='expired';
   let html='';
-  active.forEach((d,i)=>{
+  deals.forEach((d,i)=>{
     const brand=getBrandFor(d.merchant);
     const bgCss=brandGradientCss(brand);
     const txt=brand.text;
     const du=daysUntil(d.expiry);
     const expText=du===null?'No expiry':du===0?'Expires TODAY':du===1?'Expires tomorrow':du<0?'Expired':'Expires in '+du+' days';
-    // Compact expiry chip for the always-visible top of stacked cards.
-    // Color-coded by urgency. Hidden entirely if no expiry. Spec: feature-deal-detail-modal-v2 AC2.
+    // Section badge — replaces the urgency chip for muted sections.
     let expChip='';
-    if(du!==null){
+    if(section==='used'){
+      expChip='<span style="background:rgba(0,0,0,0.3);color:white;padding:3px 8px;border-radius:6px;font-size:9px;font-weight:700;letter-spacing:0.5px;white-space:nowrap">✓ USED</span>';
+    } else if(section==='expired'){
+      expChip='<span style="background:rgba(220,38,38,0.95);color:white;padding:3px 8px;border-radius:6px;font-size:9px;font-weight:700;letter-spacing:0.5px;white-space:nowrap">⏰ EXPIRED</span>';
+    } else if(du!==null){
+      // Active section — color-coded urgency chip.
+      // Spec: feature-deal-detail-modal-v2 AC2.
       let chipBg,chipTxt;
       if(du<0){chipBg='rgba(220,38,38,0.95)';chipTxt='Expired';}
       else if(du===0){chipBg='rgba(220,38,38,0.95)';chipTxt='Today';}
@@ -690,10 +879,11 @@ function renderDealsList(active){
       else{chipBg='rgba(255,255,255,0.25)';chipTxt=du+'d left';}
       expChip='<span style="background:'+chipBg+';color:white;padding:3px 8px;border-radius:6px;font-size:9px;font-weight:700;letter-spacing:0.5px;white-space:nowrap">⏱ '+chipTxt+'</span>';
     }
-    const isLast=i===active.length-1;
+    const isLast=i===deals.length-1;
+    const opacityStyle=isMuted?'opacity:0.55;':'';
     // Tap target opens the modal (the inline expand is now dead code, kept in DOM
     // for safety but no longer triggered). Spec: feature-deal-detail-modal-v2 AC1.
-    html+='<div class="wpass" data-deal-id="'+d.id+'" onclick="viewWalletDeal(\''+d.id+'\')" data-brand-bg="'+brand.bg+'" data-brand-bg2="'+brand.bg2+'" data-brand-text="'+brand.text+'" style="border-radius:18px;padding:18px 20px;'+(isLast?'margin-bottom:14px':'margin-bottom:-90px')+';position:relative;box-shadow:'+brandCardShadow()+';color:'+txt+';background:'+bgCss+';cursor:pointer">';
+    html+='<div class="wpass" data-deal-id="'+d.id+'" onclick="viewWalletDeal(\''+d.id+'\')" data-brand-bg="'+brand.bg+'" data-brand-bg2="'+brand.bg2+'" data-brand-text="'+brand.text+'" style="'+opacityStyle+'border-radius:18px;padding:18px 20px;'+(isLast?'margin-bottom:14px':'margin-bottom:-90px')+';position:relative;box-shadow:'+brandCardShadow()+';color:'+txt+';background:'+bgCss+';cursor:pointer">';
     html+='<div class="pcoll" style="display:flex;flex-direction:column;gap:60px">';
     const sharedBadge=d.shared?'<span style="background:rgba(0,0,0,0.3);padding:3px 8px;border-radius:6px;font-size:9px;font-weight:700;letter-spacing:0.5px">SHARED</span>':'';
     const sourceBadge=d.source==='local'?'<span style="background:rgba(255,255,255,0.25);padding:3px 8px;border-radius:6px;font-size:9px;font-weight:700;letter-spacing:0.5px">📍 LOCAL DEAL</span>':d.source==='online'?'<span style="background:rgba(255,255,255,0.25);padding:3px 8px;border-radius:6px;font-size:9px;font-weight:700;letter-spacing:0.5px">🌐 ONLINE DEAL</span>':d.fromCommunity?'<span style="background:rgba(255,255,255,0.25);padding:3px 8px;border-radius:6px;font-size:9px;font-weight:700;letter-spacing:0.5px">👥 COMMUNITY</span>':'';
@@ -1095,15 +1285,26 @@ window.viewWalletDeal=function(id){
       +'<span style="font-size:11px;color:#4FACFE;font-weight:700;flex-shrink:0">Directions</span>'
       +'</a>';
   }
-  // Primary CTA + Share + Delete
+  // Primary CTA + Share + Delete.
+  // Spec: feature-wallet-savings-states-and-lifecycle AC #15, #21.
+  // Three modes: redeemed (existing) → "Already used" disabled; expired-and-
+  // not-redeemed → "Expired" disabled, Share hidden, Delete only; active →
+  // existing Mark as Used + Share + Delete.
+  const isExpiredUnredeemed=!isRedeemed&&d.expiry&&du!==null&&du<0;
   if(isRedeemed){
     html+='<button disabled style="width:100%;padding:14px;border-radius:14px;background:var(--surface-soft);color:var(--text-faint);border:none;font-size:15px;font-weight:800;cursor:not-allowed;margin-bottom:8px">Already used</button>';
+  } else if(isExpiredUnredeemed){
+    html+='<button disabled style="width:100%;padding:14px;border-radius:14px;background:var(--surface-soft);color:var(--text-faint);border:none;font-size:15px;font-weight:800;cursor:not-allowed;margin-bottom:8px">Expired — no longer claimable</button>';
   } else {
     html+='<button onclick="markDealUsed(\''+d.id+'\')" style="width:100%;padding:14px;border-radius:14px;background:linear-gradient(135deg,var(--accent),var(--accent-dark));color:white;border:none;font-size:15px;font-weight:800;cursor:pointer;margin-bottom:8px">Mark as Used</button>';
   }
-  // Share button — secondary, outlined. Available for both active and redeemed
-  // deals (sharing a "look at the deal I just used" recommendation is valid).
-  html+='<button onclick="shareDealFromModal(\''+d.id+'\')" style="width:100%;padding:13px;border-radius:14px;background:transparent;color:var(--accent-dark);border:2px solid var(--accent);font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px"><svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>Share Deal</button>';
+  // Share button — hidden for expired deals (AC #21). Available for active
+  // and recently-used deals (sharing a "look at the deal I just used"
+  // recommendation is valid for redeemed deals; the inner shareDeal guard
+  // catches any data-state where a redeemed deal somehow became expired).
+  if(!isExpiredUnredeemed){
+    html+='<button onclick="shareDealFromModal(\''+d.id+'\')" style="width:100%;padding:13px;border-radius:14px;background:transparent;color:var(--accent-dark);border:2px solid var(--accent);font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px"><svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>Share Deal</button>';
+  }
   // Delete button — destructive, outlined faint-red. Calls deleteDealFromModal which
   // closes modal first then runs deleteDeal (which prompts native confirm + toasts).
   // Spec: feature-deal-detail-modal-v2 AC6-7.
@@ -1141,6 +1342,14 @@ window.calculateDiscount=function(price,percent){return price-(price*percent/100
 window.shareDeal=function(id){
   const d=state.deals.find(x=>x.id===id);
   if(!d)return;
+  // Spec: feature-wallet-savings-states-and-lifecycle AC #19, #20.
+  // Block share on expired deals — they pollute the community pool and
+  // mislead social-share recipients. Single guard at this entry point covers
+  // BOTH fresh-share AND re-share paths (both flow through shareDeal on tap).
+  if(d.expiry&&daysUntil(d.expiry)<0){
+    toast("Expired deals can't be shared");
+    return;
+  }
   const claimed=d.claimCount||0;
   const sharedAlready=d.shared;
   const fromCommunity=d.fromCommunity;
@@ -1316,6 +1525,16 @@ window.copyReferralLink=function(){
 window.confirmShare=function(id){
   const d=state.deals.find(x=>x.id===id);
   if(!d)return;
+  // Spec: feature-wallet-savings-states-and-lifecycle AC #22.
+  // Defensive backup — recompute expiry at confirm time. Catches any race
+  // where the share modal was reached for a deal that just expired (e.g.,
+  // user lingers on the share modal past the deal's expiry timestamp). Same
+  // toast as shareDeal so the user sees consistent messaging.
+  if(d.expiry&&daysUntil(d.expiry)<0){
+    closeModal();
+    toast("Expired deals can't be shared");
+    return;
+  }
   // Re-shares of community-claimed deals are allowed but earn zero points.
   // The original sharer already earned share-points + per-claim points;
   // re-sharer adds no new value. Spec: feature-reshare-community-claims

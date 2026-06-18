@@ -140,6 +140,47 @@ function runMetricsMigration(seedStoreOverrides) {
   else { fail++; console.error('AC3 PARTIAL user: preserved=' + preserved + ' filled=' + filled + ' state=' + JSON.stringify(m).slice(0,300)); }
 }
 
+// ============================================================
+// Spec: feature-wallet-savings-states-and-lifecycle — 1 migration test
+// ============================================================
+// AC #26: legacy redeemed deals without redeemedAt get back-filled to 0.
+// Verifies migrateRedeemedAt() runs at boot and treats unset/null/wrong-type
+// redeemedAt as "redeemed long ago" (= 0). These deals immediately fall
+// outside the 7-day Recently-used visibility window.
+
+// T10 (AC #26) — legacy redeemed deals get redeemedAt back-filled to 0
+{
+  // Seed a returning user with multiple shapes of legacy redeemed deal:
+  //   d1: redeemed=true, redeemedAt missing entirely
+  //   d2: redeemed=true, redeemedAt explicit null
+  //   d3: redeemed=true, redeemedAt is a string (corrupted)
+  //   d4: redeemed=true, redeemedAt already a valid number (must NOT change)
+  //   d5: redeemed=false (must NOT touch — non-redeemed deals never get redeemedAt)
+  const validTs = 1700000000000;
+  const seed = {
+    'perq-mvp:deals': JSON.stringify([
+      { id: 'd1', merchant: 'A', discount: '$1', redeemed: true,                    createdAt: 1 },
+      { id: 'd2', merchant: 'B', discount: '$2', redeemed: true, redeemedAt: null,  createdAt: 2 },
+      { id: 'd3', merchant: 'C', discount: '$3', redeemed: true, redeemedAt: 'oops',createdAt: 3 },
+      { id: 'd4', merchant: 'D', discount: '$4', redeemed: true, redeemedAt: validTs, createdAt: 4 },
+      { id: 'd5', merchant: 'E', discount: '$5', redeemed: false,                   createdAt: 5 }
+    ])
+  };
+  const s = runMetricsMigration(seed);
+  const deals = JSON.parse(s['perq-mvp:deals']);
+  const byId = Object.fromEntries(deals.map(d => [d.id, d]));
+  // d1, d2, d3 should now have redeemedAt === 0 (back-filled)
+  const d1ok = byId.d1.redeemedAt === 0;
+  const d2ok = byId.d2.redeemedAt === 0;
+  const d3ok = byId.d3.redeemedAt === 0;
+  // d4 must keep its valid timestamp (no clobber)
+  const d4ok = byId.d4.redeemedAt === validTs;
+  // d5 must NOT have redeemedAt added (non-redeemed deals are untouched)
+  const d5ok = !('redeemedAt' in byId.d5) || byId.d5.redeemedAt == null;
+  if (d1ok && d2ok && d3ok && d4ok && d5ok) pass++;
+  else { fail++; console.error('AC26: redeemedAt back-fill — d1=' + byId.d1.redeemedAt + ' d2=' + byId.d2.redeemedAt + ' d3=' + byId.d3.redeemedAt + ' d4=' + byId.d4.redeemedAt + ' d5=' + byId.d5.redeemedAt); }
+}
+
 console.log(`MIGRATION TEST: PASS ${pass}, FAIL ${fail}`);
 console.log('Final rewards:', JSON.stringify(r));
 process.exit(fail === 0 ? 0 : 1);

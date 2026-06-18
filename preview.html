@@ -386,7 +386,11 @@ input[type=range]:focus{outline:none}
     <span style="position:absolute;top:-20px;right:-10px;font-size:100px;opacity:0.15;line-height:1">💰</span>
     <p id="savings-label" style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;opacity:0.7;margin:0;position:relative">Potential savings</p>
     <h2 id="total-saved" style="font-size:38px;font-weight:900;margin:4px 0;letter-spacing:-1.2px;position:relative">$0</h2>
-    <p style="font-size:11px;opacity:0.75;display:flex;align-items:center;gap:6px;position:relative" id="streak-text">Save your first deal to start a streak</p>
+    <!-- Spec: feature-wallet-savings-states-and-lifecycle § 4. Secondary line + divider hidden by default; renderWallet shows them in State B (both redeemed AND active). -->
+    <div id="savings-divider" style="display:none;height:1px;background:rgba(0,0,0,0.08);margin:8px 0 4px;position:relative"></div>
+    <p id="savings-label-2" style="display:none;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;opacity:0.6;margin:0;position:relative">Still to claim</p>
+    <h3 id="total-saved-2" style="display:none;font-size:24px;font-weight:800;margin:4px 0 0;letter-spacing:-0.8px;color:rgba(26,26,26,0.78);position:relative">$0</h3>
+    <p style="font-size:11px;opacity:0.75;display:flex;align-items:center;gap:6px;position:relative;margin-top:6px" id="streak-text">Save your first deal to start a streak</p>
   </div>
 
   <div class="wallet-tabs">
@@ -615,6 +619,6 @@ input[type=range]:focus{outline:none}
 <div id="confetti-root" style="position:fixed;inset:0;pointer-events:none;z-index:9998;overflow:hidden"></div>
 <input type="file" id="capture-input" accept="image/*" capture="environment" style="display:none">
 
-<script src="preview-app.js?v=47"></script>
+<script src="preview-app.js?v=48"></script>
 </body>
 </html>

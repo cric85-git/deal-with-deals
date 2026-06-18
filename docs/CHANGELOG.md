@@ -4,6 +4,63 @@ All notable feature changes to the Perq app are documented here.
 
 ---
 
+## [Unreleased] — 2026-06-18 (wallet-states-and-lifecycle)
+
+### 🆕 Feature: four-state savings hero + recently-used + recently-expired sections + block-share-on-expired
+
+Spec: `.kiro/specs/feature-wallet-savings-states-and-lifecycle.md` (27 ACs across 9 sections, 14 edge cases). No new `window.X = function` globals — all changes live inside existing functions.
+
+**Why this matters (four user complaints, one fix):**
+
+1. **The savings hero used to forget potential savings the moment you redeemed your first deal.** A user with 12 active deals worth $340 and one $5 redemption saw "$5 saved this year" — the $340 of opportunity-still-on-the-table disappeared from the headline.
+2. **Wallet deals were stacked in random order.** A deal expiring tomorrow could sit below a deal expiring in 90 days.
+3. **Redeemed and expired deals vanished immediately.** No "yes, I used Pizza Hut on Tuesday" memory window for cashier-dispute resolution. No "darn, I let Sephora expire" feedback loop for next time.
+4. **Expired deals could still be shared into the community pool**, polluting the feed for other users.
+
+**What a user gets today:**
+
+- **Savings hero is now a state machine over four cases** (spec § 3.3):
+  - **Z (zero / only-expired)** — `Start adding deals to save` headline, no `$0` shown. Streak text: `Save your first deal to start a streak`.
+  - **P (potential only)** — single-line `Potential savings · $X` where X = sum of active deals. Streak text: `Tap a deal and mark it redeemed to bank the savings`.
+  - **A (actual only)** — single-line `Total saved · $Y` where Y = sum of all redeemed deals (lifetime). Streak text: `+$Y saved · N day streak 🔥` if streak > 0, else `Snap your next deal to keep saving`.
+  - **B (both)** — dual-line `Saved this year · $Y` (32px, top) + 1px divider + `Still to claim · $X` (24px, deprioritized). Streak text below both. Hero card grows ~40px to fit.
+- **Active deals are sorted by `daysUntil(expiry)` ascending, null-last** (spec AC #8-#10). Most-urgent at top. Stable tiebreaker.
+- **Recently used section** (spec AC #11-#13): redeemed deals stay visible in their own section for 7 days post-redemption. Cards render at opacity 0.55 with a `✓ USED` badge replacing the urgency chip. Sorted by `redeemedAt` desc. Section header omitted entirely if empty.
+- **Recently expired section** (spec AC #14-#17): unredeemed-and-past-expiry deals stay visible for 5 days post-expiry. Cards render at opacity 0.55 with a red `⏰ EXPIRED` badge. Sorted by expiry desc. Section header omitted entirely if empty. Section ordering top-to-bottom: Active → Recently used → Recently expired → Reward programs → Loyalty.
+- **Block-share-on-expired** (spec AC #19-#24): both `shareDeal` and `confirmShare` have a defensive `daysUntil(d.expiry) < 0` guard. Toast: `Expired deals can't be shared`. Single guard at `shareDeal` covers fresh shares AND community re-shares (Spec #3 path) since both flow through the same function. `confirmShare` has a backup guard for race conditions where the modal is somehow reached for a borderline-expired deal. The `viewWalletDeal` modal hides the Share button entirely on recently-expired cards.
+- **`viewWalletDeal` expired mode** (spec AC #15, #21): for unredeemed deals past expiry, the modal hides Mark as Used (replaced with disabled `Expired — no longer claimable`) and hides Share. Delete still works. Existing `isRedeemed` branch (Already used + Share visible) preserved untouched.
+- **Wallet sub-header count** (spec AC #18): only counts the active bucket. Recently-used and recently-expired deals are NOT counted as "items in your wallet" — they're memory, not active wallet content.
+
+**Lifecycle classification (spec § 3.2 — pure derivation from `state.deals`):**
+
+| Bucket | Predicate | Visible? | Counts toward "Potential"? | Counts toward "Total saved"? |
+|---|---|---|---|---|
+| `active` | `!d.redeemed && (d.expiry === '' \|\| daysUntil(d.expiry) >= 0)` | Yes | **Yes** | No |
+| `recently-used` | `d.redeemed && (Date.now() - d.redeemedAt <= 7 days)` | Yes | No | **Yes** |
+| `recently-expired` | `!d.redeemed && daysUntil(d.expiry) < 0 && (now - expiry <= 5 days)` | Yes | No | No |
+| `archived` | older than either window | No (still in `state.deals` for lifetime tally) | No | **Yes** if redeemed; No if just expired |
+
+**Honest math** — only redeemed deals contribute to "Total saved." Expired-unused deals are dead value; they don't count as savings, just as a brief memory in the recently-expired section.
+
+**Migration (spec AC #26):**
+- `migrateRedeemedAt()` runs at boot. For each `d` in `state.deals` where `d.redeemed === true && (d.redeemedAt == null || typeof d.redeemedAt !== 'number')`, sets `d.redeemedAt = 0`. Treats them as "redeemed long ago" — they fall outside the 7-day window immediately. Honest: we don't know the real timestamp, so we don't pretend.
+
+**Constants:**
+- `REDEEMED_VISIBILITY_DAYS = 7` — celebratory window for redeemed deals
+- `EXPIRED_VISIBILITY_DAYS = 5` — shorter window for expired deals (deliberately asymmetric — wallet shouldn't fill with regret)
+
+**Files:**
+- `preview-app.js` — added two visibility constants, `migrateRedeemedAt()` IIFE, rewrote `renderWallet` with the four-state hero machine + bucket classification + per-bucket sort + three-section render. Updated `renderDealsList` signature to `(deals, opts)` with `opts.section: 'active'|'used'|'expired'` controlling badge + opacity. Added expired-deal guards to `shareDeal` and `confirmShare`. Added expired-mode handling to `viewWalletDeal` (hide Share, replace Mark Redeemed with disabled `Expired — no longer claimable`).
+- `preview.html` — added `#savings-divider`, `#savings-label-2`, `#total-saved-2` to the hero card (hidden by default, shown only in State B). Cache buster `?v=47` → `?v=48`.
+- `sw.js` — `CACHE_NAME` `perq-v42-action-counters` → `perq-v43-wallet-states-and-lifecycle`.
+- `scripts/perq-migration-test.js` — 1 new test (AC #26 legacy redeemedAt back-fill, all four corruption shapes covered). Total 10 PASS (was 9).
+- `scripts/perq-render-test.js` — 14 new tests (hero State Z/P/A/B/only-expired-→-Z, sort by daysUntil null-last, recently-used render/omit, recently-expired render/omit, section ordering, shareDeal expired-block, confirmShare defensive expired-block, wallet-sub count). Plus two helpers: `installHeroSpy(el)` for capturing textContent + style.display mutations, and `_daysUntil(s)` mirror for tests that need it without exposing the IIFE-internal one. Total 95 PASS (was 81).
+- `.kiro/specs/feature-wallet-savings-states-and-lifecycle.md` — full spec with 27 ACs, 14 edge cases, and a SPOT-CHECK trail for each.
+
+**Tests:** 196/196 PASS (gamif 20 / load OK / migration 10 / render 95 / brand 53 + 9 outline-warn / splash 18) + smoke 6/6.
+
+---
+
 ## [Unreleased] — 2026-06-15 (action-counters)
 
 ### 🆕 Feature: lifetime activity counters surfaced in Settings
