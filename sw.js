@@ -1,4 +1,4 @@
-const CACHE_NAME = 'perq-v43-wallet-states-and-lifecycle';
+const CACHE_NAME = 'perq-v44-clean-baseline';
 const ASSETS = [
   './',
   './index.html',

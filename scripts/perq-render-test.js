@@ -508,8 +508,13 @@ try {
     Object.defineProperty(e, 'innerHTML', { set(v) { walletHTML = v; }, get() { return walletHTML; } });
     return e;
   })();
+  // Use a future-relative expiry so this test stays valid regardless of when it runs.
+  // A fixed date-string like '2026-06-25' drifts into the past over time and the
+  // deal falls beyond the 5-day recently-expired visibility window, causing the
+  // wallet to render empty and this test to fail. Compute +30 days from now.
+  const _futureExpiry = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
   store['perq-mvp:deals'] = JSON.stringify([
-    { id: 'aXcBnQ', merchant: 'Trader Joes', discount: '20% off entire purchase', value: 10, redeemed: false, category: 'Groceries', expiry: '2026-06-25', address: '123 Main St, Anywhere', image: 'data:image/png;base64,iVBORw0KGgo=', createdAt: Date.now() }
+    { id: 'aXcBnQ', merchant: 'Trader Joes', discount: '20% off entire purchase', value: 10, redeemed: false, category: 'Groceries', expiry: _futureExpiry, address: '123 Main St, Anywhere', image: 'data:image/png;base64,iVBORw0KGgo=', createdAt: Date.now() }
   ]);
   vm.runInContext(code, ctx, { filename: 'preview-app.js' });
   // Re-install interceptors AFTER IIFE reload (it recreates els lazily).

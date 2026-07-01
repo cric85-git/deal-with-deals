@@ -1,6 +1,6 @@
 # Perq Automated Test Results
 
-Last run: 2026-06-18 (post wallet-states-and-lifecycle — four-state savings hero (Z/P/A/B), active deals sorted by expiry asc null-last, recently-used section with 7-day visibility window, recently-expired section with 5-day visibility window, hard block on sharing expired deals at both `shareDeal` and `confirmShare` entry points)
+Last run: 2026-07-01 (chore commit — .vscode/ gitignore + sw cache bump; folded in one date-independent render-test fix: hardcoded `expiry: '2026-06-25'` on the `viewWalletDeal` fixture was 6 days past today and beyond the 5-day recently-expired visibility window, so the wallet rendered empty and 2 tests regressed. Now uses `Date.now() + 30 days` — date-independent going forward. No production code changed vs 2026-06-18 baseline.)
 
 ## Suite 1 — `npm test` (Node script suite, runs in CI on every push)
 

@@ -7,6 +7,7 @@ dist/
 tmp/
 test-results/
 .commit-msg.tmp
+.vscode/
 
 # Personal/internal docs — never track in this repo (live at workspace root, not Perq_Dev)
 Documents/
